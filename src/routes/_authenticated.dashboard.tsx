@@ -222,15 +222,15 @@ function DashboardPage() {
   );
 }
 
-function Kpi({ to, icon: Icon, label, value, highlight }: { to: string; icon: any; label: string; value: number; highlight?: boolean }) {
+function Kpi({ to, icon: Icon, label, value, highlight, muted }: { to: string; icon: any; label: string; value: number; highlight?: boolean; muted?: boolean }) {
   return (
     <Link to={to}>
-      <Card className={"transition-shadow hover:shadow-md " + (highlight ? "border-amber-400" : "")}>
+      <Card className={"transition-shadow hover:shadow-md " + (highlight ? "border-amber-400" : "") + (muted ? " opacity-80" : "")}>
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-              <div className="mt-1 text-3xl font-semibold">{value}</div>
+              <div className={"mt-1 text-3xl font-semibold " + (muted ? "text-muted-foreground" : "")}>{value}</div>
             </div>
             <Icon className={"h-5 w-5 " + (highlight ? "text-amber-500" : "text-muted-foreground")} />
           </div>
