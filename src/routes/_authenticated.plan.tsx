@@ -360,6 +360,18 @@ function EinsatzDialog({
     onSuccess: () => { toast.success("Einsatz gelöscht"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const upsertAbw = useServerFn(upsertAbwesenheit);
+  const delAbw = useServerFn(deleteAbwesenheit);
+  const krankMut = useMutation({
+    mutationFn: (art: "krank_mit_AU" | "krank_ohne_AU") => upsertAbw({ data: { mitarbeiter_id: mitarbeiterId, datum, art } }),
+    onSuccess: () => { toast.success("Als krank gemeldet"); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const clearKrankMut = useMutation({
+    mutationFn: () => delAbw({ data: { mitarbeiter_id: mitarbeiterId, datum } }),
+    onSuccess: () => { toast.success("Abwesenheit entfernt"); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
