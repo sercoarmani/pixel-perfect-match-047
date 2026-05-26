@@ -13,7 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getPlanData, upsertEinsatz, deleteEinsatz } from "@/lib/dispo.functions";
+import { getPlanData, upsertEinsatz, deleteEinsatz, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
+import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
+import { startOfMonth, endOfMonth } from "date-fns";
 import {
   DIENSTE, DIENST_KURZ, STATUS_LABEL, STATUS_CLASS,
   buildDateRange, fmtIsoDate, weekStart, type Dienst, type EinsatzStatus,
