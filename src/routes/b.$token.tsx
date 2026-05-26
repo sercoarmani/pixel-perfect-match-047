@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { getAnfrageByToken, submitBedarf } from "@/lib/dispo.functions";
+import { getAnfrageByToken, submitBedarf } from "@/lib/dispo-public.functions";
 
 export const Route = createFileRoute("/b/$token")({
   component: BedarfPage,
