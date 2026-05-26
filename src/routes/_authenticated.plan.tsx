@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { addDays, format } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileText, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getPlanData, upsertEinsatz, deleteEinsatz, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
+import { exportPlanungslisteExcel, exportPlanungslistePdf } from "@/lib/excel-planungsliste";
 import { startOfMonth, endOfMonth } from "date-fns";
 import {
   DIENSTE, DIENST_KURZ, STATUS_LABEL, STATUS_CLASS,
@@ -150,6 +151,44 @@ function PlanPage() {
               <SelectItem value="28">28 Tage</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                exportPlanungslistePdf({
+                  mitarbeiter: data?.mitarbeiter ?? [],
+                  einsaetze: data?.einsaetze ?? [],
+                  abwesenheiten: data?.abwesenheiten ?? [],
+                  einrichtungen: data?.einrichtungen ?? [],
+                  dateRange,
+                });
+              } catch (e: any) { toast.error(e?.message ?? "PDF-Export fehlgeschlagen"); }
+            }}
+            disabled={isLoading}
+            title="Planungsliste als PDF exportieren"
+          >
+            <FileText className="h-4 w-4 mr-1" /> PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                exportPlanungslisteExcel({
+                  mitarbeiter: data?.mitarbeiter ?? [],
+                  einsaetze: data?.einsaetze ?? [],
+                  abwesenheiten: data?.abwesenheiten ?? [],
+                  einrichtungen: data?.einrichtungen ?? [],
+                  dateRange,
+                });
+              } catch (e: any) { toast.error(e?.message ?? "Excel-Export fehlgeschlagen"); }
+            }}
+            disabled={isLoading}
+            title="Planungsliste als Excel exportieren"
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+          </Button>
         </div>
       </header>
 
@@ -181,8 +220,8 @@ function PlanPage() {
             </thead>
             <tbody>
               {grouped.map((g) => (
-                <>
-                  <tr key={`h-${g.key}`}>
+                <Fragment key={g.key}>
+                  <tr>
                     <td colSpan={dateRange.length + 1} className="sticky left-0 z-10 bg-muted/60 border-b px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {g.label} <span className="ml-2 font-normal normal-case">({g.items.length})</span>
                     </td>
@@ -230,7 +269,7 @@ function PlanPage() {
                       })}
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
