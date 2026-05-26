@@ -223,11 +223,12 @@ export const updateTemplate = createServerFn({ method: "POST" })
 
 
 // ---------- Excel Import ----------
+const QualifikationEnum = z.enum(["PFK","PHK","GuK","PFA","PFM","PFF","Azubi","Berufserfahrung","LG1_LG2","Krankenschwester"]);
 const MitarbeiterRow = z.object({
   vorname: z.string().min(1).max(100),
   nachname: z.string().min(1).max(100),
   kuerzel: z.string().min(1).max(20),
-  qualifikation: z.enum(["PFK", "PHK"]).default("PFK"),
+  qualifikation: QualifikationEnum.default("PFK"),
   telefon: z.string().max(50).optional().nullable(),
   email: z.string().email().max(255).optional().nullable(),
   wohnort: z.string().max(200).optional().nullable(),

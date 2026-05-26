@@ -274,18 +274,176 @@ function ImportPanel({ spec }: { spec: Spec }) {
   );
 }
 
+function PlanungslistePanel() {
+  const [filename, setFilename] = useState("");
+  const [parsed, setParsed] = useState<import("@/lib/planungsliste-parser").ParseResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [report, setReport] = useState<any>(null);
+
+  const importMa = useServerFn(importMitarbeiter);
+  const importEi = useServerFn(importEinrichtungen);
+  const importEs = useServerFn(importEinsaetze);
+  const importAb = useServerFn(importAbwesenheiten);
+
+  async function onFile(f: File) {
+    setReport(null);
+    const { parsePlanungsliste } = await import("@/lib/planungsliste-parser");
+    try {
+      const r = await parsePlanungsliste(f);
+      setParsed(r);
+      setFilename(f.name);
+      toast.success(
+        `Erkannt: ${r.einrichtungen.length} Einrichtungen · ${r.mitarbeiter.length} Mitarbeiter · ${r.einsaetze.length} Einsätze · ${r.abwesenheiten.length} Abwesenheiten`,
+      );
+    } catch (e: any) {
+      toast.error("Parser-Fehler: " + e.message);
+    }
+  }
+
+  async function runAll() {
+    if (!parsed) return;
+    setRunning(true);
+    setReport(null);
+    const out: any = {};
+    try {
+      if (parsed.einrichtungen.length)
+        out.einrichtungen = await importEi({ data: { rows: parsed.einrichtungen as any } });
+      if (parsed.mitarbeiter.length)
+        out.mitarbeiter = await importMa({ data: { rows: parsed.mitarbeiter as any } });
+      if (parsed.einsaetze.length) {
+        // chunk
+        const chunks: any[] = [];
+        for (let i = 0; i < parsed.einsaetze.length; i += 1000)
+          chunks.push(parsed.einsaetze.slice(i, i + 1000));
+        let c = 0, u = 0, errs: any[] = [];
+        for (const chunk of chunks) {
+          const res: any = await importEs({ data: { rows: chunk as any } });
+          c += res.created ?? 0; u += res.updated ?? 0; errs.push(...(res.errors ?? []));
+        }
+        out.einsaetze = { created: c, updated: u, errors: errs };
+      }
+      if (parsed.abwesenheiten.length)
+        out.abwesenheiten = await importAb({ data: { rows: parsed.abwesenheiten as any } });
+      setReport(out);
+      toast.success("Import abgeschlossen");
+    } catch (e: any) {
+      toast.error("Import fehlgeschlagen: " + e.message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <h3 className="font-semibold mb-1">Planungsliste (Vollformat)</h3>
+        <p className="text-sm text-muted-foreground">
+          Liest die komplette Matrix aus dem Excel-Sheet <code>Planungsliste</code>:
+          Einrichtungen (Zeilen mit Name + VS-Satz), Mitarbeiter (PFK/PHK Minijob &amp; VZ/TZ),
+          Einsätze (Kürzel in Datums-Spalten), <code>XYZ*</code> wird als „zur Überprüfung"
+          importiert, <code>(XYZ)</code> als Urlaub.
+        </p>
+      </Card>
+
+      <Card className="p-4">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div className="flex items-center gap-2 rounded-md border border-dashed px-4 py-3 hover:bg-muted/40 flex-1">
+            <Upload className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">
+              {filename ? <><b>{filename}</b></> : "Planungsliste-Excel wählen (.xlsx)"}
+            </span>
+          </div>
+          <input type="file" accept=".xlsx,.xls" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+        </label>
+
+        {parsed && (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <Card className="p-3"><div className="text-muted-foreground text-xs">Einrichtungen</div><div className="text-xl font-semibold">{parsed.einrichtungen.length}</div></Card>
+            <Card className="p-3"><div className="text-muted-foreground text-xs">Mitarbeiter</div><div className="text-xl font-semibold">{parsed.mitarbeiter.length}</div></Card>
+            <Card className="p-3"><div className="text-muted-foreground text-xs">Einsätze</div><div className="text-xl font-semibold">{parsed.einsaetze.length}</div></Card>
+            <Card className="p-3"><div className="text-muted-foreground text-xs">Abwesenheiten</div><div className="text-xl font-semibold">{parsed.abwesenheiten.length}</div></Card>
+          </div>
+        )}
+
+        {parsed && parsed.warnings.length > 0 && (
+          <div className="mt-3 rounded border bg-muted/30 p-2 text-xs space-y-1">
+            {parsed.warnings.map((w, i) => (
+              <div key={i} className="flex items-start gap-2"><AlertCircle className="h-3 w-3 mt-0.5 text-muted-foreground" />{w}</div>
+            ))}
+          </div>
+        )}
+
+        {parsed && (
+          <div className="mt-4 grid md:grid-cols-2 gap-4">
+            <div>
+              <div className="text-xs font-semibold mb-1">Einrichtungen (Vorschau)</div>
+              <div className="rounded border max-h-48 overflow-auto text-xs">
+                <table className="w-full">
+                  <thead className="bg-muted/50 sticky top-0"><tr><th className="px-2 py-1 text-left">Name</th><th className="px-2 py-1">WB</th><th className="px-2 py-1">PFK</th><th className="px-2 py-1">PHK</th></tr></thead>
+                  <tbody>
+                    {parsed.einrichtungen.slice(0, 40).map((e, i) => (
+                      <tr key={i} className="border-t"><td className="px-2 py-1">{e.name}</td><td className="px-2 py-1">{e.wohnbereich ?? ""}</td><td className="px-2 py-1">{e.vs_satz_pfk ?? ""}</td><td className="px-2 py-1">{e.vs_satz_phk ?? ""}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-semibold mb-1">Mitarbeiter (Vorschau)</div>
+              <div className="rounded border max-h-48 overflow-auto text-xs">
+                <table className="w-full">
+                  <thead className="bg-muted/50 sticky top-0"><tr><th className="px-2 py-1 text-left">Name</th><th className="px-2 py-1">Kürzel</th><th className="px-2 py-1">Qual.</th><th className="px-2 py-1">Anst.</th></tr></thead>
+                  <tbody>
+                    {parsed.mitarbeiter.slice(0, 40).map((m, i) => (
+                      <tr key={i} className="border-t"><td className="px-2 py-1">{m.nachname}, {m.vorname}</td><td className="px-2 py-1 font-mono">{m.kuerzel}</td><td className="px-2 py-1">{m.qualifikation}</td><td className="px-2 py-1">{m.anstellung}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {parsed && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={runAll} disabled={running}>
+              {running ? "Importiere…" : <><FileSpreadsheet className="h-4 w-4 mr-2" /> Alles importieren</>}
+            </Button>
+          </div>
+        )}
+
+        {report && (
+          <div className="mt-4 space-y-2 text-sm">
+            {Object.entries(report).map(([k, v]: [string, any]) => (
+              <div key={k} className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-status-bestaetigt" />
+                <span className="capitalize"><b>{k}</b>: neu {v.created ?? 0} · aktualisiert {v.updated ?? 0} · Fehler {v.errors?.length ?? 0}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
 function ImportPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Excel-Import</h1>
       <p className="text-muted-foreground mb-6">Stammdaten und Plandaten aus Excel-Listen einlesen.</p>
-      <Tabs defaultValue="mitarbeiter">
+      <Tabs defaultValue="planungsliste">
         <TabsList>
+          <TabsTrigger value="planungsliste">Planungsliste</TabsTrigger>
           <TabsTrigger value="mitarbeiter">Mitarbeiter</TabsTrigger>
           <TabsTrigger value="einrichtungen">Einrichtungen</TabsTrigger>
           <TabsTrigger value="einsaetze">Einsätze</TabsTrigger>
           <TabsTrigger value="abwesenheiten">Abwesenheiten</TabsTrigger>
         </TabsList>
+        <TabsContent value="planungsliste" className="mt-4">
+          <PlanungslistePanel />
+        </TabsContent>
         {(Object.keys(SPECS) as EntityKey[]).map((k) => (
           <TabsContent key={k} value={k} className="mt-4">
             <ImportPanel spec={SPECS[k]} />
