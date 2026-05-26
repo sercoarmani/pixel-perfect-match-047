@@ -522,6 +522,7 @@ export const getDashboard = createServerFn({ method: "GET" })
         einrichtungenInaktiv: einInaktiv.count ?? 0,
         anfragenOffen: anfOffen.count ?? 0,
         einsaetzeMonat: geplant,
+        reaktionAvgH,
       },
       monatsStats: {
         geplant,
