@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, LayoutDashboard, Sparkles, BarChart3 } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -18,7 +18,8 @@ const NAV = [
   { to: "/anfragen", label: "Anfragen", icon: Inbox },
   { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
   { to: "/einrichtungen", label: "Einrichtungen", icon: Building2 },
-  { to: "/import", label: "Excel-Import", icon: FileSpreadsheet },
+  { to: "/import", label: "Datei-Import", icon: FileSpreadsheet },
+  { to: "/export", label: "Datei-Export", icon: Download },
   { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare },
 ] as const;
 
