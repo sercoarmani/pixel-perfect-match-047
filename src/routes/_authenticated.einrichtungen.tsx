@@ -23,7 +23,7 @@ function EinrichtungenPage() {
   const fetchList = useServerFn(listEinrichtungen);
   const { data, isLoading } = useQuery({ queryKey: ["einrichtungen"], queryFn: () => fetchList() });
   const [edit, setEdit] = useState<any | null>(null);
-  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">("aktiv");
+  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">("alle");
 
   const filtered = (data ?? []).filter((e: any) =>
     filter === "alle" ? true : filter === "aktiv" ? e.aktiv : !e.aktiv,
