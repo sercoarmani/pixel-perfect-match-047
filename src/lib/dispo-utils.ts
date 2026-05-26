@@ -47,6 +47,13 @@ export function weekStart(d: Date) {
   return startOfWeek(d, { weekStartsOn: 1 });
 }
 
+export function monthRange(anchor: Date): Date[] {
+  const s = startOfMonth(anchor);
+  const e = endOfMonth(anchor);
+  const n = differenceInCalendarDays(e, s) + 1;
+  return Array.from({ length: n }, (_, i) => addDays(s, i));
+}
+
 export function parseDate(s: string) {
   return parseISO(s);
 }
