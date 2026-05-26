@@ -449,7 +449,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const monatStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
     const monatEnde = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
 
-    const [maAll, einAll, einInaktiv, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat] = await Promise.all([
+    const [maAll, einAll, einInaktiv, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat, anfBeantwortet] = await Promise.all([
       supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", false),
@@ -462,7 +462,19 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase.from("einrichtungen").select("id, name, ort"),
       supabase.from("mitarbeiter").select("id, max_einsaetze, anstellung, qualifikation").eq("aktiv", true),
       supabase.from("abwesenheiten").select("mitarbeiter_id, datum").gte("datum", monatStart).lte("datum", monatEnde),
+      supabase.from("anfragen").select("erstellt_am, beantwortet_am").not("beantwortet_am", "is", null).gte("erstellt_am", monatStart),
     ]);
+
+    // Reaktionszeit (Dienstanfrage → Bestätigung): Mittelwert in Stunden
+    const reaktionStunden: number[] = [];
+    (anfBeantwortet.data ?? []).forEach((a: any) => {
+      if (!a.erstellt_am || !a.beantwortet_am) return;
+      const diff = (new Date(a.beantwortet_am).getTime() - new Date(a.erstellt_am).getTime()) / 36e5;
+      if (diff >= 0 && diff < 24 * 30) reaktionStunden.push(diff);
+    });
+    const reaktionAvgH = reaktionStunden.length > 0
+      ? Math.round((reaktionStunden.reduce((a, b) => a + b, 0) / reaktionStunden.length) * 10) / 10
+      : null;
 
     const mitMap = new Map((mitAll.data ?? []).map((m) => [m.id, m]));
     const einMap = new Map((einAllForMap.data ?? []).map((e) => [e.id, e]));
