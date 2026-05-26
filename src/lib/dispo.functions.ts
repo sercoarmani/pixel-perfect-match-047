@@ -231,7 +231,7 @@ const MitarbeiterRow = z.object({
   telefon: z.string().max(50).optional().nullable(),
   email: z.string().email().max(255).optional().nullable(),
   wohnort: z.string().max(200).optional().nullable(),
-  anstellung: z.enum(["Vollzeit", "Teilzeit", "Minijob", "Freelance"]).optional(),
+  anstellung: z.enum(["Vollzeit", "Teilzeit", "Minijob"]).optional(),
   notiz: z.string().max(2000).optional().nullable(),
 });
 
@@ -260,7 +260,7 @@ const EinsatzRow = z.object({
 const AbwesenheitRow = z.object({
   mitarbeiter_kuerzel: z.string().min(1).max(20),
   datum: z.string().min(8).max(20),
-  art: z.enum(["URLAUB", "KRANK", "FREI", "FORTBILDUNG", "SONSTIGES"]),
+  art: z.enum(["Urlaub", "Wunschfrei", "krank_mit_AU", "krank_ohne_AU", "unbezahlter_Urlaub"]),
   notiz: z.string().max(2000).optional().nullable(),
 });
 
