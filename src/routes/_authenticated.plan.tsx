@@ -121,6 +121,25 @@ function PlanPage() {
           <Button variant="outline" size="icon" onClick={() => setAnchor(addDays(anchor, 7))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Select value={qualFilter} onValueChange={setQualFilter}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALLE">Alle Quali</SelectItem>
+              <SelectItem value="PFK">PFK</SelectItem>
+              <SelectItem value="PHK">PHK</SelectItem>
+              <SelectItem value="Sonstige">Sonstige</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={anstFilter} onValueChange={setAnstFilter}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALLE">Alle Anstellung</SelectItem>
+              <SelectItem value="VZ_TZ">Vollzeit / Teilzeit</SelectItem>
+              <SelectItem value="Vollzeit">Vollzeit</SelectItem>
+              <SelectItem value="Teilzeit">Teilzeit</SelectItem>
+              <SelectItem value="Minijob">Minijob</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
             <SelectContent>
