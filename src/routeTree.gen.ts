@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VTokenRouteImport } from './routes/v.$token'
+import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
 const VTokenRoute = VTokenRouteImport.update({
   id: '/v/$token',
   path: '/v/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KundeTokenRoute = KundeTokenRouteImport.update({
+  id: '/kunde/$token',
+  path: '/kunde/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BTokenRoute = BTokenRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/b/$token': typeof BTokenRoute
+  '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/b/$token': typeof BTokenRoute
+  '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/b/$token': typeof BTokenRoute
+  '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
 }
 export interface FileRouteTypes {
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/nachrichten'
     | '/plan'
     | '/b/$token'
+    | '/kunde/$token'
     | '/v/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -163,6 +173,7 @@ export interface FileRouteTypes {
     | '/nachrichten'
     | '/plan'
     | '/b/$token'
+    | '/kunde/$token'
     | '/v/$token'
   id:
     | '__root__'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/_authenticated/nachrichten'
     | '/_authenticated/plan'
     | '/b/$token'
+    | '/kunde/$token'
     | '/v/$token'
   fileRoutesById: FileRoutesById
 }
@@ -186,6 +198,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   BTokenRoute: typeof BTokenRoute
+  KundeTokenRoute: typeof KundeTokenRoute
   VTokenRoute: typeof VTokenRoute
 }
 
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/v/$token'
       fullPath: '/v/$token'
       preLoaderRoute: typeof VTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kunde/$token': {
+      id: '/kunde/$token'
+      path: '/kunde/$token'
+      fullPath: '/kunde/$token'
+      preLoaderRoute: typeof KundeTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$token': {
@@ -316,6 +336,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   BTokenRoute: BTokenRoute,
+  KundeTokenRoute: KundeTokenRoute,
   VTokenRoute: VTokenRoute,
 }
 export const routeTree = rootRouteImport

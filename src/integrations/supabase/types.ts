@@ -186,6 +186,7 @@ export type Database = {
           name: string
           notiz: string | null
           ort: string | null
+          portal_token: string | null
           traeger_id: string | null
           vs_satz_pfk: number | null
           vs_satz_phk: number | null
@@ -202,6 +203,7 @@ export type Database = {
           name: string
           notiz?: string | null
           ort?: string | null
+          portal_token?: string | null
           traeger_id?: string | null
           vs_satz_pfk?: number | null
           vs_satz_phk?: number | null
@@ -218,6 +220,7 @@ export type Database = {
           name?: string
           notiz?: string | null
           ort?: string | null
+          portal_token?: string | null
           traeger_id?: string | null
           vs_satz_pfk?: number | null
           vs_satz_phk?: number | null
