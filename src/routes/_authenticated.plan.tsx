@@ -81,7 +81,7 @@ function PlanPage() {
       g.items.push(m);
     });
     return groups;
-  }, [data, qualFilter, anstFilter]);
+  }, [data, qualFilter, anstFilter, maFilter]);
 
 
   const einsatzByCell = useMemo(() => {
