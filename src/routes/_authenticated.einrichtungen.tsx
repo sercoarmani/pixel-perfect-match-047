@@ -54,9 +54,9 @@ function EinrichtungenPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Träger</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Ort</TableHead>
-              <TableHead>Träger</TableHead>
               <TableHead>Kontakt</TableHead>
               <TableHead>VS PFK</TableHead>
               <TableHead>VS PHK</TableHead>
@@ -68,9 +68,9 @@ function EinrichtungenPage() {
             {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {filtered.map((e: any) => (
               <TableRow key={e.id}>
+                <TableCell className="text-sm text-muted-foreground">{e.traeger?.name ?? "—"}</TableCell>
                 <TableCell className="font-medium cursor-pointer" onClick={() => setEdit(e)}>{e.name}</TableCell>
                 <TableCell className="cursor-pointer" onClick={() => setEdit(e)}>{e.ort ?? "—"}</TableCell>
-                <TableCell>{e.traeger?.name ?? "—"}</TableCell>
                 <TableCell className="text-xs">{e.kontakt_name ?? "—"}<br/>{e.kontakt_telefon ?? ""}</TableCell>
                 <TableCell>{e.vs_satz_pfk ? `${e.vs_satz_pfk} €` : "—"}</TableCell>
                 <TableCell>{e.vs_satz_phk ? `${e.vs_satz_phk} €` : "—"}</TableCell>
