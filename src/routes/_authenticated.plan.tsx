@@ -178,48 +178,57 @@ function PlanPage() {
               </tr>
             </thead>
             <tbody>
-              {data?.mitarbeiter.map((m: any) => (
-                <tr key={m.id} className="group">
-                  <td className="sticky left-0 z-10 border-b border-r bg-card px-3 py-2">
-                    <div className="font-medium">{m.kuerzel}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {m.nachname}, {m.vorname} · {m.qualifikation}
-                    </div>
-                  </td>
-                  {dateRange.map((d) => {
-                    const iso = fmtIsoDate(d);
-                    const key = `${m.id}|${iso}`;
-                    const e = einsatzByCell.get(key);
-                    const abw = abwByCell.get(key);
-                    const ein = e ? data!.einrichtungen.find((x: any) => x.id === e.einrichtung_id) : null;
-                    const wknd = [0, 6].includes(d.getDay());
-                    const verfMarks = DIENSTE.filter((di) => verfByCell.get(`${m.id}|${iso}|${di}`) === true);
-                    return (
-                      <td
-                        key={iso}
-                        className={cn(
-                          "h-12 cursor-pointer border-b border-r p-1 align-top transition-colors",
-                          wknd && !e && "bg-muted/30",
-                          !e && "hover:bg-accent/50",
-                        )}
-                        onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
-                      >
-                        {abw ? (
-                          <div className="text-[10px] text-muted-foreground italic">{abw}</div>
-                        ) : e ? (
-                          <div className={cn("rounded px-1 py-0.5 text-[10px] leading-tight", STATUS_CLASS[e.status])}>
-                            <div className="font-bold">{DIENST_KURZ[e.dienst]}</div>
-                            <div className="truncate">{ein?.name ?? "?"}</div>
-                          </div>
-                        ) : verfMarks.length > 0 ? (
-                          <div className="text-[10px] text-emerald-700 dark:text-emerald-300">
-                            ✓ {verfMarks.join("")}
-                          </div>
-                        ) : null}
+              {grouped.map((g) => (
+                <>
+                  <tr key={`h-${g.key}`}>
+                    <td colSpan={dateRange.length + 1} className="sticky left-0 z-10 bg-muted/60 border-b px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {g.label} <span className="ml-2 font-normal normal-case">({g.items.length})</span>
+                    </td>
+                  </tr>
+                  {g.items.map((m: any) => (
+                    <tr key={m.id} className="group">
+                      <td className="sticky left-0 z-10 border-b border-r bg-card px-3 py-2">
+                        <div className="font-medium">{m.kuerzel}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {m.nachname}, {m.vorname} · {m.qualifikation}
+                        </div>
                       </td>
-                    );
-                  })}
-                </tr>
+                      {dateRange.map((d) => {
+                        const iso = fmtIsoDate(d);
+                        const key = `${m.id}|${iso}`;
+                        const e = einsatzByCell.get(key);
+                        const abw = abwByCell.get(key);
+                        const ein = e ? data!.einrichtungen.find((x: any) => x.id === e.einrichtung_id) : null;
+                        const wknd = [0, 6].includes(d.getDay());
+                        const verfMarks = DIENSTE.filter((di) => verfByCell.get(`${m.id}|${iso}|${di}`) === true);
+                        return (
+                          <td
+                            key={iso}
+                            className={cn(
+                              "h-12 cursor-pointer border-b border-r p-1 align-top transition-colors",
+                              wknd && !e && "bg-muted/30",
+                              !e && "hover:bg-accent/50",
+                            )}
+                            onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
+                          >
+                            {abw ? (
+                              <div className="text-[10px] text-muted-foreground italic">{abw}</div>
+                            ) : e ? (
+                              <div className={cn("rounded px-1 py-0.5 text-[10px] leading-tight", STATUS_CLASS[e.status])}>
+                                <div className="font-bold">{DIENST_KURZ[e.dienst]}</div>
+                                <div className="truncate">{ein?.name ?? "?"}</div>
+                              </div>
+                            ) : verfMarks.length > 0 ? (
+                              <div className="text-[10px] text-emerald-700 dark:text-emerald-300">
+                                ✓ {verfMarks.join("")}
+                              </div>
+                            ) : null}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </>
               ))}
             </tbody>
           </table>
