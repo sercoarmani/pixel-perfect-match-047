@@ -151,6 +151,44 @@ function PlanPage() {
               <SelectItem value="28">28 Tage</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                exportPlanungslistePdf({
+                  mitarbeiter: data?.mitarbeiter ?? [],
+                  einsaetze: data?.einsaetze ?? [],
+                  abwesenheiten: data?.abwesenheiten ?? [],
+                  einrichtungen: data?.einrichtungen ?? [],
+                  dateRange,
+                });
+              } catch (e: any) { toast.error(e?.message ?? "PDF-Export fehlgeschlagen"); }
+            }}
+            disabled={isLoading}
+            title="Planungsliste als PDF exportieren"
+          >
+            <FileText className="h-4 w-4 mr-1" /> PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                exportPlanungslisteExcel({
+                  mitarbeiter: data?.mitarbeiter ?? [],
+                  einsaetze: data?.einsaetze ?? [],
+                  abwesenheiten: data?.abwesenheiten ?? [],
+                  einrichtungen: data?.einrichtungen ?? [],
+                  dateRange,
+                });
+              } catch (e: any) { toast.error(e?.message ?? "Excel-Export fehlgeschlagen"); }
+            }}
+            disabled={isLoading}
+            title="Planungsliste als Excel exportieren"
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+          </Button>
         </div>
       </header>
 
