@@ -36,14 +36,14 @@ type Einsatz = {
 };
 
 function PlanPage() {
-  const [anchor, setAnchor] = useState(() => weekStart(new Date()));
-  const [days, setDays] = useState(14);
+  const [anchor, setAnchor] = useState(() => startOfMonth(new Date()));
   const [qualFilter, setQualFilter] = useState<string>("ALLE");
   const [anstFilter, setAnstFilter] = useState<string>("ALLE");
-  const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz } | null>(null);
+  const [maFilter, setMaFilter] = useState<string>("ALLE");
+  const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz; existingAbwId?: string } | null>(null);
   const [exporting, setExporting] = useState<null | "pdf" | "xlsx">(null);
 
-  const dateRange = useMemo(() => buildDateRange(anchor, days), [anchor, days]);
+  const dateRange = useMemo(() => monthRange(anchor), [anchor]);
   const von = fmtIsoDate(dateRange[0]);
   const bis = fmtIsoDate(dateRange[dateRange.length - 1]);
 
