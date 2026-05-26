@@ -269,7 +269,7 @@ function PlanPage() {
                       })}
                     </tr>
                   ))}
-                </>
+                </Fragment>
               ))}
             </tbody>
           </table>
