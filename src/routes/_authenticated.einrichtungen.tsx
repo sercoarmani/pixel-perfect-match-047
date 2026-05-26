@@ -42,19 +42,21 @@ function EinrichtungenPage() {
               <TableHead>VS PFK</TableHead>
               <TableHead>VS PHK</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={7} className="text-muted-foreground">Lade…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {data?.map((e: any) => (
-              <TableRow key={e.id} className="cursor-pointer" onClick={() => setEdit(e)}>
-                <TableCell className="font-medium">{e.name}</TableCell>
-                <TableCell>{e.ort ?? "—"}</TableCell>
+              <TableRow key={e.id}>
+                <TableCell className="font-medium cursor-pointer" onClick={() => setEdit(e)}>{e.name}</TableCell>
+                <TableCell className="cursor-pointer" onClick={() => setEdit(e)}>{e.ort ?? "—"}</TableCell>
                 <TableCell>{e.traeger?.name ?? "—"}</TableCell>
                 <TableCell className="text-xs">{e.kontakt_name ?? "—"}<br/>{e.kontakt_telefon ?? ""}</TableCell>
                 <TableCell>{e.vs_satz_pfk ? `${e.vs_satz_pfk} €` : "—"}</TableCell>
                 <TableCell>{e.vs_satz_phk ? `${e.vs_satz_phk} €` : "—"}</TableCell>
                 <TableCell>{e.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
+                <TableCell className="text-right"><DeleteEinrichtungButton einrichtung={e} /></TableCell>
               </TableRow>
             ))}
           </TableBody>
