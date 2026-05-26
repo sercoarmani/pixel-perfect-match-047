@@ -449,9 +449,10 @@ export const getDashboard = createServerFn({ method: "GET" })
     const monatStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
     const monatEnde = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
 
-    const [maAll, einAll, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat] = await Promise.all([
+    const [maAll, einAll, einInaktiv, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat] = await Promise.all([
       supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", true),
+      supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", false),
       supabase.from("anfragen").select("id", { count: "exact", head: true }).eq("status", "offen"),
       supabase.from("einsaetze").select("id, status, mitarbeiter_id, dienst", { count: "exact" }).gte("datum", monatStart).lte("datum", monatEnde),
       supabase.from("einsaetze").select("*").eq("datum", heute).order("dienst"),
@@ -506,6 +507,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       kpis: {
         mitarbeiterAktiv: maAll.count ?? 0,
         einrichtungenAktiv: einAll.count ?? 0,
+        einrichtungenInaktiv: einInaktiv.count ?? 0,
         anfragenOffen: anfOffen.count ?? 0,
         einsaetzeMonat: geplant,
       },

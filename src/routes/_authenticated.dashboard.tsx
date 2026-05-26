@@ -5,7 +5,7 @@ import { getDashboard } from "@/lib/dispo.functions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Building2, Inbox, CalendarDays, AlertCircle, ArrowRight } from "lucide-react";
+import { Users, Building2, BuildingIcon, Inbox, CalendarDays, AlertCircle, ArrowRight } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -48,9 +48,10 @@ function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <Kpi to="/mitarbeiter" icon={Users} label="Aktive Mitarbeiter" value={data.kpis.mitarbeiterAktiv} />
         <Kpi to="/einrichtungen" icon={Building2} label="Aktive Einrichtungen" value={data.kpis.einrichtungenAktiv} />
+        <Kpi to="/einrichtungen" icon={BuildingIcon} label="Inaktive Einrichtungen" value={data.kpis.einrichtungenInaktiv} muted />
         <Kpi to="/anfragen" icon={Inbox} label="Offene Anfragen" value={data.kpis.anfragenOffen} highlight={data.kpis.anfragenOffen > 0} />
         <Kpi to="/plan" icon={CalendarDays} label="Einsätze diesen Monat" value={data.kpis.einsaetzeMonat} />
       </div>
