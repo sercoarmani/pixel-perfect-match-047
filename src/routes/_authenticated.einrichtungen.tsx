@@ -118,3 +118,34 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
 function F({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
   return <div className={"space-y-1.5 " + (full ? "col-span-2" : "")}><Label>{label}</Label>{children}</div>;
 }
+
+function DeleteEinrichtungButton({ einrichtung }: { einrichtung: any }) {
+  const del = useServerFn(deleteEinrichtung);
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => del({ data: { id: einrichtung.id } }),
+    onSuccess: () => { toast.success("Einrichtung gelöscht"); qc.invalidateQueries({ queryKey: ["einrichtungen"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive" title="Löschen" onClick={(e) => e.stopPropagation()}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Einrichtung löschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            „{einrichtung.name}" wird unwiderruflich gelöscht. Zugehörige Einsätze und Bedarfe werden ebenfalls entfernt.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogAction onClick={() => m.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
