@@ -242,6 +242,20 @@ function Kpi({ to, icon: Icon, label, value, highlight }: { to: string; icon: an
   );
 }
 
+function Metric({ label, value, sub, pct, color }: { label: string; value: string; sub: string; pct: number; color: "emerald" | "primary" | "amber" }) {
+  const barColor = color === "emerald" ? "bg-emerald-500" : color === "amber" ? "bg-amber-500" : "bg-primary";
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-3xl font-semibold">{value}</div>
+      <div className="text-xs text-muted-foreground">{sub}</div>
+      <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+        <div className={"h-full " + barColor} style={{ width: `${Math.min(100, pct)}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   const variant: Record<string, "default" | "outline" | "secondary" | "destructive"> = {
     BESTAETIGT: "default",
