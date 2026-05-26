@@ -14,5 +14,5 @@ function IndexRedirect() {
       </div>
     );
   }
-  return <Navigate to={session ? "/plan" : "/login"} />;
+  return <Navigate to={session ? "/dashboard" : "/login"} />;
 }

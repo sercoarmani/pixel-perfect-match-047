@@ -19,6 +19,7 @@ import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenti
 import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
 
 const LoginRoute = LoginRouteImport.update({
@@ -73,6 +74,11 @@ const AuthenticatedEinrichtungenRoute =
     path: '/einrichtungen',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAnfragenRoute = AuthenticatedAnfragenRouteImport.update({
   id: '/anfragen',
   path: '/anfragen',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/anfragen'
+    | '/dashboard'
     | '/einrichtungen'
     | '/import'
     | '/mitarbeiter'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/anfragen'
+    | '/dashboard'
     | '/einrichtungen'
     | '/import'
     | '/mitarbeiter'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/anfragen'
+    | '/_authenticated/dashboard'
     | '/_authenticated/einrichtungen'
     | '/_authenticated/import'
     | '/_authenticated/mitarbeiter'
@@ -237,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEinrichtungenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/anfragen': {
       id: '/_authenticated/anfragen'
       path: '/anfragen'
@@ -249,6 +268,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
@@ -258,6 +278,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAnfragenRoute: AuthenticatedAnfragenRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
