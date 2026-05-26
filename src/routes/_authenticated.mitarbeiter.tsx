@@ -70,10 +70,11 @@ function MitarbeiterPage() {
                 <TableCell>{m.wohnort ?? "—"}</TableCell>
                 <TableCell>{m.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
                 <TableCell className="text-right">
-                  <PdfButton mitarbeiter={m} />
+                  <div className="flex justify-end gap-1">
+                    <PdfButton mitarbeiter={m} />
+                    <DeleteButton mitarbeiter={m} />
+                  </div>
                 </TableCell>
-              </TableRow>
-            ))}
           </TableBody>
         </Table>
       </div>
