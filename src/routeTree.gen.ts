@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as VTokenRouteImport } from './routes/v.$token'
 import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
+import { Route as AuthenticatedStatistikRouteImport } from './routes/_authenticated.statistik'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
 import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
@@ -52,6 +53,11 @@ const BTokenRoute = BTokenRouteImport.update({
   id: '/b/$token',
   path: '/b/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedStatistikRoute = AuthenticatedStatistikRouteImport.update({
+  id: '/statistik',
+  path: '/statistik',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
   id: '/plan',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
+  '/statistik': typeof AuthenticatedStatistikRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
+  '/statistik': typeof AuthenticatedStatistikRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
+  '/_authenticated/statistik': typeof AuthenticatedStatistikRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/mitarbeiter'
     | '/nachrichten'
     | '/plan'
+    | '/statistik'
     | '/b/$token'
     | '/kunde/$token'
     | '/v/$token'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/mitarbeiter'
     | '/nachrichten'
     | '/plan'
+    | '/statistik'
     | '/b/$token'
     | '/kunde/$token'
     | '/v/$token'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mitarbeiter'
     | '/_authenticated/nachrichten'
     | '/_authenticated/plan'
+    | '/_authenticated/statistik'
     | '/b/$token'
     | '/kunde/$token'
     | '/v/$token'
@@ -245,6 +257,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/b/$token'
       preLoaderRoute: typeof BTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/statistik': {
+      id: '/_authenticated/statistik'
+      path: '/statistik'
+      fullPath: '/statistik'
+      preLoaderRoute: typeof AuthenticatedStatistikRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/plan': {
       id: '/_authenticated/plan'
@@ -314,6 +333,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
+  AuthenticatedStatistikRoute: typeof AuthenticatedStatistikRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -325,6 +345,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
+  AuthenticatedStatistikRoute: AuthenticatedStatistikRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
