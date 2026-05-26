@@ -129,29 +129,36 @@ function MitarbeiterPage() {
 
 function PdfButton({ mitarbeiter }: { mitarbeiter: any }) {
   const fetchPlan = useServerFn(getMitarbeiterDienstplan);
-  const [loading, setLoading] = useState(false);
-  async function go() {
-    setLoading(true);
+  const [loading, setLoading] = useState<null | "pdf" | "xlsx">(null);
+  async function go(kind: "pdf" | "xlsx") {
+    setLoading(kind);
     try {
       const von = format(new Date(), "yyyy-MM-dd");
       const bis = format(addDays(new Date(), 30), "yyyy-MM-dd");
       const res: any = await fetchPlan({ data: { mitarbeiter_id: mitarbeiter.id, von, bis } });
-      generateDienstplanPdf({
+      const args = {
         mitarbeiter: res.mitarbeiter,
         einsaetze: res.einsaetze,
         abwesenheiten: res.abwesenheiten,
         von, bis,
-      });
+      };
+      if (kind === "pdf") generateDienstplanPdf(args);
+      else generateDienstplanExcel(args);
     } catch (e: any) {
-      toast.error(e.message ?? "PDF konnte nicht erstellt werden");
+      toast.error(e.message ?? "Export fehlgeschlagen");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
   return (
-    <Button size="sm" variant="outline" onClick={go} disabled={loading} title="Dienstplan PDF (nächste 30 Tage)">
-      <FileText className="h-3.5 w-3.5 mr-1" /> Dienstplan
-    </Button>
+    <div className="flex gap-1">
+      <Button size="sm" variant="outline" onClick={() => go("pdf")} disabled={loading !== null} title="Dienstplan PDF (nächste 30 Tage)">
+        <FileText className="h-3.5 w-3.5 mr-1" /> PDF
+      </Button>
+      <Button size="sm" variant="outline" onClick={() => go("xlsx")} disabled={loading !== null} title="Dienstplan Excel (nächste 30 Tage)">
+        <FileSpreadsheet className="h-3.5 w-3.5 mr-1" /> Excel
+      </Button>
+    </div>
   );
 }
 
