@@ -42,6 +42,7 @@ function PlanPage() {
   const [qualFilter, setQualFilter] = useState<string>("ALLE");
   const [anstFilter, setAnstFilter] = useState<string>("ALLE");
   const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz } | null>(null);
+  const [exporting, setExporting] = useState<null | "pdf" | "xlsx">(null);
 
   const dateRange = useMemo(() => buildDateRange(anchor, days), [anchor, days]);
   const von = fmtIsoDate(dateRange[0]);
