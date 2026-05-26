@@ -5,7 +5,7 @@ import { getDashboard } from "@/lib/dispo.functions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Building2, BuildingIcon, Inbox, CalendarDays, AlertCircle, ArrowRight } from "lucide-react";
+import { Users, Building2, BuildingIcon, Inbox, CalendarDays, AlertCircle, ArrowRight, Timer } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
