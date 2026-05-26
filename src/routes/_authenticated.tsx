@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const NAV = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/plan", label: "Planungsmatrix", icon: CalendarDays },
   { to: "/anfragen", label: "Anfragen", icon: Inbox },
   { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
