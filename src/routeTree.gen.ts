@@ -20,6 +20,7 @@ import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenti
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedBedarfRouteImport } from './routes/_authenticated.bedarf'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
 
 const LoginRoute = LoginRouteImport.update({
@@ -79,6 +80,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBedarfRoute = AuthenticatedBedarfRouteImport.update({
+  id: '/bedarf',
+  path: '/bedarf',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAnfragenRoute = AuthenticatedAnfragenRouteImport.update({
   id: '/anfragen',
   path: '/anfragen',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/import': typeof AuthenticatedImportRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/import': typeof AuthenticatedImportRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRoute
+  '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/anfragen'
+    | '/bedarf'
     | '/dashboard'
     | '/einrichtungen'
     | '/import'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/anfragen'
+    | '/bedarf'
     | '/dashboard'
     | '/einrichtungen'
     | '/import'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/anfragen'
+    | '/_authenticated/bedarf'
     | '/_authenticated/dashboard'
     | '/_authenticated/einrichtungen'
     | '/_authenticated/import'
@@ -256,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bedarf': {
+      id: '/_authenticated/bedarf'
+      path: '/bedarf'
+      fullPath: '/bedarf'
+      preLoaderRoute: typeof AuthenticatedBedarfRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/anfragen': {
       id: '/_authenticated/anfragen'
       path: '/anfragen'
@@ -268,6 +287,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRoute
+  AuthenticatedBedarfRoute: typeof AuthenticatedBedarfRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
@@ -278,6 +298,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAnfragenRoute: AuthenticatedAnfragenRoute,
+  AuthenticatedBedarfRoute: AuthenticatedBedarfRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,

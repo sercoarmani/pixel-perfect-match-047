@@ -1,93 +1,45 @@
+Großer Funktionsumfang — ich schlage vor, in **3 Phasen** umzusetzen. Bitte bestätige Phase 1, dann gehe ich direkt weiter.
 
-# DispoPlan – Bauplan
+## Phase 1 — Anfrage-Workflow (Kern, jetzt)
 
-Die Spezifikation ist sehr umfangreich (8 Kerntabellen, Planungs-Matrix, Dashboard, Anfragen-Center, Matching-Engine, Import/Export, Templates, Webhook-Vorbereitung). Das in einem Rutsch zu bauen führt erfahrungsgemäß zu instabilen Ergebnissen. Ich schlage einen **klar geschnittenen MVP (Phase A)** vor, der sofort produktiv ist, und baue die weiteren Phasen danach Schritt für Schritt darauf auf.
+**1. Anfrage-Eingabe (neue Seite `/anfragen/neu`)**
+- Zwei Tabs: **"Text einfügen"** (E-Mail-Text reinpasten) und **"Manuell"**
+- KI-Parser via Lovable AI (`google/gemini-2.5-flash`): liest aus dem Text → Einrichtung, Datum(e), Schicht (F/S/N), Qualifikation, Anzahl
+- Vorschau-Tabelle der erkannten Bedarfe → "In Planungsmatrix übernehmen" (schreibt in `bedarfe`)
 
-Hinweis zur Plattform: Statt eines externen Supabase-Kontos nutze ich **Lovable Cloud** (gleicher Funktionsumfang wie Supabase – Postgres, Auth, RLS, Edge Functions, Storage – ohne separates Konto und ohne Setup). Die App-Logik bleibt 1:1 identisch zur Spezifikation.
+**2. Verfügbare Mitarbeiter vorschlagen**
+- Pro Bedarf: zeigt alle Mitarbeiter mit
+  - passender Qualifikation
+  - Dienst in `dienste_moeglich`
+  - keine Abwesenheit am Datum
+  - kein anderer Einsatz am Datum
+  - `max_einsaetze` im Monat noch nicht erreicht
+- Sortiert: PFK > PHK, Vollzeit > Teilzeit > Minijob
+- Pro Zeile: **📞 Anrufen** (`tel:`), **💬 WhatsApp** (`https://wa.me/...`), **✅ Zusage** (legt Einsatz mit Status BESTAETIGT an)
 
----
+**3. Dark/Light Mode**
+- Theme-Toggle im Header, persistiert in localStorage
+- `src/styles.css` Tokens für beide Modes (bereits teils da, ergänzen)
 
-## Phase A – MVP (dieser Auftrag)
+## Phase 2 — Kunden-Portal (Bedarfsmeldung) (nächste Runde)
+- Öffentlicher Token-Link `/kunde/$token` für Einrichtungen
+- Formular: Datum, Schicht, Qualifikation, Anzahl, Notiz
+- Schreibt direkt in `bedarfe` mit `quelle = 'kundenportal'`
+- Toast/Benachrichtigung im Dashboard ("Neue Bedarfe (3)")
 
-Ziel: Disponent kann sich einloggen, Stammdaten pflegen, in der Matrix planen, Verfügbarkeits- und Bedarfs-Links erzeugen + per WhatsApp/E-Mail versenden, Antworten landen automatisch in der DB.
-
-1. **Cloud + Auth + Rollen**
-   - Lovable Cloud aktivieren
-   - E-Mail/Passwort-Login, Rollen `admin` / `disponent` über separate `user_roles`-Tabelle mit `has_role()`-Funktion (Security Best Practice)
-   - Geschützter Bereich unter `/_authenticated`, öffentliche Token-Routen daneben
-
-2. **Datenmodell anlegen (alle 9 Tabellen aus dem Prompt)**
-   - `traeger, einrichtungen, mitarbeiter, einsaetze, abwesenheiten, verfuegbarkeiten, bedarfe, anfragen, audit_log`
-   - RLS-Policies: interne Rollen lesen/schreiben; öffentliche Token-Endpunkte laufen über Server-Functions mit Admin-Client + Token-Validierung
-   - Beispieldaten-Seed (3 Träger, 5 Einrichtungen, 10 Mitarbeiter, ein paar Einsätze, Verfügbarkeiten, offene Bedarfe)
-
-3. **Disponenten-UI (Desktop-first, deutschsprachig)**
-   - **Dashboard**: offene Bedarfe, neue Verfügbarkeiten/Bedarfe, Auslastung, Auffälligkeiten, Schnellsprung Matrix
-   - **Planungs-Matrix**: Zeilen = Einrichtungen (nach Träger gruppiert, aufklappbar), Spalten = Tage des Monats (Wochenenden abgesetzt, sticky Header/erste Spalte), Zellen = Mitarbeiter-Kürzel mit Status-Badge (Text + Icon, nicht nur Farbe). Zell-Klick öffnet Panel zum Zuweisen/Bearbeiten. Live-Warnungen (Doppelplanung, Abwesenheit, Qualifikation, max_einsaetze, „nicht verfügbar")
-   - **Mitarbeiter-Übersicht** (Liste + Bearbeiten + Status)
-   - **Einrichtungen/Kunden-Übersicht** (Liste + Bearbeiten + Sätze)
-   - **Anfragen-Center**: Liste aller Versand-Vorgänge, Status, Link kopieren, erneut senden
-   - **Verfügbarkeits-Matrix** (Mitarbeiter × Tage)
-
-4. **Token-Link-System (öffentlich, mobil-first, ohne Login)**
-   - Disponent erzeugt Anfrage → langer zufälliger Token, Ablaufdatum
-   - Route `/v/[token]` (Verfügbarkeit Mitarbeiter): Tagesliste, pro Tag F/S/N antippen, Notiz, Absenden → schreibt `verfuegbarkeiten`, setzt Anfrage `beantwortet`
-   - Route `/b/[token]` (Bedarf Einrichtung): pro Tag Dienst + Qualifikation + Anzahl → schreibt `bedarfe` mit Status `offen`
-   - Server-Functions validieren Token, prüfen Ablauf, schreiben sauber (Mehrfach-Antworten überschreiben)
-
-5. **Versand-Komfort (manuell, sofort nutzbar)**
-   - Versand-Adapter-Architektur (Interface), aktiv: `wa.me`-Deep-Link, `sms:`-Link, `mailto:`-Link mit vorausgefülltem Text
-   - Sammel-Versand: pro Empfänger eigener Link, ein Klick öffnet jeweils WhatsApp
-   - Webhook-Endpoint `/api/public/whatsapp-webhook` als Skeleton (Signaturprüfung, später aktivierbar) – nur Stub, im UI als „später aktivierbar" gekennzeichnet
-
-6. **Nachrichten-Templates (Admin-Bereich, editierbar)**
-   - Templates für Verfügbarkeitsabfrage / Erinnerung / Bedarfsabfrage / Einsatzbestätigung (Texte aus Abschnitt 3 als Defaults)
-   - Platzhalter `{{Vorname}} {{von}} {{bis}} {{Link}} {{Einrichtung}} {{Firmenname}} {{Disponent}}` werden beim Versand befüllt
-
-7. **Matching-Vorschläge**
-   - Beim Besetzen eines Bedarfs Vorschlagsliste (sortiert): hat „verfügbar" gemeldet → Qualifikation → Dienst möglich → freie Kapazität → keine Kollision → optional Wohnort-Nähe
-   - Eignungsgründe + Warnungen sichtbar, ein Klick = Einsatz angelegt (`quelle=aus_bedarf`, Bedarf → `besetzt`)
-
-8. **Status-System + Audit-Log**
-   - Status-Dropdown direkt in der Matrix; jede Änderung schreibt Audit-Log-Zeile
-
-## Phase B (nach MVP-Abnahme)
-
-- CSV-Import-Assistent (Semikolon, UTF-8 BOM) für `mitarbeiter.csv` + `einrichtungen.csv` mit Spalten-Mapping und Vorschau
-- Export Matrix → Excel + PDF, Einsatzplan pro Mitarbeiter → PDF
-- Manueller Komplett-Export (JSON/Excel) im Admin-Bereich
-
-## Phase C (optional, später)
-
-- Echte WhatsApp Business Cloud API / Twilio anbinden (Adapter wird aktiviert, Webhook scharfschalten)
-- Erweiterte Auswertungen, Erinnerungs-Automatiken (Cron)
+## Phase 3 — E-Mail-Integration (später)
+- Empfehlung: **Gmail-Connector** (eingehende Anfragen lesen) + **Lovable Emails** (Bestätigungen senden)
+- Eingehende E-Mails per Server-Function listen → mit demselben KI-Parser verarbeiten
+- "Einsatz bestätigen"-Button sendet Bestätigungsmail an Einrichtung + Mitarbeiter
 
 ---
 
-## Design-Richtung
+### Technische Details Phase 1
+- **Neue Datei**: `src/lib/anfrage-parser.functions.ts` — `parseAnfrageText` ServerFn → Lovable AI Gateway
+- **Neue Datei**: `src/lib/dispo-vorschlag.functions.ts` — `getVerfuegbareMitarbeiter({ datum, dienst, qualifikation })`
+- **Neue Route**: `src/routes/_authenticated.anfragen.tsx`
+- **Erweitert**: `src/routes/_authenticated.tsx` — Nav-Item "Anfragen", Theme-Toggle
+- **Erweitert**: `src/styles.css` — Light-Mode-Tokens prüfen/ergänzen
+- **Komponente**: `ThemeToggle` mit Sonne/Mond-Icon
 
-Disponenten-Tool, kein Marketing-Look. Vorschlag: ruhige, dichte Informations-Oberfläche – helle Basis, kräftige Status-Akzente, sehr klare Typografie. Status-Badges immer **Icon + Kurztext + Farbe** (Barrierefreiheit). Mobile Link-Seiten dagegen großzügig, große Tap-Targets, ein Button pro Tag.
-
-Falls du eine andere Richtung möchtest (z.B. dunkler Operator-Look, Excel-nah, oder farbenfroher), sag kurz Bescheid – sonst baue ich in der oben skizzierten ruhig-dichten Variante.
-
-## Technische Details (zur Info)
-
-- Stack: TanStack Start (React 19 + TS) + Tailwind v4 + shadcn/ui + Lovable Cloud (Postgres/Auth/Edge)
-- Routen: `src/routes/_authenticated/*` für Disponenten-Bereich, `src/routes/v.$token.tsx` + `src/routes/b.$token.tsx` für öffentliche Token-Seiten, `src/routes/api/public/*` für Webhooks
-- Server-Logik über `createServerFn` mit `requireSupabaseAuth` für interne Calls; Token-Endpunkte als öffentliche Server-Functions mit eigener Token-Validierung
-- Audit-Log über DB-Trigger auf relevanten Tabellen
-- Token-Generierung: `crypto.randomUUID()` + zusätzlicher Zufalls-Suffix, im URL-Pfad, nie Personendaten in der URL
-
----
-
-## Was ich nach deinem OK zuerst tue
-
-1. Lovable Cloud aktivieren
-2. Schema + RLS + Seed-Daten anlegen
-3. Auth + geschützter Bereich
-4. Matrix + Stammdaten-CRUD
-5. Token-Link-Flows (Verfügbarkeit + Bedarf)
-6. Anfragen-Center + Versand-Helfer + Templates
-7. Matching-Vorschläge + Live-Warnungen
-
-CSV-Import, Exports und WhatsApp-API kommen in Phase B/C – sag mir nach dem MVP, in welcher Reihenfolge.
+Soll ich mit **Phase 1** starten?

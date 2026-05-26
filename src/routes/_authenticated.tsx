@@ -2,8 +2,9 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, LayoutDashboard } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, LayoutDashboard, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/bedarf", label: "Bedarfsassistent", icon: Sparkles },
   { to: "/plan", label: "Planungsmatrix", icon: CalendarDays },
   { to: "/anfragen", label: "Anfragen", icon: Inbox },
   { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
@@ -59,11 +61,12 @@ function AuthLayout() {
             );
           })}
         </nav>
-        <div className="border-t p-3 space-y-2">
-          <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="border-t p-3 space-y-1">
+          <div className="text-xs text-muted-foreground truncate px-1">{user?.email}</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
             {isDispo ? "Disponent" : "Eingeschränkt"}
           </div>
+          <ThemeToggle />
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => signOut()}>
             <LogOut className="mr-2 h-4 w-4" /> Abmelden
           </Button>
