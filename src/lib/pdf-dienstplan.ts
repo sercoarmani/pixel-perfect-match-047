@@ -1,24 +1,23 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
-import { DIENST_LABEL, STATUS_LABEL, type Dienst, type EinsatzStatus } from "@/lib/dispo-utils";
 
 type Einsatz = {
   datum: string;
-  dienst: Dienst;
-  status: EinsatzStatus;
+  dienst: "F" | "S" | "N";
+  status: string;
   notiz: string | null;
   einrichtung: { name: string; ort: string | null; wohnbereich: string | null } | null;
 };
-
 type Abwesenheit = { datum: string; art: string; notiz: string | null };
+type Mitarbeiter = { vorname: string; nachname: string; kuerzel: string; qualifikation: string };
 
-type Mitarbeiter = {
-  vorname: string;
-  nachname: string;
-  kuerzel: string;
-  qualifikation: string;
+// Standardzeiten je Dienst (passend zur Vorlage)
+const ZEITEN: Record<string, { kuerzel: string; zeit: string }> = {
+  F: { kuerzel: "FD", zeit: "06:00 bis 14:00" },
+  S: { kuerzel: "SD", zeit: "14:00 bis 22:00" },
+  N: { kuerzel: "ND", zeit: "20:30 bis 06:15" },
 };
 
 export function generateDienstplanPdf(opts: {
@@ -27,74 +26,78 @@ export function generateDienstplanPdf(opts: {
   abwesenheiten: Abwesenheit[];
   von: string;
   bis: string;
+  erstellerName?: string;
 }) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const m = opts.mitarbeiter;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-  doc.setFontSize(18);
+  // Zeitraum auf ganzen Monat ausweiten (Vorlagen-Format)
+  const vonD = parseISO(opts.von);
+  const monatStart = startOfMonth(vonD);
+  const monatEnde = endOfMonth(vonD);
+  const tage = eachDayOfInterval({ start: monatStart, end: monatEnde });
+
+  const einsatzByDate = new Map(opts.einsaetze.map((e) => [e.datum, e]));
+  const abwByDate = new Map(opts.abwesenheiten.map((a) => [a.datum, a]));
+
+  // Header
+  doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text("Dienstplan", 14, 18);
+  doc.text(format(monatStart, "MMMM yyyy", { locale: de }), 14, 16);
 
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(`${m.vorname} ${m.nachname} (${m.kuerzel}) – ${m.qualifikation}`, 14, 26);
-  const vonF = format(parseISO(opts.von), "dd.MM.yyyy", { locale: de });
-  const bisF = format(parseISO(opts.bis), "dd.MM.yyyy", { locale: de });
-  doc.text(`Zeitraum: ${vonF} – ${bisF}`, 14, 32);
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text(`Erstellt am ${format(new Date(), "dd.MM.yyyy HH:mm", { locale: de })}`, 14, 38);
-  doc.setTextColor(0);
-
-  const rows = opts.einsaetze.map((e) => [
-    format(parseISO(e.datum), "EEE dd.MM.yyyy", { locale: de }),
-    DIENST_LABEL[e.dienst],
-    e.einrichtung?.name ?? "-",
-    [e.einrichtung?.wohnbereich, e.einrichtung?.ort].filter(Boolean).join(" · "),
-    STATUS_LABEL[e.status] ?? e.status,
-    e.notiz ?? "",
-  ]);
+  const rows = tage.map((d) => {
+    const key = format(d, "yyyy-MM-dd");
+    const e = einsatzByDate.get(key);
+    const a = abwByDate.get(key);
+    const datumStr = format(d, "EEEE, dd.MM.yyyy", { locale: de });
+    if (e) {
+      const z = ZEITEN[e.dienst] ?? { kuerzel: e.dienst, zeit: "" };
+      return [
+        datumStr,
+        z.kuerzel,
+        z.zeit,
+        e.einrichtung?.name ?? "",
+        e.einrichtung?.ort ?? "",
+        e.einrichtung?.wohnbereich ?? "",
+      ];
+    }
+    if (a) return [datumStr, "", a.art, "", "", ""];
+    return [datumStr, "", "", "", "", ""];
+  });
 
   autoTable(doc, {
-    startY: 44,
-    head: [["Datum", "Dienst", "Einrichtung", "Bereich / Ort", "Status", "Notiz"]],
-    body: rows.length > 0 ? rows : [["—", "", "Keine Einsätze im Zeitraum", "", "", ""]],
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [40, 40, 40], textColor: 255 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
+    startY: 22,
+    head: [["Datum", "Schicht", "Zeit", "Einrichtung", "Adresse", "WB"]],
+    body: rows,
+    styles: { fontSize: 8, cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.1 },
+    headStyles: { fillColor: [50, 50, 50], textColor: 255, fontSize: 9 },
     columnStyles: {
-      0: { cellWidth: 32 },
-      1: { cellWidth: 18 },
-      4: { cellWidth: 26 },
+      0: { cellWidth: 42 },
+      1: { cellWidth: 14, halign: "center" },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 48 },
+      4: { cellWidth: 40 },
+      5: { cellWidth: 12, halign: "center" },
     },
   });
 
-  if (opts.abwesenheiten.length > 0) {
-    const finalY = (doc as any).lastAutoTable?.finalY ?? 50;
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("Abwesenheiten", 14, finalY + 10);
-    autoTable(doc, {
-      startY: finalY + 14,
-      head: [["Datum", "Art", "Notiz"]],
-      body: opts.abwesenheiten.map((a) => [
-        format(parseISO(a.datum), "EEE dd.MM.yyyy", { locale: de }),
-        a.art,
-        a.notiz ?? "",
-      ]),
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [80, 80, 80], textColor: 255 },
-    });
-  }
+  // Footer
+  const finalY = (doc as any).lastAutoTable?.finalY ?? 270;
+  const footerY = Math.max(finalY + 8, 270);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80);
+  const hinweis =
+    "Die im Dienstplan angegebenen Zeiten sind verbindlich, können jedoch vor Ort angepasst werden. " +
+    "Für die Abrechnung zählen ausschließlich die tatsächlich geleisteten und vom Kunden bestätigten Arbeitszeiten.";
+  const lines = doc.splitTextToSize(hinweis, 180);
+  doc.text(lines, 14, footerY);
 
-  const pageCount = (doc as any).internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(140);
-    doc.text(`Seite ${i} / ${pageCount}`, 200, 290, { align: "right" });
-  }
+  doc.setTextColor(0);
+  doc.setFontSize(9);
+  doc.text(`erstellt von: ${opts.erstellerName ?? "DispoPlan"}`, 14, footerY + 12);
+  doc.text(`für: ${m.vorname} ${m.nachname} (${m.kuerzel}) – ${m.qualifikation}`, 14, footerY + 18);
 
-  const filename = `Dienstplan_${m.kuerzel}_${opts.von}_${opts.bis}.pdf`;
-  doc.save(filename);
+  const fname = `Dienstplan_${m.kuerzel}_${format(monatStart, "yyyy-MM")}.pdf`;
+  doc.save(fname);
 }
