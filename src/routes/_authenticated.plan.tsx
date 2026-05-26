@@ -36,6 +36,8 @@ type Einsatz = {
 function PlanPage() {
   const [anchor, setAnchor] = useState(() => weekStart(new Date()));
   const [days, setDays] = useState(14);
+  const [qualFilter, setQualFilter] = useState<string>("ALLE");
+  const [anstFilter, setAnstFilter] = useState<string>("ALLE");
   const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz } | null>(null);
 
   const dateRange = useMemo(() => buildDateRange(anchor, days), [anchor, days]);
@@ -49,6 +51,34 @@ function PlanPage() {
     queryKey: ["plan", von, bis],
     queryFn: () => fetchPlan({ data: { von, bis } }),
   });
+
+  const QUAL_GROUP = (q: string) => (q === "PFK" ? "PFK" : q === "PHK" ? "PHK" : "Sonstige");
+  const ANST_ORDER: Record<string, number> = { Vollzeit: 0, Teilzeit: 1, Minijob: 2 };
+
+  const grouped = useMemo(() => {
+    const list = (data?.mitarbeiter ?? []).filter((m: any) => {
+      if (qualFilter !== "ALLE" && QUAL_GROUP(m.qualifikation) !== qualFilter) return false;
+      if (anstFilter === "VZ_TZ" && !(m.anstellung === "Vollzeit" || m.anstellung === "Teilzeit")) return false;
+      if (anstFilter !== "ALLE" && anstFilter !== "VZ_TZ" && m.anstellung !== anstFilter) return false;
+      return true;
+    });
+    list.sort((a: any, b: any) => {
+      const g = QUAL_GROUP(a.qualifikation).localeCompare(QUAL_GROUP(b.qualifikation));
+      if (g !== 0) return g;
+      const an = (ANST_ORDER[a.anstellung] ?? 9) - (ANST_ORDER[b.anstellung] ?? 9);
+      if (an !== 0) return an;
+      return a.nachname.localeCompare(b.nachname);
+    });
+    const groups: { key: string; label: string; items: any[] }[] = [];
+    list.forEach((m: any) => {
+      const key = `${QUAL_GROUP(m.qualifikation)} · ${m.anstellung}`;
+      let g = groups.find((x) => x.key === key);
+      if (!g) { g = { key, label: key, items: [] }; groups.push(g); }
+      g.items.push(m);
+    });
+    return groups;
+  }, [data, qualFilter, anstFilter]);
+
 
   const einsatzByCell = useMemo(() => {
     const map = new Map<string, Einsatz>();
