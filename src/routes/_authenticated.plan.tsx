@@ -267,7 +267,11 @@ function PlanPage() {
                             onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
                           >
                             {abw ? (
-                              <div className="text-[10px] text-muted-foreground italic">{abw}</div>
+                              abw.startsWith("krank") ? (
+                                <div className="rounded bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold text-white">KRANK</div>
+                              ) : (
+                                <div className="text-[10px] text-muted-foreground italic">{abw}</div>
+                              )
                             ) : e ? (
                               <div className={cn("rounded px-1 py-0.5 text-[10px] leading-tight", STATUS_CLASS[e.status])}>
                                 <div className="font-bold">{DIENST_KURZ[e.dienst]}</div>
