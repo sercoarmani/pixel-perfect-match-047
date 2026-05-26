@@ -20,6 +20,7 @@ import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.p
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
 import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
+import { Route as AuthenticatedExportRouteImport } from './routes/_authenticated.export'
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedBedarfRouteImport } from './routes/_authenticated.bedarf'
@@ -81,6 +82,11 @@ const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedExportRoute = AuthenticatedExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedEinrichtungenRoute =
   AuthenticatedEinrichtungenRouteImport.update({
     id: '/einrichtungen',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/export': typeof AuthenticatedExportRoute
   '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/export': typeof AuthenticatedExportRoute
   '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/_authenticated/export': typeof AuthenticatedExportRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/bedarf'
     | '/dashboard'
     | '/einrichtungen'
+    | '/export'
     | '/import'
     | '/mitarbeiter'
     | '/nachrichten'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/bedarf'
     | '/dashboard'
     | '/einrichtungen'
+    | '/export'
     | '/import'
     | '/mitarbeiter'
     | '/nachrichten'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bedarf'
     | '/_authenticated/dashboard'
     | '/_authenticated/einrichtungen'
+    | '/_authenticated/export'
     | '/_authenticated/import'
     | '/_authenticated/mitarbeiter'
     | '/_authenticated/nachrichten'
@@ -293,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedImportRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/export': {
+      id: '/_authenticated/export'
+      path: '/export'
+      fullPath: '/export'
+      preLoaderRoute: typeof AuthenticatedExportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/einrichtungen': {
       id: '/_authenticated/einrichtungen'
       path: '/einrichtungen'
@@ -329,6 +348,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBedarfRoute: typeof AuthenticatedBedarfRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
+  AuthenticatedExportRoute: typeof AuthenticatedExportRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
@@ -341,6 +361,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBedarfRoute: AuthenticatedBedarfRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
+  AuthenticatedExportRoute: AuthenticatedExportRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
