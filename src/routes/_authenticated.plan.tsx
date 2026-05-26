@@ -423,6 +423,17 @@ function EinsatzDialog({
             <Label>Notiz</Label>
             <Textarea value={notiz ?? ""} onChange={(e) => setNotiz(e.target.value)} rows={2} />
           </div>
+          <div className="flex gap-2 border-t pt-3">
+            <Button type="button" variant="outline" size="sm" onClick={() => krankMut.mutate("krank_mit_AU")} disabled={krankMut.isPending}>
+              <HeartPulse className="mr-1 h-3.5 w-3.5 text-red-600" /> Krank mit AU
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => krankMut.mutate("krank_ohne_AU")} disabled={krankMut.isPending}>
+              <HeartPulse className="mr-1 h-3.5 w-3.5" /> Krank ohne AU
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => clearKrankMut.mutate()} disabled={clearKrankMut.isPending}>
+              Abw. löschen
+            </Button>
+          </div>
         </div>
         <DialogFooter className="flex justify-between gap-2 sm:justify-between">
           {existing ? (
