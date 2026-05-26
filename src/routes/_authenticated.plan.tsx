@@ -114,17 +114,26 @@ function PlanPage() {
         <div>
           <h1 className="text-lg font-semibold">Planungsmatrix</h1>
           <p className="text-xs text-muted-foreground">
-            {format(dateRange[0], "dd.MM.yyyy", { locale: de })} – {format(dateRange[dateRange.length - 1], "dd.MM.yyyy", { locale: de })}
+            {format(anchor, "MMMM yyyy", { locale: de })} · {format(dateRange[0], "dd.MM.", { locale: de })} – {format(dateRange[dateRange.length - 1], "dd.MM.yyyy", { locale: de })}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setAnchor(addDays(anchor, -7))}>
+          <Button variant="outline" size="icon" onClick={() => setAnchor(startOfMonth(addMonths(anchor, -1)))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setAnchor(weekStart(new Date()))}>Heute</Button>
-          <Button variant="outline" size="icon" onClick={() => setAnchor(addDays(anchor, 7))}>
+          <Button variant="outline" size="sm" onClick={() => setAnchor(startOfMonth(new Date()))}>Heute</Button>
+          <Button variant="outline" size="icon" onClick={() => setAnchor(startOfMonth(addMonths(anchor, 1)))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Select value={maFilter} onValueChange={setMaFilter}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALLE">Alle Mitarbeiter</SelectItem>
+              {[...(data?.mitarbeiter ?? [])].sort((a: any, b: any) => a.kuerzel.localeCompare(b.kuerzel)).map((m: any) => (
+                <SelectItem key={m.id} value={m.id}>{m.kuerzel} – {m.nachname}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={qualFilter} onValueChange={setQualFilter}>
             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -142,14 +151,6 @@ function PlanPage() {
               <SelectItem value="Vollzeit">Vollzeit</SelectItem>
               <SelectItem value="Teilzeit">Teilzeit</SelectItem>
               <SelectItem value="Minijob">Minijob</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">7 Tage</SelectItem>
-              <SelectItem value="14">14 Tage</SelectItem>
-              <SelectItem value="28">28 Tage</SelectItem>
             </SelectContent>
           </Select>
           <Button
