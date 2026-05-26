@@ -223,7 +223,7 @@ function DashboardPage() {
   );
 }
 
-function Kpi({ to, icon: Icon, label, value, highlight, muted }: { to: string; icon: any; label: string; value: number; highlight?: boolean; muted?: boolean }) {
+function Kpi({ to, icon: Icon, label, value, highlight, muted }: { to: string; icon: any; label: string; value: number | string; highlight?: boolean; muted?: boolean }) {
   return (
     <Link to={to}>
       <Card className={"transition-shadow hover:shadow-md " + (highlight ? "border-amber-400" : "") + (muted ? " opacity-80" : "")}>
