@@ -435,3 +435,58 @@ export const getMitarbeiterDienstplan = createServerFn({ method: "GET" })
       abwesenheiten: abw.data ?? [],
     };
   });
+
+// ---------- Dashboard ----------
+export const getDashboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const today = new Date();
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const heute = iso(today);
+    const in7 = new Date(today); in7.setDate(in7.getDate() + 7);
+    const in30 = new Date(today); in30.setDate(in30.getDate() + 30);
+    const monatStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
+    const monatEnde = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+
+    const [maAll, einAll, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap] = await Promise.all([
+      supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).eq("aktiv", true),
+      supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", true),
+      supabase.from("anfragen").select("id", { count: "exact", head: true }).eq("status", "offen"),
+      supabase.from("einsaetze").select("id, status", { count: "exact" }).gte("datum", monatStart).lte("datum", monatEnde),
+      supabase.from("einsaetze").select("*").eq("datum", heute).order("dienst"),
+      supabase.from("einsaetze").select("datum, status").gte("datum", heute).lte("datum", iso(in7)),
+      supabase.from("abwesenheiten").select("*").gte("datum", heute).lte("datum", iso(in7)).order("datum"),
+      supabase.from("mitarbeiter").select("id, vorname, nachname, kuerzel"),
+      supabase.from("einrichtungen").select("id, name, ort"),
+    ]);
+
+    const mitMap = new Map((mitAll.data ?? []).map((m) => [m.id, m]));
+    const einMap = new Map((einAllForMap.data ?? []).map((e) => [e.id, e]));
+
+    const statusZaehlung: Record<string, number> = {};
+    (einsMonat.data ?? []).forEach((e: any) => { statusZaehlung[e.status] = (statusZaehlung[e.status] ?? 0) + 1; });
+
+    const wochenZaehlung: Record<string, number> = {};
+    (einsWoche.data ?? []).forEach((e: any) => { wochenZaehlung[e.datum] = (wochenZaehlung[e.datum] ?? 0) + 1; });
+
+    return {
+      kpis: {
+        mitarbeiterAktiv: maAll.count ?? 0,
+        einrichtungenAktiv: einAll.count ?? 0,
+        anfragenOffen: anfOffen.count ?? 0,
+        einsaetzeMonat: einsMonat.count ?? 0,
+      },
+      statusZaehlung,
+      wochenZaehlung,
+      einsaetzeHeute: (einsHeute.data ?? []).map((e: any) => ({
+        ...e,
+        mitarbeiter: mitMap.get(e.mitarbeiter_id) ?? null,
+        einrichtung: einMap.get(e.einrichtung_id) ?? null,
+      })),
+      abwesenheitenWoche: (abwWoche.data ?? []).map((a: any) => ({
+        ...a,
+        mitarbeiter: mitMap.get(a.mitarbeiter_id) ?? null,
+      })),
+    };
+  });
