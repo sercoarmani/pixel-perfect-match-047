@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getAnfrageByToken, submitVerfuegbarkeit } from "@/lib/dispo.functions";
+import { getAnfrageByToken, submitVerfuegbarkeit } from "@/lib/dispo-public.functions";
 
 export const Route = createFileRoute("/v/$token")({
   component: VerfPage,
