@@ -171,3 +171,34 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
 }
+
+function DeleteButton({ mitarbeiter }: { mitarbeiter: any }) {
+  const del = useServerFn(deleteMitarbeiter);
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => del({ data: { id: mitarbeiter.id } }),
+    onSuccess: () => { toast.success("Mitarbeiter gelöscht"); qc.invalidateQueries({ queryKey: ["mitarbeiter"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive" title="Löschen">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Mitarbeiter löschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {mitarbeiter.nachname}, {mitarbeiter.vorname} ({mitarbeiter.kuerzel}) wird unwiderruflich gelöscht. Zugehörige Einsätze und Abwesenheiten werden ebenfalls entfernt.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogAction onClick={() => m.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
