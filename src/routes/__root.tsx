@@ -77,6 +77,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  if (typeof window !== "undefined") {
+    const t = localStorage.getItem("dispoplan-theme");
+    const dark = t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.classList.toggle("dark", dark);
+  }
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
