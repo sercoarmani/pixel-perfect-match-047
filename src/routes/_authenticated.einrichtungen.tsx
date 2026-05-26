@@ -155,3 +155,39 @@ function DeleteEinrichtungButton({ einrichtung }: { einrichtung: any }) {
     </AlertDialog>
   );
 }
+
+function PortalLinkButton({ einrichtung }: { einrichtung: any }) {
+  const gen = useServerFn(generatePortalToken);
+  const qc = useQueryClient();
+  const buildUrl = (token: string) => `${window.location.origin}/kunde/${token}`;
+  const m = useMutation({
+    mutationFn: () => gen({ data: { einrichtung_id: einrichtung.id } }),
+    onSuccess: (r) => {
+      navigator.clipboard.writeText(buildUrl(r.token));
+      toast.success("Neuer Portal-Link kopiert");
+      qc.invalidateQueries({ queryKey: ["einrichtungen"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  if (einrichtung.portal_token) {
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        title="Portal-Link kopieren"
+        onClick={(e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(buildUrl(einrichtung.portal_token));
+          toast.success("Portal-Link kopiert");
+        }}
+      >
+        <Copy className="h-3.5 w-3.5" />
+      </Button>
+    );
+  }
+  return (
+    <Button size="sm" variant="ghost" title="Portal-Link erzeugen" onClick={(e) => { e.stopPropagation(); m.mutate(); }} disabled={m.isPending}>
+      <Link2 className="h-3.5 w-3.5" />
+    </Button>
+  );
+}
