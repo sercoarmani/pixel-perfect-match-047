@@ -75,6 +75,8 @@ function MitarbeiterPage() {
                     <DeleteButton mitarbeiter={m} />
                   </div>
                 </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>
