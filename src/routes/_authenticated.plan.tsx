@@ -155,7 +155,9 @@ function PlanPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={async () => {
+              if (exporting) return;
+              setExporting("pdf");
               try {
                 exportPlanungslistePdf({
                   mitarbeiter: data?.mitarbeiter ?? [],
@@ -164,17 +166,23 @@ function PlanPage() {
                   einrichtungen: data?.einrichtungen ?? [],
                   dateRange,
                 });
-              } catch (e: any) { toast.error(e?.message ?? "PDF-Export fehlgeschlagen"); }
+              } catch (e: any) {
+                toast.error(e?.message ?? "PDF-Export fehlgeschlagen");
+              } finally {
+                setExporting(null);
+              }
             }}
-            disabled={isLoading}
+            disabled={isLoading || exporting !== null}
             title="Planungsliste als PDF exportieren"
           >
-            <FileText className="h-4 w-4 mr-1" /> PDF
+            <FileText className="h-4 w-4 mr-1" /> {exporting === "pdf" ? "PDF…" : "PDF"}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
+            onClick={async () => {
+              if (exporting) return;
+              setExporting("xlsx");
               try {
                 exportPlanungslisteExcel({
                   mitarbeiter: data?.mitarbeiter ?? [],
@@ -183,12 +191,16 @@ function PlanPage() {
                   einrichtungen: data?.einrichtungen ?? [],
                   dateRange,
                 });
-              } catch (e: any) { toast.error(e?.message ?? "Excel-Export fehlgeschlagen"); }
+              } catch (e: any) {
+                toast.error(e?.message ?? "Excel-Export fehlgeschlagen");
+              } finally {
+                setExporting(null);
+              }
             }}
-            disabled={isLoading}
+            disabled={isLoading || exporting !== null}
             title="Planungsliste als Excel exportieren"
           >
-            <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+            <FileSpreadsheet className="h-4 w-4 mr-1" /> {exporting === "xlsx" ? "Excel…" : "Excel"}
           </Button>
         </div>
       </header>
