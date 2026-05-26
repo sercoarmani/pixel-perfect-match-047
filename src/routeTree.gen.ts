@@ -17,6 +17,7 @@ import { Route as BTokenRouteImport } from './routes/b.$token'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
 import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
+import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
 
@@ -61,6 +62,11 @@ const AuthenticatedMitarbeiterRoute =
     path: '/mitarbeiter',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedEinrichtungenRoute =
   AuthenticatedEinrichtungenRouteImport.update({
     id: '/einrichtungen',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/anfragen'
     | '/einrichtungen'
+    | '/import'
     | '/mitarbeiter'
     | '/nachrichten'
     | '/plan'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/anfragen'
     | '/einrichtungen'
+    | '/import'
     | '/mitarbeiter'
     | '/nachrichten'
     | '/plan'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/anfragen'
     | '/_authenticated/einrichtungen'
+    | '/_authenticated/import'
     | '/_authenticated/mitarbeiter'
     | '/_authenticated/nachrichten'
     | '/_authenticated/plan'
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMitarbeiterRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/import': {
+      id: '/_authenticated/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AuthenticatedImportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/einrichtungen': {
       id: '/_authenticated/einrichtungen'
       path: '/einrichtungen'
@@ -231,6 +250,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
+  AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
@@ -239,6 +259,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAnfragenRoute: AuthenticatedAnfragenRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
+  AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,

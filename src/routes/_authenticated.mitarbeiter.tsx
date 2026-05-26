@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listMitarbeiter, upsertMitarbeiter } from "@/lib/dispo.functions";
+import { listMitarbeiter, upsertMitarbeiter, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Phone, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
+import { format, addDays } from "date-fns";
+
 
 export const Route = createFileRoute("/_authenticated/mitarbeiter")({
   component: MitarbeiterPage,
@@ -45,19 +48,29 @@ function MitarbeiterPage() {
               <TableHead>Telefon</TableHead>
               <TableHead>Wohnort</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={7} className="text-muted-foreground">Lade…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {data?.map((m: any) => (
-              <TableRow key={m.id} className="cursor-pointer" onClick={() => setEdit(m)}>
-                <TableCell className="font-mono">{m.kuerzel}</TableCell>
-                <TableCell>{m.nachname}, {m.vorname}</TableCell>
+              <TableRow key={m.id}>
+                <TableCell className="font-mono cursor-pointer" onClick={() => setEdit(m)}>{m.kuerzel}</TableCell>
+                <TableCell className="cursor-pointer" onClick={() => setEdit(m)}>{m.nachname}, {m.vorname}</TableCell>
                 <TableCell><Badge variant="secondary">{m.qualifikation}</Badge></TableCell>
                 <TableCell>{m.anstellung}</TableCell>
-                <TableCell>{m.telefon ?? "—"}</TableCell>
+                <TableCell>
+                  {m.telefon ? (
+                    <a href={`tel:${m.telefon.replace(/\s/g, "")}`} className="inline-flex items-center gap-1 text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                      <Phone className="h-3 w-3" />{m.telefon}
+                    </a>
+                  ) : "—"}
+                </TableCell>
                 <TableCell>{m.wohnort ?? "—"}</TableCell>
                 <TableCell>{m.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
+                <TableCell className="text-right">
+                  <PdfButton mitarbeiter={m} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -67,6 +80,35 @@ function MitarbeiterPage() {
     </div>
   );
 }
+
+function PdfButton({ mitarbeiter }: { mitarbeiter: any }) {
+  const fetchPlan = useServerFn(getMitarbeiterDienstplan);
+  const [loading, setLoading] = useState(false);
+  async function go() {
+    setLoading(true);
+    try {
+      const von = format(new Date(), "yyyy-MM-dd");
+      const bis = format(addDays(new Date(), 30), "yyyy-MM-dd");
+      const res: any = await fetchPlan({ data: { mitarbeiter_id: mitarbeiter.id, von, bis } });
+      generateDienstplanPdf({
+        mitarbeiter: res.mitarbeiter,
+        einsaetze: res.einsaetze,
+        abwesenheiten: res.abwesenheiten,
+        von, bis,
+      });
+    } catch (e: any) {
+      toast.error(e.message ?? "PDF konnte nicht erstellt werden");
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <Button size="sm" variant="outline" onClick={go} disabled={loading} title="Dienstplan PDF (nächste 30 Tage)">
+      <FileText className="h-3.5 w-3.5 mr-1" /> Dienstplan
+    </Button>
+  );
+}
+
 
 function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
   const [form, setForm] = useState({

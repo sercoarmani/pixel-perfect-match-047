@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -14,8 +14,10 @@ const NAV = [
   { to: "/anfragen", label: "Anfragen", icon: Inbox },
   { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
   { to: "/einrichtungen", label: "Einrichtungen", icon: Building2 },
+  { to: "/import", label: "Excel-Import", icon: FileSpreadsheet },
   { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare },
 ] as const;
+
 
 function AuthLayout() {
   const { loading, session, signOut, user, isDispo } = useAuth();
