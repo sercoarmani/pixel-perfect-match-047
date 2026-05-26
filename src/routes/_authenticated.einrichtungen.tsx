@@ -129,6 +129,12 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
           <F label="E-Mail" full><Input type="email" value={form.kontakt_email} onChange={(e) => setForm({...form, kontakt_email: e.target.value})} /></F>
           <F label="VS-Satz PFK (€)"><Input type="number" step="0.01" value={form.vs_satz_pfk ?? ""} onChange={(e) => setForm({...form, vs_satz_pfk: e.target.value as any})} /></F>
           <F label="VS-Satz PHK (€)"><Input type="number" step="0.01" value={form.vs_satz_phk ?? ""} onChange={(e) => setForm({...form, vs_satz_phk: e.target.value as any})} /></F>
+          <F label="Status" full>
+            <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+              <input id="aktiv-tog" type="checkbox" checked={form.aktiv} onChange={(e) => setForm({...form, aktiv: e.target.checked})} className="h-4 w-4" />
+              <label htmlFor="aktiv-tog" className="text-sm cursor-pointer">{form.aktiv ? "Aktiv – wird in Listen & Planung angezeigt" : "Inaktiv – ausgeblendet"}</label>
+            </div>
+          </F>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
