@@ -276,7 +276,17 @@ function EinsatzDialog({
 
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: existing?.id, mitarbeiter_id: mitarbeiterId, einrichtung_id: einrichtungId, datum, dienst, status, notiz } }),
-    onSuccess: () => { toast.success("Einsatz gespeichert"); onSaved(); },
+    onSuccess: () => {
+      if (status === "BESTAETIGT") {
+        toast.success("Einsatz bestätigt – PDF kann erstellt werden", {
+          description: "Öffne den Mitarbeiter und nutze »Dienstplan« für den aktuellen Monat.",
+          duration: 6000,
+        });
+      } else {
+        toast.success("Einsatz gespeichert");
+      }
+      onSaved();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const delMut = useMutation({

@@ -22,15 +22,33 @@ function EinrichtungenPage() {
   const fetchList = useServerFn(listEinrichtungen);
   const { data, isLoading } = useQuery({ queryKey: ["einrichtungen"], queryFn: () => fetchList() });
   const [edit, setEdit] = useState<any | null>(null);
+  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">("aktiv");
+
+  const filtered = (data ?? []).filter((e: any) =>
+    filter === "alle" ? true : filter === "aktiv" ? e.aktiv : !e.aktiv,
+  );
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Einrichtungen</h1>
-          <p className="text-sm text-muted-foreground">{data?.length ?? 0} Einrichtungen</p>
+          <p className="text-sm text-muted-foreground">{filtered.length} von {data?.length ?? 0} Einrichtungen</p>
         </div>
-        <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border bg-card p-0.5 text-xs">
+            {(["aktiv", "inaktiv", "alle"] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => setFilter(k)}
+                className={"px-3 py-1.5 rounded capitalize " + (filter === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
+          <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
+        </div>
       </div>
       <div className="rounded-md border bg-card">
         <Table>
@@ -48,7 +66,7 @@ function EinrichtungenPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
-            {data?.map((e: any) => (
+            {filtered.map((e: any) => (
               <TableRow key={e.id}>
                 <TableCell className="font-medium cursor-pointer" onClick={() => setEdit(e)}>{e.name}</TableCell>
                 <TableCell className="cursor-pointer" onClick={() => setEdit(e)}>{e.ort ?? "—"}</TableCell>
@@ -111,6 +129,12 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
           <F label="E-Mail" full><Input type="email" value={form.kontakt_email} onChange={(e) => setForm({...form, kontakt_email: e.target.value})} /></F>
           <F label="VS-Satz PFK (€)"><Input type="number" step="0.01" value={form.vs_satz_pfk ?? ""} onChange={(e) => setForm({...form, vs_satz_pfk: e.target.value as any})} /></F>
           <F label="VS-Satz PHK (€)"><Input type="number" step="0.01" value={form.vs_satz_phk ?? ""} onChange={(e) => setForm({...form, vs_satz_phk: e.target.value as any})} /></F>
+          <F label="Status" full>
+            <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+              <input id="aktiv-tog" type="checkbox" checked={form.aktiv} onChange={(e) => setForm({...form, aktiv: e.target.checked})} className="h-4 w-4" />
+              <label htmlFor="aktiv-tog" className="text-sm cursor-pointer">{form.aktiv ? "Aktiv – wird in Listen & Planung angezeigt" : "Inaktiv – ausgeblendet"}</label>
+            </div>
+          </F>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
