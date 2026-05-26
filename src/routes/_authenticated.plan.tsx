@@ -275,15 +275,22 @@ function EinsatzDialog({
 
   const upsert = useServerFn(upsertEinsatz);
   const del = useServerFn(deleteEinsatz);
+  const fetchPlan = useServerFn(getMitarbeiterDienstplan);
 
   const saveMut = useMutation({
     mutationFn: () => upsert({ data: { id: existing?.id, mitarbeiter_id: mitarbeiterId, einrichtung_id: einrichtungId, datum, dienst, status, notiz } }),
-    onSuccess: () => {
+    onSuccess: async () => {
       if (status === "BESTAETIGT") {
-        toast.success("Einsatz bestätigt – PDF kann erstellt werden", {
-          description: "Öffne den Mitarbeiter und nutze »Dienstplan« für den aktuellen Monat.",
-          duration: 6000,
-        });
+        toast.success("Einsatz bestätigt – PDF wird erstellt …");
+        try {
+          const ref = new Date(datum);
+          const von = fmtIsoDate(startOfMonth(ref));
+          const bis = fmtIsoDate(endOfMonth(ref));
+          const res: any = await fetchPlan({ data: { mitarbeiter_id: mitarbeiterId, von, bis } });
+          generateDienstplanPdf({ mitarbeiter: res.mitarbeiter, einsaetze: res.einsaetze, abwesenheiten: res.abwesenheiten, von, bis });
+        } catch (e: any) {
+          toast.error(e.message ?? "PDF konnte nicht erstellt werden");
+        }
       } else {
         toast.success("Einsatz gespeichert");
       }
