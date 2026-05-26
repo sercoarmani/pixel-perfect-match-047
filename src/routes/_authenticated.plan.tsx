@@ -60,6 +60,7 @@ function PlanPage() {
 
   const grouped = useMemo(() => {
     const list = (data?.mitarbeiter ?? []).filter((m: any) => {
+      if (maFilter !== "ALLE" && m.id !== maFilter) return false;
       if (qualFilter !== "ALLE" && QUAL_GROUP(m.qualifikation) !== qualFilter) return false;
       if (anstFilter === "VZ_TZ" && !(m.anstellung === "Vollzeit" || m.anstellung === "Teilzeit")) return false;
       if (anstFilter !== "ALLE" && anstFilter !== "VZ_TZ" && m.anstellung !== anstFilter) return false;
