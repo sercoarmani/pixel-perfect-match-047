@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { addDays, format } from "date-fns";
+import { addMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileText, FileSpreadsheet } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileText, FileSpreadsheet, HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -13,13 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getPlanData, upsertEinsatz, deleteEinsatz, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
+import { getPlanData, upsertEinsatz, deleteEinsatz, getMitarbeiterDienstplan, upsertAbwesenheit, deleteAbwesenheit } from "@/lib/dispo.functions";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { exportPlanungslisteExcel, exportPlanungslistePdf } from "@/lib/excel-planungsliste";
-import { startOfMonth, endOfMonth } from "date-fns";
 import {
   DIENSTE, DIENST_KURZ, STATUS_LABEL, STATUS_CLASS,
-  buildDateRange, fmtIsoDate, weekStart, type Dienst, type EinsatzStatus,
+  monthRange, fmtIsoDate, type Dienst, type EinsatzStatus,
 } from "@/lib/dispo-utils";
 
 export const Route = createFileRoute("/_authenticated/plan")({
