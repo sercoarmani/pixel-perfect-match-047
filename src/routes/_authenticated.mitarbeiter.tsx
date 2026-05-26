@@ -207,6 +207,13 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
           <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
           <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
           <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+          <div className="space-y-1.5 col-span-2">
+            <Label>Status</Label>
+            <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+              <input id="ma-aktiv-tog" type="checkbox" checked={form.aktiv} onChange={(e) => setForm({...form, aktiv: e.target.checked})} className="h-4 w-4" />
+              <label htmlFor="ma-aktiv-tog" className="text-sm cursor-pointer">{form.aktiv ? "Aktiv – wird in Planung & Listen angezeigt" : "Inaktiv – ausgeblendet"}</label>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
