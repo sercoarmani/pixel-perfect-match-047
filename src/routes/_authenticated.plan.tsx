@@ -36,6 +36,8 @@ type Einsatz = {
 function PlanPage() {
   const [anchor, setAnchor] = useState(() => weekStart(new Date()));
   const [days, setDays] = useState(14);
+  const [qualFilter, setQualFilter] = useState<string>("ALLE");
+  const [anstFilter, setAnstFilter] = useState<string>("ALLE");
   const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz } | null>(null);
 
   const dateRange = useMemo(() => buildDateRange(anchor, days), [anchor, days]);
@@ -49,6 +51,34 @@ function PlanPage() {
     queryKey: ["plan", von, bis],
     queryFn: () => fetchPlan({ data: { von, bis } }),
   });
+
+  const QUAL_GROUP = (q: string) => (q === "PFK" ? "PFK" : q === "PHK" ? "PHK" : "Sonstige");
+  const ANST_ORDER: Record<string, number> = { Vollzeit: 0, Teilzeit: 1, Minijob: 2 };
+
+  const grouped = useMemo(() => {
+    const list = (data?.mitarbeiter ?? []).filter((m: any) => {
+      if (qualFilter !== "ALLE" && QUAL_GROUP(m.qualifikation) !== qualFilter) return false;
+      if (anstFilter === "VZ_TZ" && !(m.anstellung === "Vollzeit" || m.anstellung === "Teilzeit")) return false;
+      if (anstFilter !== "ALLE" && anstFilter !== "VZ_TZ" && m.anstellung !== anstFilter) return false;
+      return true;
+    });
+    list.sort((a: any, b: any) => {
+      const g = QUAL_GROUP(a.qualifikation).localeCompare(QUAL_GROUP(b.qualifikation));
+      if (g !== 0) return g;
+      const an = (ANST_ORDER[a.anstellung] ?? 9) - (ANST_ORDER[b.anstellung] ?? 9);
+      if (an !== 0) return an;
+      return a.nachname.localeCompare(b.nachname);
+    });
+    const groups: { key: string; label: string; items: any[] }[] = [];
+    list.forEach((m: any) => {
+      const key = `${QUAL_GROUP(m.qualifikation)} · ${m.anstellung}`;
+      let g = groups.find((x) => x.key === key);
+      if (!g) { g = { key, label: key, items: [] }; groups.push(g); }
+      g.items.push(m);
+    });
+    return groups;
+  }, [data, qualFilter, anstFilter]);
+
 
   const einsatzByCell = useMemo(() => {
     const map = new Map<string, Einsatz>();
@@ -91,6 +121,25 @@ function PlanPage() {
           <Button variant="outline" size="icon" onClick={() => setAnchor(addDays(anchor, 7))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Select value={qualFilter} onValueChange={setQualFilter}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALLE">Alle Quali</SelectItem>
+              <SelectItem value="PFK">PFK</SelectItem>
+              <SelectItem value="PHK">PHK</SelectItem>
+              <SelectItem value="Sonstige">Sonstige</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={anstFilter} onValueChange={setAnstFilter}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALLE">Alle Anstellung</SelectItem>
+              <SelectItem value="VZ_TZ">Vollzeit / Teilzeit</SelectItem>
+              <SelectItem value="Vollzeit">Vollzeit</SelectItem>
+              <SelectItem value="Teilzeit">Teilzeit</SelectItem>
+              <SelectItem value="Minijob">Minijob</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -129,48 +178,57 @@ function PlanPage() {
               </tr>
             </thead>
             <tbody>
-              {data?.mitarbeiter.map((m: any) => (
-                <tr key={m.id} className="group">
-                  <td className="sticky left-0 z-10 border-b border-r bg-card px-3 py-2">
-                    <div className="font-medium">{m.kuerzel}</div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {m.nachname}, {m.vorname} · {m.qualifikation}
-                    </div>
-                  </td>
-                  {dateRange.map((d) => {
-                    const iso = fmtIsoDate(d);
-                    const key = `${m.id}|${iso}`;
-                    const e = einsatzByCell.get(key);
-                    const abw = abwByCell.get(key);
-                    const ein = e ? data!.einrichtungen.find((x: any) => x.id === e.einrichtung_id) : null;
-                    const wknd = [0, 6].includes(d.getDay());
-                    const verfMarks = DIENSTE.filter((di) => verfByCell.get(`${m.id}|${iso}|${di}`) === true);
-                    return (
-                      <td
-                        key={iso}
-                        className={cn(
-                          "h-12 cursor-pointer border-b border-r p-1 align-top transition-colors",
-                          wknd && !e && "bg-muted/30",
-                          !e && "hover:bg-accent/50",
-                        )}
-                        onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
-                      >
-                        {abw ? (
-                          <div className="text-[10px] text-muted-foreground italic">{abw}</div>
-                        ) : e ? (
-                          <div className={cn("rounded px-1 py-0.5 text-[10px] leading-tight", STATUS_CLASS[e.status])}>
-                            <div className="font-bold">{DIENST_KURZ[e.dienst]}</div>
-                            <div className="truncate">{ein?.name ?? "?"}</div>
-                          </div>
-                        ) : verfMarks.length > 0 ? (
-                          <div className="text-[10px] text-emerald-700 dark:text-emerald-300">
-                            ✓ {verfMarks.join("")}
-                          </div>
-                        ) : null}
+              {grouped.map((g) => (
+                <>
+                  <tr key={`h-${g.key}`}>
+                    <td colSpan={dateRange.length + 1} className="sticky left-0 z-10 bg-muted/60 border-b px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {g.label} <span className="ml-2 font-normal normal-case">({g.items.length})</span>
+                    </td>
+                  </tr>
+                  {g.items.map((m: any) => (
+                    <tr key={m.id} className="group">
+                      <td className="sticky left-0 z-10 border-b border-r bg-card px-3 py-2">
+                        <div className="font-medium">{m.kuerzel}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {m.nachname}, {m.vorname} · {m.qualifikation}
+                        </div>
                       </td>
-                    );
-                  })}
-                </tr>
+                      {dateRange.map((d) => {
+                        const iso = fmtIsoDate(d);
+                        const key = `${m.id}|${iso}`;
+                        const e = einsatzByCell.get(key);
+                        const abw = abwByCell.get(key);
+                        const ein = e ? data!.einrichtungen.find((x: any) => x.id === e.einrichtung_id) : null;
+                        const wknd = [0, 6].includes(d.getDay());
+                        const verfMarks = DIENSTE.filter((di) => verfByCell.get(`${m.id}|${iso}|${di}`) === true);
+                        return (
+                          <td
+                            key={iso}
+                            className={cn(
+                              "h-12 cursor-pointer border-b border-r p-1 align-top transition-colors",
+                              wknd && !e && "bg-muted/30",
+                              !e && "hover:bg-accent/50",
+                            )}
+                            onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
+                          >
+                            {abw ? (
+                              <div className="text-[10px] text-muted-foreground italic">{abw}</div>
+                            ) : e ? (
+                              <div className={cn("rounded px-1 py-0.5 text-[10px] leading-tight", STATUS_CLASS[e.status])}>
+                                <div className="font-bold">{DIENST_KURZ[e.dienst]}</div>
+                                <div className="truncate">{ein?.name ?? "?"}</div>
+                              </div>
+                            ) : verfMarks.length > 0 ? (
+                              <div className="text-[10px] text-emerald-700 dark:text-emerald-300">
+                                ✓ {verfMarks.join("")}
+                              </div>
+                            ) : null}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </>
               ))}
             </tbody>
           </table>

@@ -2,14 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listEinrichtungen, upsertEinrichtung } from "@/lib/dispo.functions";
+import { listEinrichtungen, upsertEinrichtung, deleteEinrichtung } from "@/lib/dispo.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/einrichtungen")({
@@ -41,19 +42,21 @@ function EinrichtungenPage() {
               <TableHead>VS PFK</TableHead>
               <TableHead>VS PHK</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={7} className="text-muted-foreground">Lade…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {data?.map((e: any) => (
-              <TableRow key={e.id} className="cursor-pointer" onClick={() => setEdit(e)}>
-                <TableCell className="font-medium">{e.name}</TableCell>
-                <TableCell>{e.ort ?? "—"}</TableCell>
+              <TableRow key={e.id}>
+                <TableCell className="font-medium cursor-pointer" onClick={() => setEdit(e)}>{e.name}</TableCell>
+                <TableCell className="cursor-pointer" onClick={() => setEdit(e)}>{e.ort ?? "—"}</TableCell>
                 <TableCell>{e.traeger?.name ?? "—"}</TableCell>
                 <TableCell className="text-xs">{e.kontakt_name ?? "—"}<br/>{e.kontakt_telefon ?? ""}</TableCell>
                 <TableCell>{e.vs_satz_pfk ? `${e.vs_satz_pfk} €` : "—"}</TableCell>
                 <TableCell>{e.vs_satz_phk ? `${e.vs_satz_phk} €` : "—"}</TableCell>
                 <TableCell>{e.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
+                <TableCell className="text-right"><DeleteEinrichtungButton einrichtung={e} /></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -114,4 +117,35 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
 
 function F({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
   return <div className={"space-y-1.5 " + (full ? "col-span-2" : "")}><Label>{label}</Label>{children}</div>;
+}
+
+function DeleteEinrichtungButton({ einrichtung }: { einrichtung: any }) {
+  const del = useServerFn(deleteEinrichtung);
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => del({ data: { id: einrichtung.id } }),
+    onSuccess: () => { toast.success("Einrichtung gelöscht"); qc.invalidateQueries({ queryKey: ["einrichtungen"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive" title="Löschen" onClick={(e) => e.stopPropagation()}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Einrichtung löschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            „{einrichtung.name}" wird unwiderruflich gelöscht. Zugehörige Einsätze und Bedarfe werden ebenfalls entfernt.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogAction onClick={() => m.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }

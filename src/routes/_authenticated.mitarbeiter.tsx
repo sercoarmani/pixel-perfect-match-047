@@ -2,15 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listMitarbeiter, upsertMitarbeiter, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
+import { listMitarbeiter, upsertMitarbeiter, deleteMitarbeiter, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Phone, FileText } from "lucide-react";
+import { Plus, Phone, FileText, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { format, addDays } from "date-fns";
@@ -69,7 +70,10 @@ function MitarbeiterPage() {
                 <TableCell>{m.wohnort ?? "—"}</TableCell>
                 <TableCell>{m.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
                 <TableCell className="text-right">
-                  <PdfButton mitarbeiter={m} />
+                  <div className="flex justify-end gap-1">
+                    <PdfButton mitarbeiter={m} />
+                    <DeleteButton mitarbeiter={m} />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -166,4 +170,35 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+}
+
+function DeleteButton({ mitarbeiter }: { mitarbeiter: any }) {
+  const del = useServerFn(deleteMitarbeiter);
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: () => del({ data: { id: mitarbeiter.id } }),
+    onSuccess: () => { toast.success("Mitarbeiter gelöscht"); qc.invalidateQueries({ queryKey: ["mitarbeiter"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="text-destructive" title="Löschen">
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Mitarbeiter löschen?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {mitarbeiter.nachname}, {mitarbeiter.vorname} ({mitarbeiter.kuerzel}) wird unwiderruflich gelöscht. Zugehörige Einsätze und Abwesenheiten werden ebenfalls entfernt.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogAction onClick={() => m.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }

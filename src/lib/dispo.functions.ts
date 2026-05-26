@@ -449,16 +449,18 @@ export const getDashboard = createServerFn({ method: "GET" })
     const monatStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
     const monatEnde = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
 
-    const [maAll, einAll, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap] = await Promise.all([
+    const [maAll, einAll, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat] = await Promise.all([
       supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("anfragen").select("id", { count: "exact", head: true }).eq("status", "offen"),
-      supabase.from("einsaetze").select("id, status", { count: "exact" }).gte("datum", monatStart).lte("datum", monatEnde),
+      supabase.from("einsaetze").select("id, status, mitarbeiter_id, dienst", { count: "exact" }).gte("datum", monatStart).lte("datum", monatEnde),
       supabase.from("einsaetze").select("*").eq("datum", heute).order("dienst"),
       supabase.from("einsaetze").select("datum, status").gte("datum", heute).lte("datum", iso(in7)),
       supabase.from("abwesenheiten").select("*").gte("datum", heute).lte("datum", iso(in7)).order("datum"),
-      supabase.from("mitarbeiter").select("id, vorname, nachname, kuerzel"),
+      supabase.from("mitarbeiter").select("id, vorname, nachname, kuerzel, qualifikation, anstellung"),
       supabase.from("einrichtungen").select("id, name, ort"),
+      supabase.from("mitarbeiter").select("id, max_einsaetze, anstellung, qualifikation").eq("aktiv", true),
+      supabase.from("abwesenheiten").select("mitarbeiter_id, datum").gte("datum", monatStart).lte("datum", monatEnde),
     ]);
 
     const mitMap = new Map((mitAll.data ?? []).map((m) => [m.id, m]));
@@ -470,13 +472,52 @@ export const getDashboard = createServerFn({ method: "GET" })
     const wochenZaehlung: Record<string, number> = {};
     (einsWoche.data ?? []).forEach((e: any) => { wochenZaehlung[e.datum] = (wochenZaehlung[e.datum] ?? 0) + 1; });
 
+    // Mögliche Einsätze = Summe max_einsaetze - Abwesenheitstage (gedeckelt pro MA)
+    const moeglichePerMA = new Map<string, number>();
+    (mitMaxAll.data ?? []).forEach((m: any) => moeglichePerMA.set(m.id, m.max_einsaetze ?? 0));
+    const abwPerMA = new Map<string, number>();
+    (abwMonat.data ?? []).forEach((a: any) => abwPerMA.set(a.mitarbeiter_id, (abwPerMA.get(a.mitarbeiter_id) ?? 0) + 1));
+    let moeglichSumme = 0;
+    moeglichePerMA.forEach((max, id) => {
+      const abwTage = abwPerMA.get(id) ?? 0;
+      moeglichSumme += Math.max(0, max - abwTage);
+    });
+
+    const geplant = einsMonat.count ?? 0;
+    const besetzt = (statusZaehlung["BESTAETIGT"] ?? 0) + (statusZaehlung["INTERN"] ?? 0);
+    const besetztPct = geplant > 0 ? Math.round((besetzt / geplant) * 100) : 0;
+    const auslastungPct = moeglichSumme > 0 ? Math.round((geplant / moeglichSumme) * 100) : 0;
+
+    // Gruppierung Mitarbeiter nach Qualifikation
+    const qualGruppen: Record<string, { gesamt: number; geplant: number }> = {};
+    (mitMaxAll.data ?? []).forEach((m: any) => {
+      const k = m.qualifikation;
+      qualGruppen[k] = qualGruppen[k] ?? { gesamt: 0, geplant: 0 };
+      qualGruppen[k].gesamt += 1;
+    });
+    (einsMonat.data ?? []).forEach((e: any) => {
+      const ma = (mitMaxAll.data ?? []).find((m: any) => m.id === e.mitarbeiter_id);
+      if (!ma) return;
+      qualGruppen[ma.qualifikation] = qualGruppen[ma.qualifikation] ?? { gesamt: 0, geplant: 0 };
+      qualGruppen[ma.qualifikation].geplant += 1;
+    });
+
     return {
       kpis: {
         mitarbeiterAktiv: maAll.count ?? 0,
         einrichtungenAktiv: einAll.count ?? 0,
         anfragenOffen: anfOffen.count ?? 0,
-        einsaetzeMonat: einsMonat.count ?? 0,
+        einsaetzeMonat: geplant,
       },
+      monatsStats: {
+        geplant,
+        besetzt,
+        besetztPct,
+        moeglich: moeglichSumme,
+        auslastungPct,
+        offen: geplant - besetzt,
+      },
+      qualGruppen,
       statusZaehlung,
       wochenZaehlung,
       einsaetzeHeute: (einsHeute.data ?? []).map((e: any) => ({
@@ -489,4 +530,23 @@ export const getDashboard = createServerFn({ method: "GET" })
         mitarbeiter: mitMap.get(a.mitarbeiter_id) ?? null,
       })),
     };
+  });
+
+// ---------- Delete Mitarbeiter / Einrichtung ----------
+export const deleteMitarbeiter = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("mitarbeiter").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteEinrichtung = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("einrichtungen").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

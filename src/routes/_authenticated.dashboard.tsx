@@ -55,6 +55,51 @@ function DashboardPage() {
         <Kpi to="/plan" icon={CalendarDays} label="Einsätze diesen Monat" value={data.kpis.einsaetzeMonat} />
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Monatsübersicht</CardTitle>
+          <CardDescription>Geplante, besetzte und mögliche Einsätze (analog Excel-Planungsliste)</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 md:grid-cols-3">
+          <Metric
+            label="Besetzungsquote"
+            value={`${data.monatsStats.besetztPct}%`}
+            sub={`${data.monatsStats.besetzt} von ${data.monatsStats.geplant} bestätigt/intern`}
+            pct={data.monatsStats.besetztPct}
+            color="emerald"
+          />
+          <Metric
+            label="Auslastung"
+            value={`${data.monatsStats.auslastungPct}%`}
+            sub={`${data.monatsStats.geplant} geplant / ${data.monatsStats.moeglich} möglich`}
+            pct={Math.min(100, data.monatsStats.auslastungPct)}
+            color="primary"
+          />
+          <Metric
+            label="Offen"
+            value={String(data.monatsStats.offen)}
+            sub="noch nicht besetzte Dienste"
+            pct={data.monatsStats.geplant > 0 ? Math.round((data.monatsStats.offen / data.monatsStats.geplant) * 100) : 0}
+            color="amber"
+          />
+        </CardContent>
+        <CardContent className="border-t pt-4">
+          <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Geplant je Qualifikation</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(data.qualGruppen)
+              .sort((a, b) => (b[1] as any).geplant - (a[1] as any).geplant)
+              .map(([qual, v]: any) => (
+                <div key={qual} className="flex items-center justify-between rounded border px-3 py-1.5 text-sm">
+                  <span className="font-medium">{qual}</span>
+                  <span className="text-muted-foreground">
+                    {v.geplant} Einsätze · {v.gesamt} MA
+                  </span>
+                </div>
+              ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -194,6 +239,20 @@ function Kpi({ to, icon: Icon, label, value, highlight }: { to: string; icon: an
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+function Metric({ label, value, sub, pct, color }: { label: string; value: string; sub: string; pct: number; color: "emerald" | "primary" | "amber" }) {
+  const barColor = color === "emerald" ? "bg-emerald-500" : color === "amber" ? "bg-amber-500" : "bg-primary";
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-3xl font-semibold">{value}</div>
+      <div className="text-xs text-muted-foreground">{sub}</div>
+      <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+        <div className={"h-full " + barColor} style={{ width: `${Math.min(100, pct)}%` }} />
+      </div>
+    </div>
   );
 }
 
