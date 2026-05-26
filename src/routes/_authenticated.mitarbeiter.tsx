@@ -28,15 +28,56 @@ function MitarbeiterPage() {
   const fetchList = useServerFn(listMitarbeiter);
   const { data, isLoading } = useQuery({ queryKey: ["mitarbeiter"], queryFn: () => fetchList() });
   const [edit, setEdit] = useState<any | null>(null);
+  const [qualFilter, setQualFilter] = useState<string>("ALLE");
+  const [anstFilter, setAnstFilter] = useState<string>("ALLE");
+  const [statusFilter, setStatusFilter] = useState<"alle" | "aktiv" | "inaktiv">("aktiv");
+
+  const filtered = (data ?? []).filter((m: any) => {
+    if (qualFilter !== "ALLE" && m.qualifikation !== qualFilter) return false;
+    if (anstFilter !== "ALLE" && m.anstellung !== anstFilter) return false;
+    if (statusFilter !== "alle" && (statusFilter === "aktiv" ? !m.aktiv : m.aktiv)) return false;
+    return true;
+  });
 
   return (
     <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Mitarbeiter</h1>
-          <p className="text-sm text-muted-foreground">{data?.length ?? 0} Mitarbeiter</p>
+          <p className="text-sm text-muted-foreground">{filtered.length} von {data?.length ?? 0} Mitarbeitern</p>
         </div>
         <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="text-xs text-muted-foreground mr-1">Filter:</div>
+        <Select value={qualFilter} onValueChange={setQualFilter}>
+          <SelectTrigger className="h-8 w-[160px]"><SelectValue placeholder="Qualifikation" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALLE">Alle Qualifikationen</SelectItem>
+            {QUALS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={anstFilter} onValueChange={setAnstFilter}>
+          <SelectTrigger className="h-8 w-[150px]"><SelectValue placeholder="Anstellung" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALLE">Alle Anstellungen</SelectItem>
+            {ANSTS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="flex rounded-md border bg-card p-0.5 text-xs">
+          {(["aktiv", "inaktiv", "alle"] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => setStatusFilter(k)}
+              className={"px-3 py-1 rounded capitalize " + (statusFilter === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}
+            >
+              {k}
+            </button>
+          ))}
+        </div>
+        {(qualFilter !== "ALLE" || anstFilter !== "ALLE" || statusFilter !== "aktiv") && (
+          <Button size="sm" variant="ghost" onClick={() => { setQualFilter("ALLE"); setAnstFilter("ALLE"); setStatusFilter("aktiv"); }}>Zurücksetzen</Button>
+        )}
       </div>
       <div className="rounded-md border bg-card">
         <Table>
@@ -54,7 +95,7 @@ function MitarbeiterPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
-            {data?.map((m: any) => (
+            {filtered.map((m: any) => (
               <TableRow key={m.id}>
                 <TableCell className="font-mono cursor-pointer" onClick={() => setEdit(m)}>{m.kuerzel}</TableCell>
                 <TableCell className="cursor-pointer" onClick={() => setEdit(m)}>{m.nachname}, {m.vorname}</TableCell>
