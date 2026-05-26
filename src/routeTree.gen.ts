@@ -9,38 +9,166 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as VTokenRouteImport } from './routes/v.$token'
+import { Route as BTokenRouteImport } from './routes/b.$token'
+import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
+import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
+import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
+import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
+import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VTokenRoute = VTokenRouteImport.update({
+  id: '/v/$token',
+  path: '/v/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BTokenRoute = BTokenRouteImport.update({
+  id: '/b/$token',
+  path: '/b/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedNachrichtenRoute =
+  AuthenticatedNachrichtenRouteImport.update({
+    id: '/nachrichten',
+    path: '/nachrichten',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMitarbeiterRoute =
+  AuthenticatedMitarbeiterRouteImport.update({
+    id: '/mitarbeiter',
+    path: '/mitarbeiter',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedEinrichtungenRoute =
+  AuthenticatedEinrichtungenRouteImport.update({
+    id: '/einrichtungen',
+    path: '/einrichtungen',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAnfragenRoute = AuthenticatedAnfragenRouteImport.update({
+  id: '/anfragen',
+  path: '/anfragen',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
+  '/nachrichten': typeof AuthenticatedNachrichtenRoute
+  '/plan': typeof AuthenticatedPlanRoute
+  '/b/$token': typeof BTokenRoute
+  '/v/$token': typeof VTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
+  '/nachrichten': typeof AuthenticatedNachrichtenRoute
+  '/plan': typeof AuthenticatedPlanRoute
+  '/b/$token': typeof BTokenRoute
+  '/v/$token': typeof VTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authenticated/anfragen': typeof AuthenticatedAnfragenRoute
+  '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
+  '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
+  '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
+  '/_authenticated/plan': typeof AuthenticatedPlanRoute
+  '/b/$token': typeof BTokenRoute
+  '/v/$token': typeof VTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/anfragen'
+    | '/einrichtungen'
+    | '/mitarbeiter'
+    | '/nachrichten'
+    | '/plan'
+    | '/b/$token'
+    | '/v/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/anfragen'
+    | '/einrichtungen'
+    | '/mitarbeiter'
+    | '/nachrichten'
+    | '/plan'
+    | '/b/$token'
+    | '/v/$token'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/anfragen'
+    | '/_authenticated/einrichtungen'
+    | '/_authenticated/mitarbeiter'
+    | '/_authenticated/nachrichten'
+    | '/_authenticated/plan'
+    | '/b/$token'
+    | '/v/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  BTokenRoute: typeof BTokenRoute
+  VTokenRoute: typeof VTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +176,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/v/$token': {
+      id: '/v/$token'
+      path: '/v/$token'
+      fullPath: '/v/$token'
+      preLoaderRoute: typeof VTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$token': {
+      id: '/b/$token'
+      path: '/b/$token'
+      fullPath: '/b/$token'
+      preLoaderRoute: typeof BTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/plan': {
+      id: '/_authenticated/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AuthenticatedPlanRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/nachrichten': {
+      id: '/_authenticated/nachrichten'
+      path: '/nachrichten'
+      fullPath: '/nachrichten'
+      preLoaderRoute: typeof AuthenticatedNachrichtenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/mitarbeiter': {
+      id: '/_authenticated/mitarbeiter'
+      path: '/mitarbeiter'
+      fullPath: '/mitarbeiter'
+      preLoaderRoute: typeof AuthenticatedMitarbeiterRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/einrichtungen': {
+      id: '/_authenticated/einrichtungen'
+      path: '/einrichtungen'
+      fullPath: '/einrichtungen'
+      preLoaderRoute: typeof AuthenticatedEinrichtungenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/anfragen': {
+      id: '/_authenticated/anfragen'
+      path: '/anfragen'
+      fullPath: '/anfragen'
+      preLoaderRoute: typeof AuthenticatedAnfragenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRoute
+  AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
+  AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
+  AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
+  AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAnfragenRoute: AuthenticatedAnfragenRoute,
+  AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
+  AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
+  AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
+  AuthenticatedPlanRoute: AuthenticatedPlanRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  BTokenRoute: BTokenRoute,
+  VTokenRoute: VTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
