@@ -220,8 +220,8 @@ function PlanPage() {
             </thead>
             <tbody>
               {grouped.map((g) => (
-                <>
-                  <tr key={`h-${g.key}`}>
+                <Fragment key={g.key}>
+                  <tr>
                     <td colSpan={dateRange.length + 1} className="sticky left-0 z-10 bg-muted/60 border-b px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {g.label} <span className="ml-2 font-normal normal-case">({g.items.length})</span>
                     </td>
