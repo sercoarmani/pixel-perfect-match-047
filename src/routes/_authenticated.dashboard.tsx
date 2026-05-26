@@ -5,7 +5,7 @@ import { getDashboard } from "@/lib/dispo.functions";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Building2, BuildingIcon, Inbox, CalendarDays, AlertCircle, ArrowRight } from "lucide-react";
+import { Users, Building2, BuildingIcon, Inbox, CalendarDays, AlertCircle, ArrowRight, Timer } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -48,12 +48,13 @@ function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Kpi to="/mitarbeiter" icon={Users} label="Aktive Mitarbeiter" value={data.kpis.mitarbeiterAktiv} />
         <Kpi to="/einrichtungen" icon={Building2} label="Aktive Einrichtungen" value={data.kpis.einrichtungenAktiv} />
         <Kpi to="/einrichtungen" icon={BuildingIcon} label="Inaktive Einrichtungen" value={data.kpis.einrichtungenInaktiv} muted />
         <Kpi to="/anfragen" icon={Inbox} label="Offene Anfragen" value={data.kpis.anfragenOffen} highlight={data.kpis.anfragenOffen > 0} />
         <Kpi to="/plan" icon={CalendarDays} label="Einsätze diesen Monat" value={data.kpis.einsaetzeMonat} />
+        <Kpi to="/statistik" icon={Timer} label="Ø Reaktionszeit" value={data.kpis.reaktionAvgH != null ? `${data.kpis.reaktionAvgH} h` : "—"} />
       </div>
 
       <Card>
@@ -222,7 +223,7 @@ function DashboardPage() {
   );
 }
 
-function Kpi({ to, icon: Icon, label, value, highlight, muted }: { to: string; icon: any; label: string; value: number; highlight?: boolean; muted?: boolean }) {
+function Kpi({ to, icon: Icon, label, value, highlight, muted }: { to: string; icon: any; label: string; value: number | string; highlight?: boolean; muted?: boolean }) {
   return (
     <Link to={to}>
       <Card className={"transition-shadow hover:shadow-md " + (highlight ? "border-amber-400" : "") + (muted ? " opacity-80" : "")}>

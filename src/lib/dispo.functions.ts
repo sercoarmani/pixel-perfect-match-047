@@ -449,7 +449,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const monatStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
     const monatEnde = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
 
-    const [maAll, einAll, einInaktiv, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat] = await Promise.all([
+    const [maAll, einAll, einInaktiv, anfOffen, einsMonat, einsHeute, einsWoche, abwWoche, mitAll, einAllForMap, mitMaxAll, abwMonat, anfBeantwortet] = await Promise.all([
       supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", true),
       supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", false),
@@ -462,7 +462,19 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase.from("einrichtungen").select("id, name, ort"),
       supabase.from("mitarbeiter").select("id, max_einsaetze, anstellung, qualifikation").eq("aktiv", true),
       supabase.from("abwesenheiten").select("mitarbeiter_id, datum").gte("datum", monatStart).lte("datum", monatEnde),
+      supabase.from("anfragen").select("erstellt_am, beantwortet_am").not("beantwortet_am", "is", null).gte("erstellt_am", monatStart),
     ]);
+
+    // Reaktionszeit (Dienstanfrage → Bestätigung): Mittelwert in Stunden
+    const reaktionStunden: number[] = [];
+    (anfBeantwortet.data ?? []).forEach((a: any) => {
+      if (!a.erstellt_am || !a.beantwortet_am) return;
+      const diff = (new Date(a.beantwortet_am).getTime() - new Date(a.erstellt_am).getTime()) / 36e5;
+      if (diff >= 0 && diff < 24 * 30) reaktionStunden.push(diff);
+    });
+    const reaktionAvgH = reaktionStunden.length > 0
+      ? Math.round((reaktionStunden.reduce((a, b) => a + b, 0) / reaktionStunden.length) * 10) / 10
+      : null;
 
     const mitMap = new Map((mitAll.data ?? []).map((m) => [m.id, m]));
     const einMap = new Map((einAllForMap.data ?? []).map((e) => [e.id, e]));
@@ -510,6 +522,7 @@ export const getDashboard = createServerFn({ method: "GET" })
         einrichtungenInaktiv: einInaktiv.count ?? 0,
         anfragenOffen: anfOffen.count ?? 0,
         einsaetzeMonat: geplant,
+        reaktionAvgH,
       },
       monatsStats: {
         geplant,
@@ -551,4 +564,105 @@ export const deleteEinrichtung = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("einrichtungen").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ---------- Statistik (Monatsvergleich + Jahr) ----------
+export const getStatistik = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { jahr?: number }) =>
+    z.object({ jahr: z.number().int().min(2020).max(2100).optional() }).parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const jahr = data.jahr ?? new Date().getFullYear();
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const jahrStart = `${jahr}-01-01`;
+    const jahrEnde = `${jahr}-12-31`;
+
+    const [maAktiv, einAktiv, einInaktiv, einsaetze, abwesenheiten, anfragen, mitMax] = await Promise.all([
+      supabase.from("mitarbeiter").select("id", { count: "exact", head: true }).eq("aktiv", true),
+      supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", true),
+      supabase.from("einrichtungen").select("id", { count: "exact", head: true }).eq("aktiv", false),
+      supabase.from("einsaetze").select("datum, status, mitarbeiter_id").gte("datum", jahrStart).lte("datum", jahrEnde),
+      supabase.from("abwesenheiten").select("datum, art").gte("datum", jahrStart).lte("datum", jahrEnde),
+      supabase.from("anfragen").select("erstellt_am, beantwortet_am").gte("erstellt_am", `${jahr}-01-01T00:00:00Z`).lte("erstellt_am", `${jahr}-12-31T23:59:59Z`),
+      supabase.from("mitarbeiter").select("id, max_einsaetze").eq("aktiv", true),
+    ]);
+
+    const maxProMA = (mitMax.data ?? []).reduce((s, m: any) => s + (m.max_einsaetze ?? 0), 0);
+
+    const monate = Array.from({ length: 12 }, (_, i) => ({
+      monat: i + 1,
+      label: new Date(jahr, i, 1).toLocaleDateString("de-DE", { month: "short" }),
+      geplant: 0,
+      besetzt: 0,
+      offen: 0,
+      besetztPct: 0,
+      auslastungPct: 0,
+      urlaub: 0,
+      krank: 0,
+      reaktionAvgH: null as number | null,
+    }));
+
+    (einsaetze.data ?? []).forEach((e: any) => {
+      const m = new Date(e.datum).getMonth();
+      monate[m].geplant += 1;
+      if (e.status === "BESTAETIGT" || e.status === "INTERN") monate[m].besetzt += 1;
+    });
+
+    (abwesenheiten.data ?? []).forEach((a: any) => {
+      const m = new Date(a.datum).getMonth();
+      if (a.art === "Urlaub" || a.art === "unbezahlter_Urlaub") monate[m].urlaub += 1;
+      if (a.art === "krank_mit_AU" || a.art === "krank_ohne_AU") monate[m].krank += 1;
+    });
+
+    const reaktionPerMonat: number[][] = Array.from({ length: 12 }, () => []);
+    (anfragen.data ?? []).forEach((a: any) => {
+      if (!a.erstellt_am || !a.beantwortet_am) return;
+      const diff = (new Date(a.beantwortet_am).getTime() - new Date(a.erstellt_am).getTime()) / 36e5;
+      if (diff < 0 || diff > 24 * 60) return;
+      const m = new Date(a.erstellt_am).getMonth();
+      reaktionPerMonat[m].push(diff);
+    });
+    reaktionPerMonat.forEach((arr, i) => {
+      if (arr.length === 0) return;
+      monate[i].reaktionAvgH = Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10;
+    });
+
+    monate.forEach((m) => {
+      m.offen = m.geplant - m.besetzt;
+      m.besetztPct = m.geplant > 0 ? Math.round((m.besetzt / m.geplant) * 100) : 0;
+      m.auslastungPct = maxProMA > 0 ? Math.round((m.geplant / maxProMA) * 100) : 0;
+    });
+
+    const gesamt = monate.reduce(
+      (acc, m) => ({
+        geplant: acc.geplant + m.geplant,
+        besetzt: acc.besetzt + m.besetzt,
+        offen: acc.offen + m.offen,
+        urlaub: acc.urlaub + m.urlaub,
+        krank: acc.krank + m.krank,
+      }),
+      { geplant: 0, besetzt: 0, offen: 0, urlaub: 0, krank: 0 },
+    );
+    const reaktionAlle = reaktionPerMonat.flat();
+    const reaktionGesamt = reaktionAlle.length > 0
+      ? Math.round((reaktionAlle.reduce((a, b) => a + b, 0) / reaktionAlle.length) * 10) / 10
+      : null;
+
+    return {
+      jahr,
+      monate,
+      gesamt: {
+        ...gesamt,
+        besetztPct: gesamt.geplant > 0 ? Math.round((gesamt.besetzt / gesamt.geplant) * 100) : 0,
+        auslastungPct: maxProMA > 0 ? Math.round((gesamt.geplant / (maxProMA * 12)) * 100) : 0,
+        reaktionAvgH: reaktionGesamt,
+      },
+      snapshot: {
+        mitarbeiterAktiv: maAktiv.count ?? 0,
+        einrichtungenAktiv: einAktiv.count ?? 0,
+        einrichtungenInaktiv: einInaktiv.count ?? 0,
+      },
+    };
   });
