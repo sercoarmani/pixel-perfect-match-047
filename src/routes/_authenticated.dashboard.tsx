@@ -55,6 +55,51 @@ function DashboardPage() {
         <Kpi to="/plan" icon={CalendarDays} label="Einsätze diesen Monat" value={data.kpis.einsaetzeMonat} />
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Monatsübersicht</CardTitle>
+          <CardDescription>Geplante, besetzte und mögliche Einsätze (analog Excel-Planungsliste)</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 md:grid-cols-3">
+          <Metric
+            label="Besetzungsquote"
+            value={`${data.monatsStats.besetztPct}%`}
+            sub={`${data.monatsStats.besetzt} von ${data.monatsStats.geplant} bestätigt/intern`}
+            pct={data.monatsStats.besetztPct}
+            color="emerald"
+          />
+          <Metric
+            label="Auslastung"
+            value={`${data.monatsStats.auslastungPct}%`}
+            sub={`${data.monatsStats.geplant} geplant / ${data.monatsStats.moeglich} möglich`}
+            pct={Math.min(100, data.monatsStats.auslastungPct)}
+            color="primary"
+          />
+          <Metric
+            label="Offen"
+            value={String(data.monatsStats.offen)}
+            sub="noch nicht besetzte Dienste"
+            pct={data.monatsStats.geplant > 0 ? Math.round((data.monatsStats.offen / data.monatsStats.geplant) * 100) : 0}
+            color="amber"
+          />
+        </CardContent>
+        <CardContent className="border-t pt-4">
+          <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Geplant je Qualifikation</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(data.qualGruppen)
+              .sort((a, b) => (b[1] as any).geplant - (a[1] as any).geplant)
+              .map(([qual, v]: any) => (
+                <div key={qual} className="flex items-center justify-between rounded border px-3 py-1.5 text-sm">
+                  <span className="font-medium">{qual}</span>
+                  <span className="text-muted-foreground">
+                    {v.geplant} Einsätze · {v.gesamt} MA
+                  </span>
+                </div>
+              ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
