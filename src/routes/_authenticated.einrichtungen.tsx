@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listEinrichtungen, upsertEinrichtung, deleteEinrichtung } from "@/lib/dispo.functions";
+import { listEinrichtungen, upsertEinrichtung, deleteEinrichtung, listTraeger, createTraeger } from "@/lib/dispo.functions";
 import { generatePortalToken } from "@/lib/portal.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ function EinrichtungenPage() {
   const fetchList = useServerFn(listEinrichtungen);
   const { data, isLoading } = useQuery({ queryKey: ["einrichtungen"], queryFn: () => fetchList() });
   const [edit, setEdit] = useState<any | null>(null);
-  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">("aktiv");
+  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">("alle");
 
   const filtered = (data ?? []).filter((e: any) =>
     filter === "alle" ? true : filter === "aktiv" ? e.aktiv : !e.aktiv,
@@ -94,6 +95,7 @@ function EinrichtungenPage() {
 function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
   const [form, setForm] = useState({
     id: row.id,
+    traeger_id: row.traeger_id ?? null,
     name: row.name ?? "",
     ort: row.ort ?? "",
     wohnbereich: row.wohnbereich ?? "",
@@ -105,8 +107,20 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
     notiz: row.notiz ?? "",
     aktiv: row.aktiv ?? true,
   });
-  const save = useServerFn(upsertEinrichtung);
+  const fetchTraeger = useServerFn(listTraeger);
+  const { data: traeger } = useQuery({ queryKey: ["traeger"], queryFn: () => fetchTraeger() });
+  const createT = useServerFn(createTraeger);
   const qc = useQueryClient();
+  const newTraeger = useMutation({
+    mutationFn: (name: string) => createT({ data: { name } }),
+    onSuccess: (t: any) => {
+      qc.invalidateQueries({ queryKey: ["traeger"] });
+      setForm((f) => ({ ...f, traeger_id: t.id }));
+      toast.success("Träger angelegt");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const save = useServerFn(upsertEinrichtung);
   const m = useMutation({
     mutationFn: () => save({ data: {
       ...form,
@@ -121,6 +135,21 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>{row.id ? "Einrichtung bearbeiten" : "Neue Einrichtung"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-2 gap-3 text-sm">
+          <F label="Träger" full>
+            <div className="flex gap-2">
+              <Select value={form.traeger_id ?? "__none__"} onValueChange={(v) => setForm({...form, traeger_id: v === "__none__" ? null : v})}>
+                <SelectTrigger><SelectValue placeholder="– Träger wählen –" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">– kein Träger –</SelectItem>
+                  {(traeger ?? []).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                const name = window.prompt("Neuer Träger – Name:");
+                if (name && name.trim()) newTraeger.mutate(name.trim());
+              }}>+ Neu</Button>
+            </div>
+          </F>
           <F label="Name" full><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} /></F>
           <F label="Ort"><Input value={form.ort} onChange={(e) => setForm({...form, ort: e.target.value})} /></F>
           <F label="Wohnbereich"><Input value={form.wohnbereich} onChange={(e) => setForm({...form, wohnbereich: e.target.value})} /></F>

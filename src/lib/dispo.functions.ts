@@ -141,6 +141,7 @@ export const upsertEinrichtung = createServerFn({ method: "POST" })
       notiz: z.string().max(2000).optional().nullable(),
       aktiv: z.boolean().optional(),
       kunde_angelegt: z.boolean().optional(),
+      traeger_id: z.string().uuid().optional().nullable(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -565,6 +566,70 @@ export const deleteEinrichtung = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------- Träger ----------
+export const listTraeger = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.from("traeger").select("*").order("name");
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
+export const createTraeger = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ name: z.string().min(1).max(200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.from("traeger").insert({ name: data.name }).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+// ---------- Abwesenheit ----------
+export const upsertAbwesenheit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      id: z.string().uuid().optional(),
+      mitarbeiter_id: z.string().uuid(),
+      datum: z.string(),
+      art: z.enum(["Urlaub", "unbezahlter_Urlaub", "krank_mit_AU", "krank_ohne_AU", "Wunschfrei"]),
+      notiz: z.string().max(500).optional().nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    if (data.id) {
+      const { error } = await supabase.from("abwesenheiten").update({
+        mitarbeiter_id: data.mitarbeiter_id, datum: data.datum, art: data.art, notiz: data.notiz,
+      }).eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+    // Remove einsatz on that day (krank überschreibt geplanten Dienst)
+    await supabase.from("einsaetze").delete().eq("mitarbeiter_id", data.mitarbeiter_id).eq("datum", data.datum);
+    await supabase.from("abwesenheiten").delete().eq("mitarbeiter_id", data.mitarbeiter_id).eq("datum", data.datum);
+    const { data: row, error } = await supabase.from("abwesenheiten").insert({
+      mitarbeiter_id: data.mitarbeiter_id, datum: data.datum, art: data.art, notiz: data.notiz,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+    return { id: row.id };
+  });
+
+export const deleteAbwesenheit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ mitarbeiter_id: z.string().uuid(), datum: z.string() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("abwesenheiten")
+      .delete().eq("mitarbeiter_id", data.mitarbeiter_id).eq("datum", data.datum);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 // ---------- Statistik (Monatsvergleich + Jahr) ----------
 export const getStatistik = createServerFn({ method: "GET" })

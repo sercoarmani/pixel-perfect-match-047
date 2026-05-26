@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { addDays, format } from "date-fns";
+import { addMonths, format, startOfMonth, endOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, Trash2, FileText, FileSpreadsheet } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, FileText, FileSpreadsheet, HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -13,13 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getPlanData, upsertEinsatz, deleteEinsatz, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
+import { getPlanData, upsertEinsatz, deleteEinsatz, getMitarbeiterDienstplan, upsertAbwesenheit, deleteAbwesenheit } from "@/lib/dispo.functions";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { exportPlanungslisteExcel, exportPlanungslistePdf } from "@/lib/excel-planungsliste";
-import { startOfMonth, endOfMonth } from "date-fns";
 import {
   DIENSTE, DIENST_KURZ, STATUS_LABEL, STATUS_CLASS,
-  buildDateRange, fmtIsoDate, weekStart, type Dienst, type EinsatzStatus,
+  monthRange, fmtIsoDate, type Dienst, type EinsatzStatus,
 } from "@/lib/dispo-utils";
 
 export const Route = createFileRoute("/_authenticated/plan")({
@@ -37,14 +36,14 @@ type Einsatz = {
 };
 
 function PlanPage() {
-  const [anchor, setAnchor] = useState(() => weekStart(new Date()));
-  const [days, setDays] = useState(14);
+  const [anchor, setAnchor] = useState(() => startOfMonth(new Date()));
   const [qualFilter, setQualFilter] = useState<string>("ALLE");
   const [anstFilter, setAnstFilter] = useState<string>("ALLE");
-  const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz } | null>(null);
+  const [maFilter, setMaFilter] = useState<string>("ALLE");
+  const [edit, setEdit] = useState<{ mitarbeiter_id: string; datum: string; existing?: Einsatz; existingAbwId?: string } | null>(null);
   const [exporting, setExporting] = useState<null | "pdf" | "xlsx">(null);
 
-  const dateRange = useMemo(() => buildDateRange(anchor, days), [anchor, days]);
+  const dateRange = useMemo(() => monthRange(anchor), [anchor]);
   const von = fmtIsoDate(dateRange[0]);
   const bis = fmtIsoDate(dateRange[dateRange.length - 1]);
 
@@ -61,6 +60,7 @@ function PlanPage() {
 
   const grouped = useMemo(() => {
     const list = (data?.mitarbeiter ?? []).filter((m: any) => {
+      if (maFilter !== "ALLE" && m.id !== maFilter) return false;
       if (qualFilter !== "ALLE" && QUAL_GROUP(m.qualifikation) !== qualFilter) return false;
       if (anstFilter === "VZ_TZ" && !(m.anstellung === "Vollzeit" || m.anstellung === "Teilzeit")) return false;
       if (anstFilter !== "ALLE" && anstFilter !== "VZ_TZ" && m.anstellung !== anstFilter) return false;
@@ -81,7 +81,7 @@ function PlanPage() {
       g.items.push(m);
     });
     return groups;
-  }, [data, qualFilter, anstFilter]);
+  }, [data, qualFilter, anstFilter, maFilter]);
 
 
   const einsatzByCell = useMemo(() => {
@@ -114,17 +114,26 @@ function PlanPage() {
         <div>
           <h1 className="text-lg font-semibold">Planungsmatrix</h1>
           <p className="text-xs text-muted-foreground">
-            {format(dateRange[0], "dd.MM.yyyy", { locale: de })} – {format(dateRange[dateRange.length - 1], "dd.MM.yyyy", { locale: de })}
+            {format(anchor, "MMMM yyyy", { locale: de })} · {format(dateRange[0], "dd.MM.", { locale: de })} – {format(dateRange[dateRange.length - 1], "dd.MM.yyyy", { locale: de })}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setAnchor(addDays(anchor, -7))}>
+          <Button variant="outline" size="icon" onClick={() => setAnchor(startOfMonth(addMonths(anchor, -1)))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setAnchor(weekStart(new Date()))}>Heute</Button>
-          <Button variant="outline" size="icon" onClick={() => setAnchor(addDays(anchor, 7))}>
+          <Button variant="outline" size="sm" onClick={() => setAnchor(startOfMonth(new Date()))}>Heute</Button>
+          <Button variant="outline" size="icon" onClick={() => setAnchor(startOfMonth(addMonths(anchor, 1)))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Select value={maFilter} onValueChange={setMaFilter}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALLE">Alle Mitarbeiter</SelectItem>
+              {[...(data?.mitarbeiter ?? [])].sort((a: any, b: any) => a.kuerzel.localeCompare(b.kuerzel)).map((m: any) => (
+                <SelectItem key={m.id} value={m.id}>{m.kuerzel} – {m.nachname}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={qualFilter} onValueChange={setQualFilter}>
             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -142,14 +151,6 @@ function PlanPage() {
               <SelectItem value="Vollzeit">Vollzeit</SelectItem>
               <SelectItem value="Teilzeit">Teilzeit</SelectItem>
               <SelectItem value="Minijob">Minijob</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-            <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">7 Tage</SelectItem>
-              <SelectItem value="14">14 Tage</SelectItem>
-              <SelectItem value="28">28 Tage</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -266,7 +267,11 @@ function PlanPage() {
                             onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
                           >
                             {abw ? (
-                              <div className="text-[10px] text-muted-foreground italic">{abw}</div>
+                              abw.startsWith("krank") ? (
+                                <div className="rounded bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold text-white">KRANK</div>
+                              ) : (
+                                <div className="text-[10px] text-muted-foreground italic">{abw}</div>
+                              )
                             ) : e ? (
                               <div className={cn("rounded px-1 py-0.5 text-[10px] leading-tight", STATUS_CLASS[e.status])}>
                                 <div className="font-bold">{DIENST_KURZ[e.dienst]}</div>
@@ -355,6 +360,18 @@ function EinsatzDialog({
     onSuccess: () => { toast.success("Einsatz gelöscht"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const upsertAbw = useServerFn(upsertAbwesenheit);
+  const delAbw = useServerFn(deleteAbwesenheit);
+  const krankMut = useMutation({
+    mutationFn: (art: "krank_mit_AU" | "krank_ohne_AU") => upsertAbw({ data: { mitarbeiter_id: mitarbeiterId, datum, art } }),
+    onSuccess: () => { toast.success("Als krank gemeldet"); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const clearKrankMut = useMutation({
+    mutationFn: () => delAbw({ data: { mitarbeiter_id: mitarbeiterId, datum } }),
+    onSuccess: () => { toast.success("Abwesenheit entfernt"); onSaved(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -405,6 +422,17 @@ function EinsatzDialog({
           <div className="space-y-1.5">
             <Label>Notiz</Label>
             <Textarea value={notiz ?? ""} onChange={(e) => setNotiz(e.target.value)} rows={2} />
+          </div>
+          <div className="flex gap-2 border-t pt-3">
+            <Button type="button" variant="outline" size="sm" onClick={() => krankMut.mutate("krank_mit_AU")} disabled={krankMut.isPending}>
+              <HeartPulse className="mr-1 h-3.5 w-3.5 text-red-600" /> Krank mit AU
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => krankMut.mutate("krank_ohne_AU")} disabled={krankMut.isPending}>
+              <HeartPulse className="mr-1 h-3.5 w-3.5" /> Krank ohne AU
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => clearKrankMut.mutate()} disabled={clearKrankMut.isPending}>
+              Abw. löschen
+            </Button>
           </div>
         </div>
         <DialogFooter className="flex justify-between gap-2 sm:justify-between">
