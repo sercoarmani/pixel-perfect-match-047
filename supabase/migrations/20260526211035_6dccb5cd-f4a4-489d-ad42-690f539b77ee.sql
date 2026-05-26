@@ -1,0 +1,1 @@
+ALTER TABLE public.einrichtungen ADD COLUMN portal_token text UNIQUE;
