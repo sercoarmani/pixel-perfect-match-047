@@ -841,7 +841,7 @@ export const bedarfZusage = createServerFn({ method: "POST" })
       .update({
         ergebnis: "abgedeckt",
         besetzt_durch: data.mitarbeiter_id,
-        status: "abgedeckt",
+        status: "besetzt",
       })
       .eq("id", data.bedarf_id);
     if (updBedarfErr) throw updBedarfErr;
