@@ -323,24 +323,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "einsaetze_einrichtung_fk"
-            columns: ["einrichtung_id"]
-            isOneToOne: false
-            referencedRelation: "einrichtungen"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "einsaetze_einrichtung_id_fkey"
             columns: ["einrichtung_id"]
             isOneToOne: false
             referencedRelation: "einrichtungen"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "einsaetze_mitarbeiter_fk"
-            columns: ["mitarbeiter_id"]
-            isOneToOne: false
-            referencedRelation: "mitarbeiter"
             referencedColumns: ["id"]
           },
           {
