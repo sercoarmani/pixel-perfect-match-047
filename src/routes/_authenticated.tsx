@@ -53,17 +53,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AuthLayout() {
-  const { loading, session, signOut, user, isDispo } = useAuth();
-  const navigate = useNavigate();
+  const { session, signOut, user, isDispo } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login", replace: true });
-  }, [loading, session, navigate]);
-
-  if (loading || !session) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Lade…</div>;
-  }
 
   const footer = (
     <div className="border-t p-3 space-y-1">
