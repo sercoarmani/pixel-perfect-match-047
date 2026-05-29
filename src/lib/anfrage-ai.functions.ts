@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  qualErfuellt, dienstMoeglich, maEinplanbar,
+  ANSTELLUNG_RANK, qualRank,
+} from "@/lib/matching";
 
 // ============================================================
 // AI: parst E-Mail-/Freitext zu strukturierten Bedarfen
@@ -150,20 +154,10 @@ export const getVerfuegbareMitarbeiter = createServerFn({ method: "POST" })
       if (e.datum === data.datum) tagBelegt.add(e.mitarbeiter_id);
     }
 
-    const qualOk = (q: string) => {
-      if (!data.qualifikation) return true;
-      if (data.qualifikation === "PFK") {
-        return ["PFK", "GuK", "PFA", "Krankenschwester"].includes(q);
-      }
-      return true; // PHK akzeptiert alle
-    };
-
-    const anstellungRank: Record<string, number> = { Vollzeit: 0, Teilzeit: 1, Minijob: 2 };
-    const qualRank: Record<string, number> = { PFK: 0, GuK: 0, PFA: 0, Krankenschwester: 0, PHK: 1 };
-
     const vorschlaege = (mitR.data ?? [])
-      .filter((m: any) => qualOk(m.qualifikation))
-      .filter((m: any) => Array.isArray(m.dienste_moeglich) && m.dienste_moeglich.includes(data.dienst))
+      .filter((m: any) => maEinplanbar(m))
+      .filter((m: any) => !data.qualifikation || qualErfuellt(m.qualifikation, data.qualifikation))
+      .filter((m: any) => dienstMoeglich(m.dienste_moeglich, data.dienst))
       .filter((m: any) => !abwSet.has(m.id))
       .filter((m: any) => !tagBelegt.has(m.id))
       .map((m: any) => {
@@ -173,11 +167,11 @@ export const getVerfuegbareMitarbeiter = createServerFn({ method: "POST" })
       })
       .filter((m: any) => m.frei > 0)
       .sort((a: any, b: any) => {
-        const qa = qualRank[a.qualifikation] ?? 9;
-        const qb = qualRank[b.qualifikation] ?? 9;
+        const qa = qualRank(a.qualifikation);
+        const qb = qualRank(b.qualifikation);
         if (qa !== qb) return qa - qb;
-        const aa = anstellungRank[a.anstellung] ?? 9;
-        const ab = anstellungRank[b.anstellung] ?? 9;
+        const aa = ANSTELLUNG_RANK[a.anstellung] ?? 9;
+        const ab = ANSTELLUNG_RANK[b.anstellung] ?? 9;
         if (aa !== ab) return aa - ab;
         return b.frei - a.frei;
       });

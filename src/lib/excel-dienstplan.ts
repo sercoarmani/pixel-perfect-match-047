@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
+import { einsatzBelegt } from "@/lib/matching";
 
 type Einsatz = {
   datum: string;
@@ -32,7 +33,11 @@ export function generateDienstplanExcel(opts: {
   const monatEnde = endOfMonth(vonD);
   const tage = eachDayOfInterval({ start: monatStart, end: monatEnde });
 
-  const einsatzByDate = new Map(opts.einsaetze.map((e) => [e.datum, e]));
+  const einsatzByDate = new Map<string, Einsatz>();
+  for (const e of opts.einsaetze) {
+    const prev = einsatzByDate.get(e.datum);
+    if (!prev || (!einsatzBelegt(prev.status) && einsatzBelegt(e.status))) einsatzByDate.set(e.datum, e);
+  }
   const abwByDate = new Map(opts.abwesenheiten.map((a) => [a.datum, a]));
 
   const aoa: (string | number)[][] = [];

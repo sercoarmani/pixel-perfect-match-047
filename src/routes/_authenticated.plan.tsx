@@ -20,6 +20,7 @@ import {
   DIENSTE, DIENST_KURZ, STATUS_LABEL, STATUS_CLASS,
   monthRange, fmtIsoDate, type Dienst, type EinsatzStatus,
 } from "@/lib/dispo-utils";
+import { findeKonflikte, hatKonflikt } from "@/lib/matching";
 
 export const Route = createFileRoute("/_authenticated/plan")({
   component: PlanPage,
@@ -108,6 +109,31 @@ function PlanPage() {
     return map;
   }, [data]);
 
+  const konflikte = useMemo(
+    () => findeKonflikte(data?.einsaetze ?? [], data?.abwesenheiten ?? []),
+    [data],
+  );
+  const konfliktAnzahl = konflikte.doppelbelegung.size + konflikte.abwesendTrotzEinsatz.size;
+
+  // Offene Bedarfe je Tag (Bedarfsspur über der Matrix).
+  const bedarfByDate = useMemo(() => {
+    const einById = new Map((data?.einrichtungen ?? []).map((e: any) => [e.id, e.name]));
+    const map = new Map<string, { F: number; S: number; N: number; total: number; items: any[] }>();
+    (data?.bedarfe ?? []).forEach((b: any) => {
+      if (b.ergebnis && b.ergebnis !== "offen") return; // nur noch offene Bedarfe
+      const cur = map.get(b.datum) ?? { F: 0, S: 0, N: 0, total: 0, items: [] };
+      const n = b.anzahl ?? 1;
+      cur[b.dienst as "F" | "S" | "N"] += n;
+      cur.total += n;
+      cur.items.push({ dienst: b.dienst, qualifikation: b.qualifikation, anzahl: n, einrichtung: einById.get(b.einrichtung_id) ?? "?" });
+      map.set(b.datum, cur);
+    });
+    return map;
+  }, [data]);
+  const offeneBedarfeGesamt = useMemo(() => {
+    let s = 0; bedarfByDate.forEach((v) => (s += v.total)); return s;
+  }, [bedarfByDate]);
+
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b bg-card px-6 py-3">
@@ -115,6 +141,16 @@ function PlanPage() {
           <h1 className="text-lg font-semibold">Planungsmatrix</h1>
           <p className="text-xs text-muted-foreground">
             {format(anchor, "MMMM yyyy", { locale: de })} · {format(dateRange[0], "dd.MM.", { locale: de })} – {format(dateRange[dateRange.length - 1], "dd.MM.yyyy", { locale: de })}
+            {konfliktAnzahl > 0 && (
+              <span className="ml-2 inline-flex items-center rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                {konfliktAnzahl} Konflikt{konfliktAnzahl === 1 ? "" : "e"}
+              </span>
+            )}
+            {offeneBedarfeGesamt > 0 && (
+              <span className="ml-2 inline-flex items-center rounded bg-status-bedarf px-1.5 py-0.5 text-[10px] font-semibold text-status-bedarf-fg">
+                {offeneBedarfeGesamt} offene{offeneBedarfeGesamt === 1 ? "r" : ""} Bedarf
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -233,6 +269,39 @@ function PlanPage() {
               </tr>
             </thead>
             <tbody>
+              {offeneBedarfeGesamt > 0 && (
+                <tr className="border-b">
+                  <td className="sticky left-0 z-10 border-b border-r bg-amber-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                    Offener Bedarf
+                  </td>
+                  {dateRange.map((d) => {
+                    const iso = fmtIsoDate(d);
+                    const b = bedarfByDate.get(iso);
+                    const wknd = [0, 6].includes(d.getDay());
+                    const title = b
+                      ? b.items
+                          .map((x: any) => `${x.einrichtung}: ${DIENST_KURZ[x.dienst as Dienst]} ${x.qualifikation} ×${x.anzahl}`)
+                          .join("\n")
+                      : undefined;
+                    return (
+                      <td
+                        key={iso}
+                        title={title}
+                        className={cn(
+                          "border-b border-r px-1 py-1 text-center align-middle",
+                          wknd && "bg-muted/20",
+                        )}
+                      >
+                        {b && b.total > 0 ? (
+                          <span className="inline-flex items-center justify-center rounded bg-status-bedarf px-1.5 py-0.5 text-[10px] font-semibold text-status-bedarf-fg">
+                            {b.total}
+                          </span>
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
               {grouped.map((g) => (
                 <Fragment key={g.key}>
                   <tr>
@@ -256,16 +325,24 @@ function PlanPage() {
                         const ein = e ? data!.einrichtungen.find((x: any) => x.id === e.einrichtung_id) : null;
                         const wknd = [0, 6].includes(d.getDay());
                         const verfMarks = DIENSTE.filter((di) => verfByCell.get(`${m.id}|${iso}|${di}`) === true);
+                        const konflikt = hatKonflikt(konflikte, m.id, iso);
                         return (
                           <td
                             key={iso}
+                            title={konflikt ? "Konflikt: Doppelbelegung oder Einsatz trotz Abwesenheit" : undefined}
                             className={cn(
-                              "h-12 cursor-pointer border-b border-r p-1 align-top transition-colors",
+                              "relative h-12 cursor-pointer border-b border-r p-1 align-top transition-colors",
                               wknd && !e && "bg-muted/30",
                               !e && "hover:bg-accent/50",
+                              konflikt && "ring-2 ring-inset ring-red-500",
                             )}
                             onClick={() => setEdit({ mitarbeiter_id: m.id, datum: iso, existing: e as Einsatz | undefined })}
                           >
+                            {konflikt && (
+                              <span className="pointer-events-none absolute right-0 top-0 z-10 rounded-bl bg-red-600 px-1 text-[9px] font-bold leading-tight text-white">
+                                !
+                              </span>
+                            )}
                             {abw ? (
                               abw.startsWith("krank") ? (
                                 <div className="rounded bg-red-600 px-1 py-0.5 text-center text-[10px] font-semibold text-white">KRANK</div>
