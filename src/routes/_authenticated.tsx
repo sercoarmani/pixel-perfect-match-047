@@ -53,7 +53,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AuthLayout() {
-  const { session, signOut, user, isDispo, loading } = useAuth();
+  const { session, signOut, user, isDispo } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Dev-Modus: Login ist deaktiviert. Kein Redirect, kein Lade-Block.
