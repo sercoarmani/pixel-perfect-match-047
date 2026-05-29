@@ -437,6 +437,31 @@ export const getMitarbeiterDienstplan = createServerFn({ method: "GET" })
     };
   });
 
+// ---------- Mitarbeiter-Detail (Verfügbarkeiten + besetzte Anfragen + Einsätze) ----------
+export const getMitarbeiterDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { mitarbeiter_id: string }) =>
+    z.object({ mitarbeiter_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const heute = new Date().toISOString().slice(0, 10);
+    const [mit, verf, anf, eins, einrichtungen] = await Promise.all([
+      supabase.from("mitarbeiter").select("*").eq("id", data.mitarbeiter_id).single(),
+      supabase.from("verfuegbarkeiten").select("*").eq("mitarbeiter_id", data.mitarbeiter_id).order("datum", { ascending: false }).limit(200),
+      supabase.from("anfragen").select("*").eq("besetzt_durch", data.mitarbeiter_id).order("zeitraum_von", { ascending: false }).limit(100),
+      supabase.from("einsaetze").select("*").eq("mitarbeiter_id", data.mitarbeiter_id).gte("datum", heute).order("datum").limit(100),
+      supabase.from("einrichtungen").select("id, name, ort"),
+    ]);
+    const einMap = new Map((einrichtungen.data ?? []).map((e) => [e.id, e]));
+    return {
+      mitarbeiter: mit.data,
+      verfuegbarkeiten: verf.data ?? [],
+      anfragen: anf.data ?? [],
+      einsaetze: (eins.data ?? []).map((e) => ({ ...e, einrichtung: einMap.get(e.einrichtung_id) ?? null })),
+    };
+  });
+
 // ---------- Dashboard ----------
 export const getDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

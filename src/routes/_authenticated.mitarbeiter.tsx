@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listMitarbeiter, upsertMitarbeiter, deleteMitarbeiter, getMitarbeiterDienstplan } from "@/lib/dispo.functions";
+import { listMitarbeiter, upsertMitarbeiter, deleteMitarbeiter, getMitarbeiterDienstplan, getMitarbeiterDetail } from "@/lib/dispo.functions";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -186,41 +187,137 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
   });
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{row.id ? "Mitarbeiter bearbeiten" : "Neuer Mitarbeiter"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <Field label="Vorname"><Input value={form.vorname} onChange={(e) => setForm({...form, vorname: e.target.value})} /></Field>
-          <Field label="Nachname"><Input value={form.nachname} onChange={(e) => setForm({...form, nachname: e.target.value})} /></Field>
-          <Field label="Kürzel"><Input value={form.kuerzel} onChange={(e) => setForm({...form, kuerzel: e.target.value})} /></Field>
-          <Field label="Qualifikation">
-            <Select value={form.qualifikation} onValueChange={(v) => setForm({...form, qualifikation: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{QUALS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Anstellung">
-            <Select value={form.anstellung} onValueChange={(v) => setForm({...form, anstellung: v})}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{ANSTS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
-          <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
-          <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
-          <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
-          <div className="space-y-1.5 col-span-2">
-            <Label>Status</Label>
-            <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">
-              <input id="ma-aktiv-tog" type="checkbox" checked={form.aktiv} onChange={(e) => setForm({...form, aktiv: e.target.checked})} className="h-4 w-4" />
-              <label htmlFor="ma-aktiv-tog" className="text-sm cursor-pointer">{form.aktiv ? "Aktiv – wird in Planung & Listen angezeigt" : "Inaktiv – ausgeblendet"}</label>
-            </div>
-          </div>
-        </div>
+        {row.id ? (
+          <Tabs defaultValue="stamm">
+            <TabsList>
+              <TabsTrigger value="stamm">Stammdaten</TabsTrigger>
+              <TabsTrigger value="verkn">Verfügbarkeiten & Dienste</TabsTrigger>
+            </TabsList>
+            <TabsContent value="stamm">
+              <StammFields form={form} setForm={setForm} />
+            </TabsContent>
+            <TabsContent value="verkn">
+              <MitarbeiterVerknuepft mitarbeiterId={row.id} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <StammFields form={form} setForm={setForm} />
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
           <Button onClick={() => m.mutate()} disabled={m.isPending}>Speichern</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 text-sm pt-2">
+      <Field label="Vorname"><Input value={form.vorname} onChange={(e) => setForm({...form, vorname: e.target.value})} /></Field>
+      <Field label="Nachname"><Input value={form.nachname} onChange={(e) => setForm({...form, nachname: e.target.value})} /></Field>
+      <Field label="Kürzel"><Input value={form.kuerzel} onChange={(e) => setForm({...form, kuerzel: e.target.value})} /></Field>
+      <Field label="Qualifikation">
+        <Select value={form.qualifikation} onValueChange={(v) => setForm({...form, qualifikation: v})}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{QUALS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent>
+        </Select>
+      </Field>
+      <Field label="Anstellung">
+        <Select value={form.anstellung} onValueChange={(v) => setForm({...form, anstellung: v})}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>{ANSTS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent>
+        </Select>
+      </Field>
+      <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
+      <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
+      <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <div className="space-y-1.5 col-span-2">
+        <Label>Status</Label>
+        <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+          <input id="ma-aktiv-tog" type="checkbox" checked={form.aktiv} onChange={(e) => setForm({...form, aktiv: e.target.checked})} className="h-4 w-4" />
+          <label htmlFor="ma-aktiv-tog" className="text-sm cursor-pointer">{form.aktiv ? "Aktiv – wird in Planung & Listen angezeigt" : "Inaktiv – ausgeblendet"}</label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MitarbeiterVerknuepft({ mitarbeiterId }: { mitarbeiterId: string }) {
+  const fetchDetail = useServerFn(getMitarbeiterDetail);
+  const { data, isLoading } = useQuery({
+    queryKey: ["mitarbeiter-detail", mitarbeiterId],
+    queryFn: () => fetchDetail({ data: { mitarbeiter_id: mitarbeiterId } }),
+  });
+  if (isLoading) return <div className="py-6 text-sm text-muted-foreground">Lade…</div>;
+  const verf = data?.verfuegbarkeiten ?? [];
+  const eins = data?.einsaetze ?? [];
+  const anf = data?.anfragen ?? [];
+  return (
+    <div className="space-y-4 pt-3 text-sm">
+      <section>
+        <h3 className="font-medium mb-2">Verfügbarkeiten ({verf.length})</h3>
+        {verf.length === 0 ? <p className="text-muted-foreground text-xs">Keine Verfügbarkeiten erfasst.</p> : (
+          <div className="rounded border bg-card max-h-48 overflow-y-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Dienst</TableHead><TableHead>Status</TableHead><TableHead>Quelle</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {verf.map((v: any) => (
+                  <TableRow key={v.id}>
+                    <TableCell className="tabular-nums">{format(new Date(v.datum), "dd.MM.yyyy")}</TableCell>
+                    <TableCell>{v.dienst}</TableCell>
+                    <TableCell>{v.verfuegbar ? <Badge>verfügbar</Badge> : <Badge variant="outline">nicht verfügbar</Badge>}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{v.quelle}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+      <section>
+        <h3 className="font-medium mb-2">Besetzte Anfragen ({anf.length})</h3>
+        {anf.length === 0 ? <p className="text-muted-foreground text-xs">Keine Anfragen besetzt.</p> : (
+          <div className="rounded border bg-card max-h-40 overflow-y-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Typ</TableHead><TableHead>Zeitraum</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {anf.map((a: any) => (
+                  <TableRow key={a.id}>
+                    <TableCell>{a.typ}</TableCell>
+                    <TableCell className="tabular-nums text-xs">{format(new Date(a.zeitraum_von), "dd.MM.")}–{format(new Date(a.zeitraum_bis), "dd.MM.yyyy")}</TableCell>
+                    <TableCell><Badge variant="secondary">{a.status}</Badge></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+      <section>
+        <h3 className="font-medium mb-2">Kommende Einsätze ({eins.length})</h3>
+        {eins.length === 0 ? <p className="text-muted-foreground text-xs">Keine geplanten Einsätze.</p> : (
+          <div className="rounded border bg-card max-h-48 overflow-y-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Dienst</TableHead><TableHead>Einrichtung</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {eins.map((e: any) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="tabular-nums">{format(new Date(e.datum), "dd.MM.yyyy")}</TableCell>
+                    <TableCell>{e.dienst}</TableCell>
+                    <TableCell>{e.einrichtung?.name ?? "—"}{e.einrichtung?.ort ? `, ${e.einrichtung.ort}` : ""}</TableCell>
+                    <TableCell><Badge variant="secondary">{e.status}</Badge></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
