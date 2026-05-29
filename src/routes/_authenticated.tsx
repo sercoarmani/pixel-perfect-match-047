@@ -15,6 +15,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/statistik", label: "Statistiken", icon: BarChart3 },
   { to: "/bedarf", label: "Bedarfsassistent", icon: Sparkles },
+  { to: "/dispo", label: "Disposition", icon: PhoneCall },
   { to: "/plan", label: "Planungsmatrix", icon: CalendarDays },
   { to: "/anfragen", label: "Anfragen", icon: Inbox },
   { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
