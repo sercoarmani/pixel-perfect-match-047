@@ -56,7 +56,7 @@ function AuthLayout() {
   const { session, signOut, user, isDispo } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const footer = (
+  const footer = session ? (
     <div className="border-t p-3 space-y-1">
       <div className="text-xs text-muted-foreground truncate px-1">{user?.email}</div>
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
@@ -66,6 +66,13 @@ function AuthLayout() {
       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => signOut()}>
         <LogOut className="mr-2 h-4 w-4" /> Abmelden
       </Button>
+    </div>
+  ) : (
+    <div className="border-t p-3 space-y-1">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
+        Entwicklungsmodus (kein Login)
+      </div>
+      <ThemeToggle />
     </div>
   );
 
