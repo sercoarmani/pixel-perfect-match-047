@@ -56,19 +56,8 @@ function AuthLayout() {
   const { session, signOut, user, isDispo, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Solange der Auth-Status (clientseitig) geladen wird: kurzer Ladezustand,
-  // damit es beim Reload nicht kurz zum Login-Flackern kommt.
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
-        Lade…
-      </div>
-    );
-  }
-  // Ohne Sitzung kein Zugriff auf die geschützten Seiten.
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
+  // Dev-Modus: Login ist deaktiviert. Kein Redirect, kein Lade-Block.
+
 
   const footer = session ? (
     <div className="border-t p-3 space-y-1">
