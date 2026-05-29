@@ -148,10 +148,12 @@ export type Database = {
       bedarfe: {
         Row: {
           anzahl: number
+          besetzt_durch: string | null
           datum: string
           dienst: Database["public"]["Enums"]["dienst"]
           eingegangen_am: string
           einrichtung_id: string
+          ergebnis: string
           id: string
           notiz: string | null
           qualifikation: Database["public"]["Enums"]["qualifikation"]
@@ -160,10 +162,12 @@ export type Database = {
         }
         Insert: {
           anzahl?: number
+          besetzt_durch?: string | null
           datum: string
           dienst: Database["public"]["Enums"]["dienst"]
           eingegangen_am?: string
           einrichtung_id: string
+          ergebnis?: string
           id?: string
           notiz?: string | null
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
@@ -172,10 +176,12 @@ export type Database = {
         }
         Update: {
           anzahl?: number
+          besetzt_durch?: string | null
           datum?: string
           dienst?: Database["public"]["Enums"]["dienst"]
           eingegangen_am?: string
           einrichtung_id?: string
+          ergebnis?: string
           id?: string
           notiz?: string | null
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
@@ -183,6 +189,13 @@ export type Database = {
           status?: Database["public"]["Enums"]["bedarf_status"]
         }
         Relationships: [
+          {
+            foreignKeyName: "bedarfe_besetzt_durch_fk"
+            columns: ["besetzt_durch"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bedarfe_einrichtung_fk"
             columns: ["einrichtung_id"]
@@ -355,6 +368,7 @@ export type Database = {
           qualifikation: Database["public"]["Enums"]["qualifikation"]
           status: Database["public"]["Enums"]["ma_status"]
           telefon: string | null
+          umkreis_km: number | null
           vorname: string
           wohnort: string | null
         }
@@ -373,6 +387,7 @@ export type Database = {
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
           telefon?: string | null
+          umkreis_km?: number | null
           vorname: string
           wohnort?: string | null
         }
@@ -391,6 +406,7 @@ export type Database = {
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
           telefon?: string | null
+          umkreis_km?: number | null
           vorname?: string
           wohnort?: string | null
         }
@@ -471,6 +487,7 @@ export type Database = {
           mitarbeiter_id: string
           notiz: string | null
           quelle: string
+          status: string
           verfuegbar: boolean
         }
         Insert: {
@@ -481,6 +498,7 @@ export type Database = {
           mitarbeiter_id: string
           notiz?: string | null
           quelle?: string
+          status?: string
           verfuegbar: boolean
         }
         Update: {
@@ -491,6 +509,7 @@ export type Database = {
           mitarbeiter_id?: string
           notiz?: string | null
           quelle?: string
+          status?: string
           verfuegbar?: boolean
         }
         Relationships: [
