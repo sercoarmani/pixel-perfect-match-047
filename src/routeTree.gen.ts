@@ -22,6 +22,7 @@ import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenti
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
 import { Route as AuthenticatedExportRouteImport } from './routes/_authenticated.export'
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
+import { Route as AuthenticatedDispoRouteImport } from './routes/_authenticated.dispo'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedBedarfRouteImport } from './routes/_authenticated.bedarf'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
@@ -93,6 +94,11 @@ const AuthenticatedEinrichtungenRoute =
     path: '/einrichtungen',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedDispoRoute = AuthenticatedDispoRouteImport.update({
+  id: '/dispo',
+  path: '/dispo',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/anfragen': typeof AuthenticatedAnfragenRoute
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/dispo': typeof AuthenticatedDispoRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/export': typeof AuthenticatedExportRoute
   '/import': typeof AuthenticatedImportRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/anfragen': typeof AuthenticatedAnfragenRoute
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/dispo': typeof AuthenticatedDispoRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/export': typeof AuthenticatedExportRoute
   '/import': typeof AuthenticatedImportRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRoute
   '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/dispo': typeof AuthenticatedDispoRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/_authenticated/export': typeof AuthenticatedExportRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/anfragen'
     | '/bedarf'
     | '/dashboard'
+    | '/dispo'
     | '/einrichtungen'
     | '/export'
     | '/import'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/anfragen'
     | '/bedarf'
     | '/dashboard'
+    | '/dispo'
     | '/einrichtungen'
     | '/export'
     | '/import'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authenticated/anfragen'
     | '/_authenticated/bedarf'
     | '/_authenticated/dashboard'
+    | '/_authenticated/dispo'
     | '/_authenticated/einrichtungen'
     | '/_authenticated/export'
     | '/_authenticated/import'
@@ -319,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEinrichtungenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/dispo': {
+      id: '/_authenticated/dispo'
+      path: '/dispo'
+      fullPath: '/dispo'
+      preLoaderRoute: typeof AuthenticatedDispoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -347,6 +366,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRoute
   AuthenticatedBedarfRoute: typeof AuthenticatedBedarfRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDispoRoute: typeof AuthenticatedDispoRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
   AuthenticatedExportRoute: typeof AuthenticatedExportRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
@@ -360,6 +380,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAnfragenRoute: AuthenticatedAnfragenRoute,
   AuthenticatedBedarfRoute: AuthenticatedBedarfRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDispoRoute: AuthenticatedDispoRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
   AuthenticatedExportRoute: AuthenticatedExportRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,

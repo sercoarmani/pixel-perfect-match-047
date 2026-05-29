@@ -756,3 +756,134 @@ export const getStatistik = createServerFn({ method: "GET" })
       },
     };
   });
+
+// ---------- Disposition: offene Bedarfe + Anrufliste ----------
+export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const heute = new Date().toISOString().slice(0, 10);
+
+    const [bedarfeRes, mitRes, verfRes, einRes] = await Promise.all([
+      supabase
+        .from("bedarfe")
+        .select("*")
+        .eq("ergebnis", "offen")
+        .gte("datum", heute)
+        .order("datum"),
+      supabase.from("mitarbeiter").select("*").eq("aktiv", true),
+      supabase
+        .from("verfuegbarkeiten")
+        .select("*")
+        .eq("status", "frei")
+        .eq("verfuegbar", true)
+        .gte("datum", heute),
+      supabase.from("einrichtungen").select("id, name, ort"),
+    ]);
+
+    const mitarbeiter = mitRes.data ?? [];
+    const verfuegbarkeiten = verfRes.data ?? [];
+    const einMap = new Map((einRes.data ?? []).map((e) => [e.id, e]));
+
+    const bedarfeMitAnrufliste = (bedarfeRes.data ?? []).map((b) => {
+      const passend = mitarbeiter
+        .filter((m: any) => m.qualifikation === b.qualifikation)
+        .filter((m: any) =>
+          verfuegbarkeiten.some(
+            (v: any) =>
+              v.mitarbeiter_id === m.id &&
+              v.datum === b.datum &&
+              v.dienst === b.dienst,
+          ),
+        )
+        .map((m: any) => ({
+          id: m.id,
+          kuerzel: m.kuerzel,
+          vorname: m.vorname,
+          nachname: m.nachname,
+          qualifikation: m.qualifikation,
+          telefon: m.telefon,
+          umkreis_km: m.umkreis_km,
+        }))
+        .sort((a: any, b: any) => {
+          const ax = a.umkreis_km ?? Number.POSITIVE_INFINITY;
+          const bx = b.umkreis_km ?? Number.POSITIVE_INFINITY;
+          return ax - bx;
+        });
+      return { ...b, einrichtung: einMap.get(b.einrichtung_id) ?? null, anrufliste: passend };
+    });
+
+    return { bedarfe: bedarfeMitAnrufliste };
+  });
+
+export const bedarfZusage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { bedarf_id: string; mitarbeiter_id: string }) =>
+    z.object({
+      bedarf_id: z.string().uuid(),
+      mitarbeiter_id: z.string().uuid(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: bedarf, error: bErr } = await supabase
+      .from("bedarfe")
+      .select("*")
+      .eq("id", data.bedarf_id)
+      .single();
+    if (bErr || !bedarf) throw new Error(bErr?.message ?? "Bedarf nicht gefunden");
+    if (bedarf.ergebnis !== "offen") throw new Error("Bedarf ist nicht mehr offen");
+
+    // 1) Bedarf als abgedeckt markieren
+    const { error: updBedarfErr } = await supabase
+      .from("bedarfe")
+      .update({
+        ergebnis: "abgedeckt",
+        besetzt_durch: data.mitarbeiter_id,
+        status: "besetzt",
+      })
+      .eq("id", data.bedarf_id);
+    if (updBedarfErr) throw updBedarfErr;
+
+    // 2) Zugehörige Verfügbarkeit auf "vergeben" setzen
+    const { error: updVerfErr } = await supabase
+      .from("verfuegbarkeiten")
+      .update({ status: "vergeben" })
+      .eq("mitarbeiter_id", data.mitarbeiter_id)
+      .eq("datum", bedarf.datum)
+      .eq("dienst", bedarf.dienst);
+    if (updVerfErr) throw updVerfErr;
+
+    // 3) Einsatz anlegen (damit Dashboard/Matrix die Besetzung sehen)
+    await supabase.from("einsaetze").insert({
+      mitarbeiter_id: data.mitarbeiter_id,
+      einrichtung_id: bedarf.einrichtung_id,
+      datum: bedarf.datum,
+      dienst: bedarf.dienst,
+      status: "BESTAETIGT",
+      quelle: "dispo",
+      notiz: bedarf.notiz ?? null,
+    });
+
+    return { ok: true };
+  });
+
+export const bedarfAbsage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { bedarf_id: string; mitarbeiter_id: string }) =>
+    z.object({
+      bedarf_id: z.string().uuid(),
+      mitarbeiter_id: z.string().uuid(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    // Verfügbarkeit auf "frei" belassen; nur Absage als Notiz auf Bedarf protokollieren
+    const { data: bedarf } = await supabase.from("bedarfe").select("notiz").eq("id", data.bedarf_id).single();
+    const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+    const note = `${bedarf?.notiz ?? ""}\n[${stamp}] Absage von MA ${data.mitarbeiter_id}`.trim();
+    const { error } = await supabase.from("bedarfe").update({ notiz: note }).eq("id", data.bedarf_id);
+    if (error) throw error;
+    return { ok: true };
+  });
