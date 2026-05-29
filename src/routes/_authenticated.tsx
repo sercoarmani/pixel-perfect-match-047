@@ -53,10 +53,15 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AuthLayout() {
-  const { session, signOut, user, isDispo } = useAuth();
+  const { session, signOut, user, isDispo, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Dev-Modus: Login ist deaktiviert. Kein Redirect, kein Lade-Block.
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Lade…</div>;
+  }
+  if (!session) {
+    return <Navigate to="/login" />;
+  }
 
 
   const footer = session ? (
