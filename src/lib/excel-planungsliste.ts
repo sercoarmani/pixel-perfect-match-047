@@ -4,6 +4,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { DIENST_KURZ } from "@/lib/dispo-utils";
+import { einsatzBelegt } from "@/lib/matching";
 
 type Mitarbeiter = { id: string; kuerzel: string; vorname: string; nachname: string; qualifikation: string; anstellung: string };
 type Einsatz = { mitarbeiter_id: string; einrichtung_id: string; datum: string; dienst: "F" | "S" | "N"; status: string };
@@ -20,8 +21,13 @@ type Args = {
 
 function buildCells(args: Args) {
   const einMap = new Map(args.einrichtungen.map((e) => [e.id, e.name]));
-  const eByCell = new Map<string, Einsatz>();
-  args.einsaetze.forEach((e) => eByCell.set(`${e.mitarbeiter_id}|${e.datum}`, e));
+  const eByCell = new Map<string, Einsatz[]>();
+  args.einsaetze.forEach((e) => {
+    const k = `${e.mitarbeiter_id}|${e.datum}`;
+    const arr = eByCell.get(k) ?? [];
+    arr.push(e);
+    eByCell.set(k, arr);
+  });
   const aByCell = new Map<string, string>();
   args.abwesenheiten.forEach((a) => aByCell.set(`${a.mitarbeiter_id}|${a.datum}`, a.art));
 
@@ -29,11 +35,20 @@ function buildCells(args: Args) {
     const row = [`${m.kuerzel} – ${m.nachname}, ${m.vorname}`, m.qualifikation, m.anstellung];
     args.dateRange.forEach((d) => {
       const iso = format(d, "yyyy-MM-dd");
-      const e = eByCell.get(`${m.id}|${iso}`);
+      const list = eByCell.get(`${m.id}|${iso}`) ?? [];
       const a = aByCell.get(`${m.id}|${iso}`);
-      if (e) row.push(`${DIENST_KURZ[e.dienst]} ${einMap.get(e.einrichtung_id) ?? ""}`);
-      else if (a) row.push(a);
-      else row.push("");
+      if (list.length > 0) {
+        // belegende Einsätze bevorzugen; bei mehreren mit "/" verbinden
+        const belegend = list.filter((e) => einsatzBelegt(e.status));
+        const show = (belegend.length > 0 ? belegend : list)
+          .map((e) => `${DIENST_KURZ[e.dienst]} ${einMap.get(e.einrichtung_id) ?? ""}`.trim())
+          .join(" / ");
+        row.push(show);
+      } else if (a) {
+        row.push(a);
+      } else {
+        row.push("");
+      }
     });
     return row;
   });

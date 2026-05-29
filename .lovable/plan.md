@@ -1,40 +1,51 @@
-## Änderungen
+## Was im ZIP enthalten ist
 
-### 1. Planungsmatrix immer monatlich (ab dem 1.)
-`src/routes/_authenticated.plan.tsx` & `src/lib/dispo-utils.ts`
-- Anker auf `startOfMonth(new Date())` setzen statt Wochenstart.
-- Datumsbereich = ganzer Monat (28–31 Tage), Tag-Auswahl (7/14/28) durch Monatsnavigation ersetzen: «‹ Vormonat | Aktueller Monatname | Folgemonat ›» + «Heute».
-- Neue Helfer `monthRange(anchor)` in `dispo-utils.ts`.
+Laut `CHANGELOG-OPTIMIERUNG.md` enthält das Paket:
 
-### 2. Einzelnen Mitarbeiter in Planungsmatrix wählen
-- Neues Select „Mitarbeiter" oben (zwischen Anstellung-Filter und Monatsnav): „Alle" + Liste aller geladenen Mitarbeiter (sortiert nach Kürzel).
-- Filterlogik in `grouped` ergänzen.
+1. **Neues Modul `src/lib/matching.ts`** — vereinheitlichte Dispo-/Matching-Logik (Qualifikation, Verfügbarkeit, Konflikte, Reaktionszeit-Konstante).
+2. **Doppelbelegung sichtbar machen** in `_authenticated.plan.tsx` (Konflikt-Markierung, „Bedarfsspur") + Guard im `upsertEinsatz`.
+3. **Bedarf mit `anzahl > 1`** wird in `bedarfZusage` korrekt gezählt.
+4. **Mitarbeiter-Formular** um Dispo-Felder (`umkreis_km`, `dienste_moeglich`, `max_einsaetze`, `status`) erweitert.
+5. **Parser & Exporte robuster** (`planungsliste-parser.ts`, `excel-*`, `pdf-dienstplan.ts`).
+6. **Zwei neue Migrationen**
+   - `20260529160000_fix_einsaetze_delete_cascade.sql` — repariert die FKs `einsaetze → mitarbeiter/einrichtung` zurück auf `ON DELETE CASCADE`.
+   - `20260529170000_einsatz_no_doppelbelegung.sql` — bereinigt vorhandene Doppelbelegungen und legt einen partiellen UNIQUE-Index `(mitarbeiter_id, datum)` für aktive Status an.
 
-### 3. Status „Krank" in Planungsmatrix
-- Im Zellen-Dialog (`EinsatzDialog`) zusätzlich eine Schaltfläche „Als krank markieren" → legt `abwesenheit` mit `art = krank_mit_AU` an (oder Select `krank_mit_AU` / `krank_ohne_AU`).
-- Anzeige in der Zelle: rote Pille statt grauem Italic für `krank_*`.
-- Neue Server-Funktionen in `src/lib/dispo.functions.ts`: `upsertAbwesenheit({ mitarbeiter_id, datum, art, notiz })` und `deleteAbwesenheit({ id })`.
+## Geänderte/neue Dateien (genau diese werden überschrieben)
 
-### 4. Mitarbeiter bearbeiten: aktiv/inaktiv
-`src/routes/_authenticated.mitarbeiter.tsx` – `EditDialog`
-- Schalter „Status: aktiv/inaktiv" (identisch zum bereits funktionierenden Einrichtungs-Schalter) ergänzen; `aktiv` wird bereits korrekt gespeichert, der UI-Toggle fehlt nur noch.
+Neu:
+- `src/lib/matching.ts`
 
-### 5. Einrichtungen-Dialog: Feldreihenfolge & Status
-`src/routes/_authenticated.einrichtungen.tsx` – `EditDialog`
-- Felder umsortieren auf: Träger → Name → Ort → Kontaktperson → Telefon → E-Mail → VS-Satz PFK → VS-Satz PHK → Status (aktiv/inaktiv).
-- Neues Träger-Auswahlfeld (Select) inkl. Inline-Anlage neuer Träger.
-- Tabelle: Status-Spalte zeigt aktiv UND inaktiv (existiert; Default-Filter auf „alle" stellen, statt „aktiv").
-- Server-Funktionen: `listTraeger`, `createTraeger` ergänzen (falls noch nicht vorhanden).
+Überschrieben:
+- `src/lib/dispo.functions.ts`
+- `src/lib/anfrage-ai.functions.ts`
+- `src/lib/planungsliste-parser.ts`
+- `src/lib/excel-planungsliste.ts`
+- `src/lib/excel-dienstplan.ts`
+- `src/lib/pdf-dienstplan.ts`
+- `src/routes/_authenticated.plan.tsx`
+- `src/routes/_authenticated.mitarbeiter.tsx`
+- `src/routes/_authenticated.tsx`
 
-### 6. Sidebar / Datei-Import & Datei-Export
-`src/routes/_authenticated.tsx` (Sidebar) + neuer Route-Eintrag
-- „Excel-Import" → umbenennen in **„Datei-Import"** (Route `/import` bleibt).
-- Neuer Eintrag direkt darunter: **„Datei-Export"** (Route `/export`).
-- Neue Routendatei `src/routes/_authenticated.export.tsx`:
-  - Exporte für Mitarbeiter, Einrichtungen, Einsätze, Abwesenheiten — jeweils als Excel (.xlsx) **und** PDF.
-  - Zusätzlich Planungsliste (aktueller Monat / wählbar) als Excel und PDF (nutzt vorhandene Funktionen in `excel-planungsliste.ts`).
-- Bestehende `excel-planungsliste.ts` wird wiederverwendet; für die anderen Entitäten kleine generische Tabellen-Exporter.
+`src/routeTree.gen.ts` wird **nicht** angefasst (wird vom Vite-Plugin generiert).
 
-## Nicht enthalten
-- Keine Datenbank-Migrationen nötig (Schema reicht aus).
-- Keine Änderungen an Auth / RLS.
+## Wichtig — Konflikt mit deinem letzten Wunsch
+
+Die optimierte `src/routes/_authenticated.tsx` **schaltet den Login-Schutz wieder ein** (Redirect auf `/login` bei fehlender Session). Du hattest vorher gesagt: „Anmeldung erstmal raus solange ich am Projekt arbeite".
+
+Optionen:
+- **A)** Optimierung 1:1 einspielen → Login ist wieder aktiv.
+- **B)** Optimierung einspielen, aber den Login-Redirect in `_authenticated.tsx` weiterhin deaktiviert lassen (Dev-Modus wie zuletzt).
+
+Ich empfehle **B**, bis du den Login wieder aktivieren möchtest.
+
+## Umsetzungsschritte
+
+1. Die zwei Migrationen über das Datenbank-Migrationstool ausführen (zuerst `…160000_fix_einsaetze_delete_cascade`, dann `…170000_einsatz_no_doppelbelegung`). Du bekommst eine Freigabe-Aufforderung pro Migration.
+2. Alle oben gelisteten Code-Dateien aus dem ZIP übernehmen (parallel kopieren).
+3. Bei Wahl **B** in `_authenticated.tsx` den `Navigate to="/login"`-Block entfernen und den „Entwicklungsmodus"-Footer beibehalten — Rest der Datei wie im ZIP.
+4. Build/Typecheck läuft automatisch; Ergebnis prüfen.
+
+## Bitte entscheide
+
+- Variante **A** (Login wieder an) oder **B** (Login bleibt aus)?

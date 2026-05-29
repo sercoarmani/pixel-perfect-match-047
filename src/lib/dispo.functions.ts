@@ -1,6 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  qualErfuellt, dienstMoeglich, maEinplanbar, einsatzBelegt,
+  REAKTION_MAX_STUNDEN,
+} from "@/lib/matching";
+
+/** Übersetzt die DB-Sperre (UNIQUE-Verletzung) in eine verständliche Meldung. */
+function istDoppelbelegungFehler(err: any): boolean {
+  if (!err) return false;
+  if (err.code === "23505") return true;
+  return /duplicate key|einsaetze_max_eins_pro_tag/i.test(String(err.message ?? ""));
+}
+function doppelbelegungMeldung(datum: string): string {
+  return `Doppelbelegung am ${datum}: Der/die Mitarbeiter:in hat an diesem Tag bereits einen aktiven Einsatz.`;
+}
 
 
 // ---------- Plan / Matrix ----------
@@ -41,20 +55,55 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
       dienst: z.enum(["F", "S", "N"]),
       status: z.enum(["GEPLANT", "INTERN", "ZUR_UEBERPRUEFUNG", "BESTAETIGT", "ABGESAGT", "AUSGEPLANT"]).optional(),
       notiz: z.string().optional().nullable(),
+      // Erlaubt dem Disponenten, eine erkannte Doppelbelegung/Abwesenheit bewusst zu überschreiben.
+      erlaube_konflikt: z.boolean().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const status = data.status ?? "GEPLANT";
+
+    // ---- Konfliktprüfung (nur wenn der Einsatz den MA tatsächlich belegt) ----
+    if (!data.erlaube_konflikt && einsatzBelegt(status)) {
+      // 1) Abwesenheit am selben Tag?
+      const { data: abw } = await supabase
+        .from("abwesenheiten")
+        .select("art")
+        .eq("mitarbeiter_id", data.mitarbeiter_id)
+        .eq("datum", data.datum)
+        .limit(1);
+      if (abw && abw.length > 0) {
+        throw new Error(
+          `Mitarbeiter ist am ${data.datum} abwesend (${abw[0].art}). Bitte zuerst die Abwesenheit entfernen.`,
+        );
+      }
+      // 2) Bereits anderer belegender Einsatz am selben Tag?
+      const { data: vorhandene } = await supabase
+        .from("einsaetze")
+        .select("id, dienst, status")
+        .eq("mitarbeiter_id", data.mitarbeiter_id)
+        .eq("datum", data.datum);
+      const konflikt = (vorhandene ?? []).find(
+        (e) => e.id !== data.id && einsatzBelegt(e.status),
+      );
+      if (konflikt) {
+        throw new Error(
+          `Doppelbelegung am ${data.datum}: Mitarbeiter hat bereits einen ${konflikt.dienst}-Dienst. ` +
+          `Bitte den bestehenden Einsatz anpassen oder die Belegung bewusst zulassen.`,
+        );
+      }
+    }
+
     if (data.id) {
       const { error } = await supabase.from("einsaetze").update({
         mitarbeiter_id: data.mitarbeiter_id,
         einrichtung_id: data.einrichtung_id,
         datum: data.datum,
         dienst: data.dienst,
-        status: data.status,
+        status,
         notiz: data.notiz,
       }).eq("id", data.id);
-      if (error) throw new Error(error.message);
+      if (error) throw new Error(istDoppelbelegungFehler(error) ? doppelbelegungMeldung(data.datum) : error.message);
       return { id: data.id };
     }
     const { data: row, error } = await supabase.from("einsaetze").insert({
@@ -62,10 +111,10 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
       einrichtung_id: data.einrichtung_id,
       datum: data.datum,
       dienst: data.dienst,
-      status: data.status ?? "GEPLANT",
+      status,
       notiz: data.notiz,
     }).select("id").single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(istDoppelbelegungFehler(error) ? doppelbelegungMeldung(data.datum) : error.message);
     return { id: row.id };
   });
 
@@ -102,6 +151,11 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
       wohnort: z.string().max(100).optional().nullable(),
       notiz: z.string().max(2000).optional().nullable(),
       aktiv: z.boolean().optional(),
+      // Dispo-relevante Felder (werden von der Vorschlags-/Anrufliste genutzt):
+      dienste_moeglich: z.array(z.enum(["F", "S", "N"])).optional(),
+      max_einsaetze: z.number().int().min(0).max(62).optional(),
+      umkreis_km: z.number().min(0).max(2000).optional().nullable(),
+      status: z.enum(["aktiv", "austritt", "schwanger", "gesperrt", "inaktiv"]).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -374,7 +428,10 @@ export const importEinsaetze = createServerFn({ method: "POST" })
           created++;
         }
       } catch (e: any) {
-        errors.push({ row: i + 2, error: e.message });
+        errors.push({
+          row: i + 2,
+          error: istDoppelbelegungFehler(e) ? doppelbelegungMeldung(r.datum) : e.message,
+        });
       }
     }
     return { created, updated, errors };
@@ -496,7 +553,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     (anfBeantwortet.data ?? []).forEach((a: any) => {
       if (!a.erstellt_am || !a.beantwortet_am) return;
       const diff = (new Date(a.beantwortet_am).getTime() - new Date(a.erstellt_am).getTime()) / 36e5;
-      if (diff >= 0 && diff < 24 * 30) reaktionStunden.push(diff);
+      if (diff >= 0 && diff < REAKTION_MAX_STUNDEN) reaktionStunden.push(diff);
     });
     const reaktionAvgH = reaktionStunden.length > 0
       ? Math.round((reaktionStunden.reduce((a, b) => a + b, 0) / reaktionStunden.length) * 10) / 10
@@ -710,7 +767,7 @@ export const getStatistik = createServerFn({ method: "GET" })
     (anfragen.data ?? []).forEach((a: any) => {
       if (!a.erstellt_am || !a.beantwortet_am) return;
       const diff = (new Date(a.beantwortet_am).getTime() - new Date(a.erstellt_am).getTime()) / 36e5;
-      if (diff < 0 || diff > 24 * 60) return;
+      if (diff < 0 || diff > REAKTION_MAX_STUNDEN) return;
       const m = new Date(a.erstellt_am).getMonth();
       reaktionPerMonat[m].push(diff);
     });
@@ -764,7 +821,7 @@ export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
     const { supabase } = context;
     const heute = new Date().toISOString().slice(0, 10);
 
-    const [bedarfeRes, mitRes, verfRes, einRes] = await Promise.all([
+    const [bedarfeRes, mitRes, verfRes, einRes, abwRes, einsRes] = await Promise.all([
       supabase
         .from("bedarfe")
         .select("*")
@@ -779,15 +836,34 @@ export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
         .eq("verfuegbar", true)
         .gte("datum", heute),
       supabase.from("einrichtungen").select("id, name, ort"),
+      supabase.from("abwesenheiten").select("mitarbeiter_id, datum").gte("datum", heute),
+      supabase.from("einsaetze").select("mitarbeiter_id, datum, status").gte("datum", heute),
     ]);
 
     const mitarbeiter = mitRes.data ?? [];
     const verfuegbarkeiten = verfRes.data ?? [];
     const einMap = new Map((einRes.data ?? []).map((e) => [e.id, e]));
 
+    // Schlüssel `mitarbeiter_id|datum` für Ausschlüsse
+    const abwSet = new Set(
+      (abwRes.data ?? []).map((a: any) => `${a.mitarbeiter_id}|${a.datum}`),
+    );
+    const belegtSet = new Set(
+      (einsRes.data ?? [])
+        .filter((e: any) => einsatzBelegt(e.status))
+        .map((e: any) => `${e.mitarbeiter_id}|${e.datum}`),
+    );
+
     const bedarfeMitAnrufliste = (bedarfeRes.data ?? []).map((b) => {
       const passend = mitarbeiter
-        .filter((m: any) => m.qualifikation === b.qualifikation)
+        // dieselben Eignungsregeln wie im Bedarfsassistenten:
+        .filter((m: any) => maEinplanbar(m))
+        .filter((m: any) => qualErfuellt(m.qualifikation, b.qualifikation))
+        .filter((m: any) => dienstMoeglich(m.dienste_moeglich, b.dienst))
+        // bereits abwesend oder an dem Tag belegt → nicht anrufen:
+        .filter((m: any) => !abwSet.has(`${m.id}|${b.datum}`))
+        .filter((m: any) => !belegtSet.has(`${m.id}|${b.datum}`))
+        // Anrufliste setzt eine gemeldete Verfügbarkeit ("frei") voraus:
         .filter((m: any) =>
           verfuegbarkeiten.some(
             (v: any) =>
@@ -835,16 +911,31 @@ export const bedarfZusage = createServerFn({ method: "POST" })
     if (bErr || !bedarf) throw new Error(bErr?.message ?? "Bedarf nicht gefunden");
     if (bedarf.ergebnis !== "offen") throw new Error("Bedarf ist nicht mehr offen");
 
-    // 1) Bedarf als abgedeckt markieren
-    const { error: updBedarfErr } = await supabase
-      .from("bedarfe")
-      .update({
-        ergebnis: "abgedeckt",
-        besetzt_durch: data.mitarbeiter_id,
-        status: "besetzt",
-      })
-      .eq("id", data.bedarf_id);
-    if (updBedarfErr) throw updBedarfErr;
+    // 0) Doppelbelegung verhindern: ist der MA an dem Tag schon belegt oder abwesend?
+    const [{ data: tagEins }, { data: tagAbw }] = await Promise.all([
+      supabase.from("einsaetze").select("status")
+        .eq("mitarbeiter_id", data.mitarbeiter_id).eq("datum", bedarf.datum),
+      supabase.from("abwesenheiten").select("art")
+        .eq("mitarbeiter_id", data.mitarbeiter_id).eq("datum", bedarf.datum).limit(1),
+    ]);
+    if (tagAbw && tagAbw.length > 0) {
+      throw new Error(`Mitarbeiter ist am ${bedarf.datum} abwesend (${tagAbw[0].art}).`);
+    }
+    if ((tagEins ?? []).some((e: any) => einsatzBelegt(e.status))) {
+      throw new Error(`Mitarbeiter ist am ${bedarf.datum} bereits eingeplant (Doppelbelegung).`);
+    }
+
+    // 1) Einsatz anlegen (damit Dashboard/Matrix die Besetzung sehen)
+    const { error: insErr } = await supabase.from("einsaetze").insert({
+      mitarbeiter_id: data.mitarbeiter_id,
+      einrichtung_id: bedarf.einrichtung_id,
+      datum: bedarf.datum,
+      dienst: bedarf.dienst,
+      status: "BESTAETIGT",
+      quelle: "dispo",
+      notiz: bedarf.notiz ?? null,
+    });
+    if (insErr) throw new Error(istDoppelbelegungFehler(insErr) ? doppelbelegungMeldung(bedarf.datum) : insErr.message);
 
     // 2) Zugehörige Verfügbarkeit auf "vergeben" setzen
     const { error: updVerfErr } = await supabase
@@ -855,18 +946,29 @@ export const bedarfZusage = createServerFn({ method: "POST" })
       .eq("dienst", bedarf.dienst);
     if (updVerfErr) throw updVerfErr;
 
-    // 3) Einsatz anlegen (damit Dashboard/Matrix die Besetzung sehen)
-    await supabase.from("einsaetze").insert({
-      mitarbeiter_id: data.mitarbeiter_id,
-      einrichtung_id: bedarf.einrichtung_id,
-      datum: bedarf.datum,
-      dienst: bedarf.dienst,
-      status: "BESTAETIGT",
-      quelle: "dispo",
-      notiz: bedarf.notiz ?? null,
-    });
+    // 3) Deckungsgrad bestimmen: zählt alle belegenden Einsätze für diese
+    //    Einrichtung/Datum/Dienst. Erst wenn anzahl erreicht ist, gilt der
+    //    Bedarf als vollständig abgedeckt – sonst bleibt er (teilbesetzt) offen.
+    const { data: deckung } = await supabase
+      .from("einsaetze")
+      .select("status")
+      .eq("einrichtung_id", bedarf.einrichtung_id)
+      .eq("datum", bedarf.datum)
+      .eq("dienst", bedarf.dienst);
+    const besetztAnzahl = (deckung ?? []).filter((e: any) => einsatzBelegt(e.status)).length;
+    const vollständig = besetztAnzahl >= (bedarf.anzahl ?? 1);
 
-    return { ok: true };
+    const { error: updBedarfErr } = await supabase
+      .from("bedarfe")
+      .update({
+        ergebnis: vollständig ? "abgedeckt" : "offen",
+        besetzt_durch: data.mitarbeiter_id,
+        status: vollständig ? "besetzt" : "in_bearbeitung",
+      })
+      .eq("id", data.bedarf_id);
+    if (updBedarfErr) throw updBedarfErr;
+
+    return { ok: true, besetzt: besetztAnzahl, benoetigt: bedarf.anzahl ?? 1, vollständig };
   });
 
 export const bedarfAbsage = createServerFn({ method: "POST" })

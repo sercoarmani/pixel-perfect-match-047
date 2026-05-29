@@ -177,6 +177,10 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
     wohnort: row.wohnort ?? "",
     notiz: row.notiz ?? "",
     aktiv: row.aktiv ?? true,
+    dienste_moeglich: (row.dienste_moeglich ?? ["F", "S", "N"]) as ("F" | "S" | "N")[],
+    max_einsaetze: row.max_einsaetze ?? 20,
+    umkreis_km: row.umkreis_km ?? null,
+    status: row.status ?? "aktiv",
   });
   const save = useServerFn(upsertMitarbeiter);
   const qc = useQueryClient();
@@ -235,6 +239,65 @@ function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }
       <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
       <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
       <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <Field label="Umkreis (km)">
+        <Input
+          type="number" min={0} inputMode="numeric"
+          value={form.umkreis_km ?? ""}
+          placeholder="z. B. 25"
+          onChange={(e) => setForm({ ...form, umkreis_km: e.target.value === "" ? null : Number(e.target.value) })}
+        />
+      </Field>
+      <Field label="Max. Einsätze / Monat">
+        <Input
+          type="number" min={0} max={62} inputMode="numeric"
+          value={form.max_einsaetze}
+          onChange={(e) => setForm({ ...form, max_einsaetze: Number(e.target.value) || 0 })}
+        />
+      </Field>
+      <Field label="MA-Status">
+        <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(["aktiv", "schwanger", "austritt", "gesperrt", "inaktiv"] as const).map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      <div className="space-y-1.5 col-span-2">
+        <Label>Mögliche Dienste</Label>
+        <div className="flex gap-2">
+          {(["F", "S", "N"] as const).map((d) => {
+            const active = form.dienste_moeglich.includes(d);
+            const label = d === "F" ? "Früh" : d === "S" ? "Spät" : "Nacht";
+            return (
+              <button
+                key={d}
+                type="button"
+                onClick={() =>
+                  setForm({
+                    ...form,
+                    dienste_moeglich: active
+                      ? form.dienste_moeglich.filter((x: string) => x !== d)
+                      : [...form.dienste_moeglich, d],
+                  })
+                }
+                className={
+                  "flex-1 rounded-md border px-3 py-2 text-sm transition-colors " +
+                  (active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground hover:bg-muted")
+                }
+              >
+                {d} · {label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Steuert, für welche Dienste der/die MA in der Anruf- und Vorschlagsliste erscheint.
+        </p>
+      </div>
       <div className="space-y-1.5 col-span-2">
         <Label>Status</Label>
         <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">

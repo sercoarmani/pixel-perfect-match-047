@@ -56,6 +56,9 @@ function AuthLayout() {
   const { session, signOut, user, isDispo } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Dev-Modus: Login ist deaktiviert. Kein Redirect, kein Lade-Block.
+
+
   const footer = session ? (
     <div className="border-t p-3 space-y-1">
       <div className="text-xs text-muted-foreground truncate px-1">{user?.email}</div>
