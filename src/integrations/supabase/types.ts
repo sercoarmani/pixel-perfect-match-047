@@ -41,6 +41,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "abwesenheiten_mitarbeiter_fk"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "abwesenheiten_mitarbeiter_id_fkey"
             columns: ["mitarbeiter_id"]
             isOneToOne: false
@@ -53,6 +60,7 @@ export type Database = {
         Row: {
           ablauf_datum: string
           beantwortet_am: string | null
+          besetzt_durch: string | null
           empfaenger_id: string
           empfaenger_typ: Database["public"]["Enums"]["empfaenger_typ"]
           erstellt_am: string
@@ -67,6 +75,7 @@ export type Database = {
         Insert: {
           ablauf_datum?: string
           beantwortet_am?: string | null
+          besetzt_durch?: string | null
           empfaenger_id: string
           empfaenger_typ: Database["public"]["Enums"]["empfaenger_typ"]
           erstellt_am?: string
@@ -81,6 +90,7 @@ export type Database = {
         Update: {
           ablauf_datum?: string
           beantwortet_am?: string | null
+          besetzt_durch?: string | null
           empfaenger_id?: string
           empfaenger_typ?: Database["public"]["Enums"]["empfaenger_typ"]
           erstellt_am?: string
@@ -92,7 +102,15 @@ export type Database = {
           zeitraum_bis?: string
           zeitraum_von?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "anfragen_besetzt_durch_fk"
+            columns: ["besetzt_durch"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_log: {
         Row: {
@@ -166,6 +184,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "bedarfe_einrichtung_fk"
+            columns: ["einrichtung_id"]
+            isOneToOne: false
+            referencedRelation: "einrichtungen"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bedarfe_einrichtung_id_fkey"
             columns: ["einrichtung_id"]
             isOneToOne: false
@@ -228,6 +253,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "einrichtungen_traeger_fk"
+            columns: ["traeger_id"]
+            isOneToOne: false
+            referencedRelation: "traeger"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "einrichtungen_traeger_id_fkey"
             columns: ["traeger_id"]
             isOneToOne: false
@@ -278,10 +310,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "einsaetze_einrichtung_fk"
+            columns: ["einrichtung_id"]
+            isOneToOne: false
+            referencedRelation: "einrichtungen"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "einsaetze_einrichtung_id_fkey"
             columns: ["einrichtung_id"]
             isOneToOne: false
             referencedRelation: "einrichtungen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "einsaetze_mitarbeiter_fk"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
             referencedColumns: ["id"]
           },
           {
@@ -448,6 +494,13 @@ export type Database = {
           verfuegbar?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "verfuegbarkeiten_mitarbeiter_fk"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "verfuegbarkeiten_mitarbeiter_id_fkey"
             columns: ["mitarbeiter_id"]
