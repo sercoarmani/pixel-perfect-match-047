@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tan
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
