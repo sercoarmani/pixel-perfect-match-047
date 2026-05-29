@@ -1,5 +1,5 @@
-import { createFileRoute, Outlet, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall } from "lucide-react";
@@ -53,19 +53,10 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AuthLayout() {
-  const { loading, session, signOut, user, isDispo } = useAuth();
-  const navigate = useNavigate();
+  const { session, signOut, user, isDispo } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login", replace: true });
-  }, [loading, session, navigate]);
-
-  if (loading || !session) {
-    return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Lade…</div>;
-  }
-
-  const footer = (
+  const footer = session ? (
     <div className="border-t p-3 space-y-1">
       <div className="text-xs text-muted-foreground truncate px-1">{user?.email}</div>
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
@@ -75,6 +66,13 @@ function AuthLayout() {
       <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => signOut()}>
         <LogOut className="mr-2 h-4 w-4" /> Abmelden
       </Button>
+    </div>
+  ) : (
+    <div className="border-t p-3 space-y-1">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
+        Entwicklungsmodus (kein Login)
+      </div>
+      <ThemeToggle />
     </div>
   );
 
