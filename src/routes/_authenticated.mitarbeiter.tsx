@@ -349,8 +349,32 @@ function StammFields({ form, setForm, row }: { form: any; setForm: (f: any) => v
       </Field>
       <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
       <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
-      <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <Field label="Straße & Nr."><Input value={form.strasse} onChange={(e) => setForm({...form, strasse: e.target.value})} placeholder="z. B. Hauptstr. 7" /></Field>
       <Field label="PLZ"><Input value={form.plz} onChange={(e) => setForm({ ...form, plz: e.target.value })} /></Field>
+      <Field label="Ort"><Input value={form.ort} onChange={(e) => setForm({...form, ort: e.target.value})} placeholder="für Geocoding" /></Field>
+      <Field label="Wohnort (Anzeige)"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <Field label="Max. Radius (km, Luftlinie)">
+        <Input
+          type="number" min={0} inputMode="numeric"
+          value={form.max_radius_km ?? ""}
+          placeholder="z. B. 30"
+          onChange={(e) => setForm({ ...form, max_radius_km: e.target.value === "" ? null : Number(e.target.value) })}
+        />
+      </Field>
+      {row?.id && (
+        <div className="col-span-2 space-y-1.5">
+          <Label>Geocoding</Label>
+          <div className="flex items-center gap-2 rounded border bg-card px-3 py-2">
+            <GeocodeStatusBadge status={row.geocode_status} fehler={row.geocode_fehler} lat={row.lat} lng={row.lng} />
+            <span className="text-xs text-muted-foreground flex-1 truncate">
+              {row.lat != null && row.lng != null
+                ? `${Number(row.lat).toFixed(5)}, ${Number(row.lng).toFixed(5)}`
+                : (row.geocode_fehler ?? "Adresse speichern, dann geokodieren")}
+            </span>
+            <GeocodeSingleButton tabelle="mitarbeiter" id={row.id} invalidateKey="mitarbeiter" />
+          </div>
+        </div>
+      )}
       <Field label="Führerschein">
         <div className="flex items-center gap-3 rounded border bg-card px-3 py-2 h-10">
           <input id="ma-fs-tog" type="checkbox" checked={form.fuehrerschein} onChange={(e) => setForm({ ...form, fuehrerschein: e.target.checked })} className="h-4 w-4" />
