@@ -412,6 +412,8 @@ export const importEinrichtungen = createServerFn({ method: "POST" })
     const { supabase } = context;
     let created = 0, updated = 0;
     const errors: { name: string; error: string }[] = [];
+    const created_names: string[] = [];
+    const updated_names: string[] = [];
     for (const row of data.rows) {
       let traeger_id: string | null = null;
       if (row.traeger) {
@@ -429,14 +431,20 @@ export const importEinrichtungen = createServerFn({ method: "POST" })
       if (existing) {
         const { error } = await supabase.from("einrichtungen").update(payload).eq("id", existing.id);
         if (error) errors.push({ name: row.name, error: error.message });
-        else updated++;
+        else {
+          updated++;
+          updated_names.push(row.name);
+        }
       } else {
         const { error } = await supabase.from("einrichtungen").insert(payload);
         if (error) errors.push({ name: row.name, error: error.message });
-        else created++;
+        else {
+          created++;
+          created_names.push(row.name);
+        }
       }
     }
-    return { created, updated, errors };
+    return { created, updated, errors, created_names, updated_names };
   });
 
 export const importEinsaetze = createServerFn({ method: "POST" })
