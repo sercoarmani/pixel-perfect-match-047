@@ -304,7 +304,7 @@ export const extractDokument = createServerFn({ method: "POST" })
 
       const { data: row, error: ue } = await supabase
         .from("mitarbeiter_dokumente")
-        .update(patch)
+        .update(patch as never)
         .eq("id", data.id)
         .select("*")
         .single();
