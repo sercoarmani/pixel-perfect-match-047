@@ -30,6 +30,13 @@ function EinrichtungenPage() {
   const [edit, setEdit] = useState<any | null>(null);
   const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">(initialQ ? "alle" : "aktiv");
   const [search, setSearch] = useState<string>(initialQ ?? "");
+  type SortKey = "traeger" | "name" | "ort" | "vs_pfk" | "vs_phk";
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir("asc"); }
+  };
 
   const normalizedSearch = search.trim().toLowerCase();
   const filtered = (data ?? []).filter((e: any) => {
@@ -41,6 +48,23 @@ function EinrichtungenPage() {
       (e.ort ?? "").toLowerCase().includes(normalizedSearch) ||
       (e.traeger?.name ?? "").toLowerCase().includes(normalizedSearch)
     );
+  });
+
+  const sorted = [...filtered].sort((a: any, b: any) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const get = (row: any) => {
+      switch (sortKey) {
+        case "traeger": return (row.traeger?.name ?? "").toLowerCase();
+        case "name": return (row.name ?? "").toLowerCase();
+        case "ort": return (row.ort ?? "").toLowerCase();
+        case "vs_pfk": return row.vs_satz_pfk == null ? -Infinity : Number(row.vs_satz_pfk);
+        case "vs_phk": return row.vs_satz_phk == null ? -Infinity : Number(row.vs_satz_phk);
+      }
+    };
+    const va = get(a); const vb = get(b);
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
   });
 
   return (
