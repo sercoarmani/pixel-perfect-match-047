@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Building2, BuildingIcon, Inbox, CalendarDays, AlertCircle, ArrowRight, Timer } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { de } from "date-fns/locale";
+import { DokumenteAblaufWidget } from "@/components/dokumente-ablauf-widget";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -219,6 +220,8 @@ function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <DokumenteAblaufWidget tage={60} />
     </div>
   );
 }
