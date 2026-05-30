@@ -21,20 +21,30 @@ export const Route = createFileRoute("/_authenticated/dispo")({
 
 function DispoPage() {
   const fetchOffene = useServerFn(getDispoOffeneBedarfe);
+  const qc = useQueryClient();
   // `faktor` = sofortiger Anzeigewert (Slider), `debouncedFaktor` = effektiver Wert für die Query.
   const [faktor, setFaktor] = useState(0.8);
   const [debouncedFaktor, setDebouncedFaktor] = useState(0.8);
+
   useEffect(() => {
     if (faktor === debouncedFaktor) return;
+    // Cache-Hit? Sofort übernehmen – keine Wartezeit, kein API-Call.
+    const cached = qc.getQueryData(["dispo-offene", faktor]);
+    if (cached) {
+      setDebouncedFaktor(faktor);
+      return;
+    }
     const t = setTimeout(() => setDebouncedFaktor(faktor), 200);
     return () => clearTimeout(t);
-  }, [faktor, debouncedFaktor]);
+  }, [faktor, debouncedFaktor, qc]);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["dispo-offene", debouncedFaktor],
     queryFn: () => fetchOffene({ data: { radius_faktor: debouncedFaktor } }),
     placeholderData: (prev) => prev,
-    staleTime: 30_000,
+    // Kurzes Client-Caching pro Faktorwert: 2 min frisch, 10 min im Speicher.
+    staleTime: 2 * 60_000,
+    gcTime: 10 * 60_000,
   });
 
   const bedarfe = data?.bedarfe ?? [];
