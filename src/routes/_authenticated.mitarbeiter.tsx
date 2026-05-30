@@ -369,8 +369,10 @@ function MitarbeiterVerknuepft({ mitarbeiterId }: { mitarbeiterId: string }) {
   const verf = data?.verfuegbarkeiten ?? [];
   const eins = data?.einsaetze ?? [];
   const anf = data?.anfragen ?? [];
+  const token = (data?.mitarbeiter as any)?.zugangs_token as string | undefined;
   return (
     <div className="space-y-4 pt-3 text-sm">
+      <PersonalLink mitarbeiterId={mitarbeiterId} token={token} />
       <section>
         <h3 className="font-medium mb-2">Verfügbarkeiten ({verf.length})</h3>
         {verf.length === 0 ? <p className="text-muted-foreground text-xs">Keine Verfügbarkeiten erfasst.</p> : (
