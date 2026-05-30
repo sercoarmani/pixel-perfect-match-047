@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import {
   ScrollText, RefreshCw, ArrowDownLeft, ArrowUpRight, Mail, MessageSquare,
-  Phone, AlertCircle, CheckCircle2, RotateCw,
+  Phone, AlertCircle, CheckCircle2, RotateCw, Copy, Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/protokoll")({
@@ -381,9 +381,9 @@ function DetailDialog({
                 <Field label="Message-Id" value={meta?.provider_message_id ?? "—"} />
               </div>
               {meta?.provider_response && (
-                <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
-                  {JSON.stringify(meta.provider_response, null, 2)}
-                </pre>
+                <div className="mt-2">
+                  <JsonBlock data={meta.provider_response} label="Provider-Response" maxHeight="max-h-56" />
+                </div>
               )}
             </div>
 
@@ -488,9 +488,13 @@ function DetailDialog({
                       </div>
                     )}
                     {retryResult.provider_response ? (
-                      <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
-                        {JSON.stringify(retryResult.provider_response, null, 2)}
-                      </pre>
+                      <div className="mt-2">
+                        <JsonBlock
+                          data={retryResult.provider_response}
+                          label="Finale HTTP-Response"
+                          maxHeight="max-h-56"
+                        />
+                      </div>
                     ) : (
                       <div className="mt-2 text-xs text-muted-foreground italic">
                         Keine Provider-Antwort vorhanden.
@@ -508,13 +512,13 @@ function DetailDialog({
             )}
 
             {meta && Object.keys(meta).length > 0 && (
-              <details className="rounded-md border p-3">
-                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">
+              <details className="rounded-md border">
+                <summary className="text-xs uppercase text-muted-foreground cursor-pointer px-3 py-2">
                   Komplette Metadaten
                 </summary>
-                <pre className="mt-2 max-h-64 overflow-auto text-xs">
-                  {JSON.stringify(meta, null, 2)}
-                </pre>
+                <div className="px-3 pb-3">
+                  <JsonBlock data={meta} label="Metadaten" maxHeight="max-h-72" />
+                </div>
               </details>
             )}
           </div>
@@ -570,5 +574,81 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon?:
         <div className="text-2xl font-semibold mt-1">{value}</div>
       </CardContent>
     </Card>
+  );
+}
+
+function JsonBlock({
+  data,
+  label,
+  maxHeight = "max-h-64",
+}: {
+  data: unknown;
+  label?: string;
+  /** Tailwind max-h-* Klasse, default max-h-64 */
+  maxHeight?: string;
+}) {
+  const json = useMemo(() => {
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  }, [data]);
+  const lineCount = useMemo(() => json.split("\n").length, [json]);
+  const sizeKb = useMemo(
+    () => (new Blob([json]).size / 1024).toFixed(1),
+    [json],
+  );
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(json);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore – Clipboard kann in iframes blockiert sein
+    }
+  };
+
+  return (
+    <div className="rounded-md border bg-muted/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b bg-muted/60">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+          {label ?? "JSON"}
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground tabular-nums">
+          <span>{lineCount} Zeilen</span>
+          <span>·</span>
+          <span>{sizeKb} KB</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[10px] gap-1"
+            onClick={onCopy}
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" /> Kopiert
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Kopieren
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+      <pre
+        className={
+          "overflow-auto p-3 text-xs leading-relaxed font-mono " +
+          "whitespace-pre [tab-size:2] " +
+          maxHeight
+        }
+      >
+        <code>{json}</code>
+      </pre>
+    </div>
   );
 }
