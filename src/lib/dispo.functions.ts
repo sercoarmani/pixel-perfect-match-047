@@ -416,15 +416,22 @@ export const importEinrichtungen = createServerFn({ method: "POST" })
     const updated_names: string[] = [];
     for (const row of data.rows) {
       let traeger_id: string | null = null;
-      if (row.traeger) {
-        const { data: t } = await supabase.from("traeger").select("id").eq("name", row.traeger).maybeSingle();
-        if (t) traeger_id = t.id;
-        else {
-          const { data: ins } = await supabase.from("traeger").insert({ name: row.traeger }).select("id").single();
-          traeger_id = ins?.id ?? null;
+      const traegerName = row.traeger?.trim();
+      if (traegerName) {
+        try {
+          const { data: t } = await supabase.from("traeger").select("id").eq("name", traegerName).maybeSingle();
+          if (t) traeger_id = t.id;
+          else {
+            const { data: ins, error: insErr } = await supabase.from("traeger").insert({ name: traegerName }).select("id").single();
+            if (!insErr) traeger_id = ins?.id ?? null;
+          }
+        } catch {
+          // Träger-Lookup/Insert darf den Einrichtungs-Import nicht blockieren.
+          traeger_id = null;
         }
       }
       const { traeger: _t, ...rest } = row;
+      // Träger ist optional – Einrichtung wird auch ohne Träger angelegt (traeger_id = null).
       const payload = { ...rest, traeger_id };
       const { data: existing } = await supabase
         .from("einrichtungen").select("id").eq("name", row.name).maybeSingle();
