@@ -21,6 +21,7 @@ import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { generateDienstplanExcel } from "@/lib/excel-dienstplan";
 import { format, addDays } from "date-fns";
 import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
+import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
 
 
 
@@ -55,6 +56,7 @@ function MitarbeiterPage() {
         </div>
         <div className="flex items-center gap-2">
           <VerfuegbarkeitsBroadcastButton mitarbeiter={data ?? []} />
+          <DokumenteSammelImport mitarbeiter={data ?? []} />
           <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
         </div>
       </div>
