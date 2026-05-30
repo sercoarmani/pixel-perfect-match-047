@@ -1,0 +1,1 @@
+ALTER TABLE public.einrichtungen DROP CONSTRAINT IF EXISTS einrichtungen_traeger_fk;
