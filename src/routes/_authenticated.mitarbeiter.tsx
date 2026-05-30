@@ -360,6 +360,67 @@ function PersonalLink({ mitarbeiterId, token }: { mitarbeiterId: string; token?:
   );
 }
 
+function TelegramLink({ mitarbeiterId, token, chatId, username }: { mitarbeiterId: string; token?: string; chatId?: number | null; username?: string | null }) {
+  const fetchBot = useServerFn(getTelegramBotInfo);
+  const sendLink = useServerFn(sendPersonalLink);
+  const { data: bot } = useQuery({ queryKey: ["tg-bot-info"], queryFn: () => fetchBot(), staleTime: 5 * 60_000 });
+  const botUser = bot?.username ?? null;
+  const deepLink = botUser && token ? `https://t.me/${botUser}?start=${token}` : "";
+  const verknuepft = !!chatId;
+
+  const copy = async () => {
+    if (!deepLink) return;
+    try { await navigator.clipboard.writeText(deepLink); toast.success("Bot-Link kopiert"); }
+    catch { toast.error("Konnte nicht kopieren"); }
+  };
+
+  const sendMut = useMutation({
+    mutationFn: () => sendLink({ data: { mitarbeiter_id: mitarbeiterId } }),
+    onSuccess: () => toast.success("Persönlicher Link via Telegram gesendet"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <section className="rounded-md border bg-muted/30 p-3">
+      <h3 className="mb-2 flex items-center gap-2 font-medium">
+        <Send className="h-4 w-4" /> Telegram-Bot
+        {verknuepft ? (
+          <Badge variant="default" className="ml-1"><CheckCircle2 className="mr-1 h-3 w-3" />verknüpft{username ? ` · @${username}` : ""}</Badge>
+        ) : (
+          <Badge variant="outline" className="ml-1">noch nicht verknüpft</Badge>
+        )}
+      </h3>
+      {!bot ? (
+        <p className="text-xs text-muted-foreground">Lade Bot-Info …</p>
+      ) : !botUser ? (
+        <p className="text-xs text-destructive">Bot ist nicht erreichbar. Bitte Telegram-Connector prüfen.</p>
+      ) : verknuepft ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs text-muted-foreground flex-1">
+            Mitarbeiter:in empfängt Anfragen direkt im Chat und kann mit Zusage/Absage antworten.
+          </p>
+          <Button type="button" size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending}>
+            <Send className="mr-1 h-3.5 w-3.5" /> Verfügbarkeits-Link senden
+          </Button>
+        </div>
+      ) : (
+        <>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Diesen Link an die Person senden. Mit einem Klick startet sie den Bot und ist verknüpft.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={deepLink} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+            <Button type="button" size="sm" variant="outline" onClick={copy}><Copy className="mr-1 h-3.5 w-3.5" />Kopieren</Button>
+            <Button type="button" size="sm" asChild>
+              <a href={deepLink} target="_blank" rel="noreferrer"><Send className="mr-1 h-3.5 w-3.5" />Öffnen</a>
+            </Button>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function MitarbeiterVerknuepft({ mitarbeiterId }: { mitarbeiterId: string }) {
   const fetchDetail = useServerFn(getMitarbeiterDetail);
   const { data, isLoading } = useQuery({
