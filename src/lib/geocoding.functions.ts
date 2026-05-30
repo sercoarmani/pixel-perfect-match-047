@@ -60,9 +60,29 @@ async function geocodeAddress(params: {
     }
     return { ok: true, lat, lng };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Fetch fehlgeschlagen' };
+    const cause = (e as { cause?: unknown })?.cause;
+    const causeMsg =
+      cause instanceof Error
+        ? cause.message
+        : typeof cause === 'string'
+          ? cause
+          : cause
+            ? JSON.stringify(cause)
+            : '';
+    const baseMsg = e instanceof Error ? e.message : 'Fetch fehlgeschlagen';
+    console.error('[geocode] fetch failed', {
+      url: url.toString(),
+      userAgent,
+      error: baseMsg,
+      cause: causeMsg,
+    });
+    return {
+      ok: false,
+      error: causeMsg ? `${baseMsg} (${causeMsg})` : baseMsg,
+    };
   }
 }
+
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
