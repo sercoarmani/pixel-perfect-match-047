@@ -19,21 +19,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDispo, setIsDispo] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       if (s?.user) {
-        // defer role lookup
         setTimeout(async () => {
           const { data } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", s.user.id);
-          setIsDispo(!!data?.some((r) => r.role === "admin" || r.role === "disponent"));
+          const roles = (data ?? []).map((r) => r.role);
+          setIsDispo(roles.some((r) => r === "admin" || r === "disponent"));
+          setIsAdmin(roles.includes("admin"));
         }, 0);
       } else {
         setIsDispo(false);
+        setIsAdmin(false);
       }
     });
 
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user ?? null,
     loading,
     isDispo,
+    isAdmin,
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error: error?.message ?? null };
