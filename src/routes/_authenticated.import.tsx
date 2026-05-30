@@ -358,6 +358,53 @@ function PlanungslistePanel() {
         out.einrichtungen = await importEi({ data: { rows: einrichtungenPayload as any } });
       if (parsed.mitarbeiter.length)
         out.mitarbeiter = await importMa({ data: { rows: parsed.mitarbeiter as any } });
+
+      // Coverage-Check: vor dem Einsatz-Import sicherstellen, dass JEDER
+      // Einrichtungs-Name aus den Einsatz-Zeilen in der DB vorliegt. Fehlende
+      // Namen werden automatisch als Minimal-Einrichtung nachgereicht, damit
+      // der Einsatz-Import nicht an „Einrichtung X nicht gefunden" scheitert.
+      let coverage: any = null;
+      if (filteredEinsaetze.length) {
+        const dbList: any[] = (await fetchEinrichtungen()) ?? [];
+        const dbNorm = new Set(dbList.map((e) => normalizeName(e.name)));
+        const requiredNames = Array.from(
+          new Set(filteredEinsaetze.map((es) => es.einrichtung_name).filter(Boolean)),
+        );
+        const missing = requiredNames.filter((n) => !dbNorm.has(normalizeName(n)));
+        if (missing.length) {
+          const patchRes: any = await importEi({
+            data: { rows: missing.map((name) => ({ name })) as any },
+          });
+          out.einrichtungen_nachzuegler = patchRes;
+          // Merge in den Haupt-Report, damit auch diese in der UI verlinkt sind.
+          if (out.einrichtungen) {
+            out.einrichtungen.created += patchRes.created ?? 0;
+            out.einrichtungen.created_names = [
+              ...(out.einrichtungen.created_names ?? []),
+              ...(patchRes.created_names ?? []),
+            ];
+            out.einrichtungen.created_records = [
+              ...(out.einrichtungen.created_records ?? []),
+              ...(patchRes.created_records ?? []),
+            ];
+            out.einrichtungen.errors = [
+              ...(out.einrichtungen.errors ?? []),
+              ...(patchRes.errors ?? []),
+            ];
+          } else {
+            out.einrichtungen = patchRes;
+          }
+        }
+        const dbList2: any[] = (await fetchEinrichtungen()) ?? [];
+        const dbNorm2 = new Set(dbList2.map((e) => normalizeName(e.name)));
+        const stillMissing = requiredNames.filter((n) => !dbNorm2.has(normalizeName(n)));
+        coverage = {
+          required: requiredNames.length,
+          present: requiredNames.length - stillMissing.length,
+          missing: stillMissing,
+        };
+      }
+
       if (filteredEinsaetze.length) {
         const chunks: any[] = [];
         for (let i = 0; i < filteredEinsaetze.length; i += 1000)
@@ -371,6 +418,7 @@ function PlanungslistePanel() {
       }
       if (parsed.abwesenheiten.length)
         out.abwesenheiten = await importAb({ data: { rows: parsed.abwesenheiten as any } });
+      if (coverage) out.coverage = coverage;
       setReport(out);
       const keys = ["einrichtungen", "mitarbeiter", "traeger", "einsaetze", "abwesenheiten"];
       await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k] })));
