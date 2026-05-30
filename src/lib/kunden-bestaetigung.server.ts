@@ -190,6 +190,19 @@ export async function sendKundenbestaetigung(id: string, userId?: string | null)
     return { ok: false, fehler: "Keine Empfänger-E-Mail", email_status: "failed", ma_unterlagen_status: "skipped" };
   }
 
+  // Atomarer Claim: nur EIN paralleler Aufruf gewinnt — alle anderen bekommen 0 rows.
+  const { data: claimed } = await supabaseAdmin
+    .from("kunden_bestaetigungen")
+    .update({ ma_unterlagen_status: "sending" })
+    .eq("id", id)
+    .eq("status", "entwurf")
+    .eq("ma_unterlagen_status", "pending")
+    .select("id");
+  if (!claimed || claimed.length === 0) {
+    return { ok: true, email_status: "skipped", ma_unterlagen_status: "skipped" };
+  }
+
+
   const docs = await loadAllowedDocs(row.mitarbeiter_id, row.dokument_ids ?? []);
   const signed: Array<{ doc: DokRow; url: string }> = [];
   for (const d of docs) {
