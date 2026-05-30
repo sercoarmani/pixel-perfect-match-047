@@ -49,6 +49,7 @@ function EinrichtungenPage() {
               </button>
             ))}
           </div>
+          <GeocodeBulkButton tabelle="einrichtungen" invalidateKey="einrichtungen" />
           <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
         </div>
       </div>
