@@ -512,13 +512,13 @@ function DetailDialog({
             )}
 
             {meta && Object.keys(meta).length > 0 && (
-              <details className="rounded-md border p-3">
-                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">
+              <details className="rounded-md border">
+                <summary className="text-xs uppercase text-muted-foreground cursor-pointer px-3 py-2">
                   Komplette Metadaten
                 </summary>
-                <pre className="mt-2 max-h-64 overflow-auto text-xs">
-                  {JSON.stringify(meta, null, 2)}
-                </pre>
+                <div className="px-3 pb-3">
+                  <JsonBlock data={meta} label="Metadaten" maxHeight="max-h-72" />
+                </div>
               </details>
             )}
           </div>
