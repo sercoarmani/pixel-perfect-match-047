@@ -240,6 +240,25 @@ function F({ label, children, full }: { label: string; children: React.ReactNode
   return <div className={"space-y-1.5 " + (full ? "col-span-2" : "")}><Label>{label}</Label>{children}</div>;
 }
 
+function SortableHead({ sortKey, current, dir, onClick, children }: {
+  sortKey: any; current: any; dir: "asc" | "desc"; onClick: (k: any) => void; children: React.ReactNode;
+}) {
+  const active = current === sortKey;
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead>
+      <button
+        type="button"
+        onClick={() => onClick(sortKey)}
+        className={"inline-flex items-center gap-1 hover:text-foreground transition-colors " + (active ? "text-foreground" : "text-muted-foreground")}
+      >
+        {children}
+        <Icon className="h-3 w-3" />
+      </button>
+    </TableHead>
+  );
+}
+
 function DeleteEinrichtungButton({ einrichtung }: { einrichtung: any }) {
   const del = useServerFn(deleteEinrichtung);
   const qc = useQueryClient();
