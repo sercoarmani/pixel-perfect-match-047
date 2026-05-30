@@ -7,10 +7,11 @@ import { qualErfuellt } from "@/lib/matching";
 const DIENST_LANG: Record<string, string> = { F: "Frühdienst", S: "Spätdienst", N: "Nachtdienst" };
 
 function publicOrigin(): string {
-  // Stabile Dev-URL des Projekts (Lovable). Über env überschreibbar.
+  // Öffentlich erreichbare URL (für Telegram-Links). Über env überschreibbar.
+  // Default: stabile Produktions-URL des veröffentlichten Projekts.
   const env = process.env.PUBLIC_APP_ORIGIN;
   if (env) return env.replace(/\/$/, "");
-  return "https://project--0ceef16a-44ab-4863-91ea-da069df2e318-dev.lovable.app";
+  return "https://project--0ceef16a-44ab-4863-91ea-da069df2e318.lovable.app";
 }
 
 export const getTelegramBotInfo = createServerFn({ method: "GET" })
