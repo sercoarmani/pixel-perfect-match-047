@@ -116,12 +116,13 @@ export const updateDokument = createServerFn({ method: "POST" })
     for (const [k, v] of Object.entries(patch)) if (v !== undefined) clean[k] = v;
     const { data: row, error } = await context.supabase
       .from("mitarbeiter_dokumente")
-      .update(clean)
+      .update(clean as never)
       .eq("id", id)
       .select("*")
       .single();
     if (error) throw new Error(error.message);
     return row;
+
   });
 
 // ---------- Löschen ----------
