@@ -213,6 +213,7 @@ export const retryVersand = createServerFn({ method: "POST" })
     if (!retry?.kind) throw new Error("Kein Retry-Plan in den Metadaten gespeichert.");
 
     if (retry.kind === "telegram_send") {
+      const startedAt = new Date().toISOString();
       try {
         const res = await tgSendMessage(Number(retry.chat_id), String(retry.text), {
           reply_markup: retry.reply_markup,
@@ -234,7 +235,16 @@ export const retryVersand = createServerFn({ method: "POST" })
             provider_response: res,
           },
         });
-        return { ok: true };
+        return {
+          ok: true,
+          status: "sent" as const,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+          provider_status: 200 as number | null,
+          provider_message_id: (res?.result?.message_id ?? null) as number | null,
+          provider_response: res ?? null,
+          fehler: null as string | null,
+        };
       } catch (e: any) {
         await logVersand({
           kanal: "telegram", richtung: "out", status: "failed",
@@ -254,7 +264,16 @@ export const retryVersand = createServerFn({ method: "POST" })
             retry: retry,
           },
         });
-        throw new Error(e.message);
+        return {
+          ok: false,
+          status: "failed" as const,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+          provider_status: (e?.status ?? null) as number | null,
+          provider_message_id: null as number | null,
+          provider_response: e?.providerBody ?? null,
+          fehler: String(e?.message ?? "Unbekannter Fehler"),
+        };
       }
     }
 
