@@ -274,9 +274,15 @@ function ImportPanel({ spec }: { spec: Spec }) {
   );
 }
 
+type EinrichtungEdit = import("@/lib/planungsliste-parser").EinrichtungOut & {
+  original_name: string;
+  skip: boolean;
+};
+
 function PlanungslistePanel() {
   const [filename, setFilename] = useState("");
   const [parsed, setParsed] = useState<import("@/lib/planungsliste-parser").ParseResult | null>(null);
+  const [einrichtungenEdit, setEinrichtungenEdit] = useState<EinrichtungEdit[]>([]);
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<any>(null);
 
@@ -291,6 +297,9 @@ function PlanungslistePanel() {
     try {
       const r = await parsePlanungsliste(f);
       setParsed(r);
+      setEinrichtungenEdit(
+        r.einrichtungen.map((e) => ({ ...e, original_name: e.name, skip: false })),
+      );
       setFilename(f.name);
       toast.success(
         `Erkannt: ${r.einrichtungen.length} Einrichtungen · ${r.mitarbeiter.length} Mitarbeiter · ${r.einsaetze.length} Einsätze · ${r.abwesenheiten.length} Abwesenheiten`,
@@ -300,21 +309,45 @@ function PlanungslistePanel() {
     }
   }
 
+  function updateEinrichtung(idx: number, patch: Partial<EinrichtungEdit>) {
+    setEinrichtungenEdit((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
+  }
+
+  const activeEinrichtungen = einrichtungenEdit.filter((e) => !e.skip && e.name.trim() !== "");
+  const skippedCount = einrichtungenEdit.length - activeEinrichtungen.length;
+  // Original-Name -> neuer Name oder null (auslassen)
+  const renameMap = new Map<string, string | null>();
+  for (const e of einrichtungenEdit) {
+    renameMap.set(e.original_name, e.skip || !e.name.trim() ? null : e.name.trim());
+  }
+  const filteredEinsaetze = (parsed?.einsaetze ?? [])
+    .map((es) => {
+      const target = renameMap.get(es.einrichtung_name);
+      if (target === undefined) return es;
+      if (target === null) return null;
+      return { ...es, einrichtung_name: target };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+  const droppedEinsaetze = (parsed?.einsaetze.length ?? 0) - filteredEinsaetze.length;
+
   async function runAll() {
     if (!parsed) return;
     setRunning(true);
     setReport(null);
     const out: any = {};
     try {
-      if (parsed.einrichtungen.length)
-        out.einrichtungen = await importEi({ data: { rows: parsed.einrichtungen as any } });
+      const einrichtungenPayload = activeEinrichtungen.map((e) => {
+        const { original_name: _o, skip: _s, source_row: _sr, raw_label: _rl, ...rest } = e;
+        return rest;
+      });
+      if (einrichtungenPayload.length)
+        out.einrichtungen = await importEi({ data: { rows: einrichtungenPayload as any } });
       if (parsed.mitarbeiter.length)
         out.mitarbeiter = await importMa({ data: { rows: parsed.mitarbeiter as any } });
-      if (parsed.einsaetze.length) {
-        // chunk
+      if (filteredEinsaetze.length) {
         const chunks: any[] = [];
-        for (let i = 0; i < parsed.einsaetze.length; i += 1000)
-          chunks.push(parsed.einsaetze.slice(i, i + 1000));
+        for (let i = 0; i < filteredEinsaetze.length; i += 1000)
+          chunks.push(filteredEinsaetze.slice(i, i + 1000));
         let c = 0, u = 0, errs: any[] = [];
         for (const chunk of chunks) {
           const res: any = await importEs({ data: { rows: chunk as any } });
@@ -332,6 +365,7 @@ function PlanungslistePanel() {
       setRunning(false);
     }
   }
+
 
   return (
     <div className="space-y-4">
@@ -377,18 +411,45 @@ function PlanungslistePanel() {
         {parsed && (
           <div className="mt-4 space-y-4">
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
                 <div className="text-xs font-semibold">
-                  Einrichtungen (Vorschau) – {parsed.einrichtungen.length} erkannt
+                  Einrichtungen (Vorschau & Bearbeitung) – {activeEinrichtungen.length} aktiv
+                  {skippedCount > 0 && (
+                    <span className="ml-2 text-muted-foreground font-normal">
+                      ({skippedCount} ausgelassen)
+                    </span>
+                  )}
                 </div>
-                {parsed.einrichtungen.length > 100 && (
-                  <div className="text-[10px] text-muted-foreground">zeige erste 100</div>
-                )}
+                <div className="flex items-center gap-2 text-[11px]">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() =>
+                      setEinrichtungenEdit((prev) => prev.map((e) => ({ ...e, skip: false })))
+                    }
+                  >
+                    Alle aktiv
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() =>
+                      setEinrichtungenEdit((prev) => prev.map((e) => ({ ...e, skip: true })))
+                    }
+                  >
+                    Alle auslassen
+                  </Button>
+                </div>
               </div>
-              <div className="rounded border max-h-72 overflow-auto text-xs">
+              <div className="rounded border max-h-96 overflow-auto text-xs">
                 <table className="w-full">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr>
+                      <th className="px-2 py-1 text-left w-16">Import</th>
                       <th className="px-2 py-1 text-left w-12">Zeile</th>
                       <th className="px-2 py-1 text-left">Name</th>
                       <th className="px-2 py-1 text-left">Ort</th>
@@ -399,31 +460,81 @@ function PlanungslistePanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {parsed.einrichtungen.slice(0, 100).map((e, i) => (
-                      <tr key={i} className="border-t align-top">
-                        <td className="px-2 py-1 font-mono text-muted-foreground">
-                          {e.source_row ?? "–"}
-                        </td>
-                        <td className="px-2 py-1 font-medium">{e.name}</td>
-                        <td className="px-2 py-1">{e.ort ?? <span className="text-muted-foreground">–</span>}</td>
-                        <td className="px-2 py-1">{e.wohnbereich ?? ""}</td>
-                        <td className="px-2 py-1 text-right">{e.vs_satz_pfk ?? ""}</td>
-                        <td className="px-2 py-1 text-right">{e.vs_satz_phk ?? ""}</td>
-                        <td className="px-2 py-1 text-muted-foreground font-mono text-[11px]" title={e.raw_label ?? ""}>
-                          {e.raw_label
-                            ? e.raw_label.length > 60
-                              ? e.raw_label.slice(0, 60) + "…"
-                              : e.raw_label
-                            : "–"}
-                        </td>
-                      </tr>
-                    ))}
+                    {einrichtungenEdit.map((e, i) => {
+                      const isSkipped = e.skip;
+                      return (
+                        <tr
+                          key={i}
+                          className={`border-t align-top ${isSkipped ? "opacity-40 bg-muted/20" : ""}`}
+                        >
+                          <td className="px-2 py-1">
+                            <input
+                              type="checkbox"
+                              checked={!isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { skip: !ev.target.checked })}
+                              className="h-4 w-4"
+                              aria-label="In Import einbeziehen"
+                            />
+                          </td>
+                          <td className="px-2 py-1 font-mono text-muted-foreground">
+                            {e.source_row ?? "–"}
+                          </td>
+                          <td className="px-2 py-1">
+                            <input
+                              type="text"
+                              value={e.name}
+                              disabled={isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { name: ev.target.value })}
+                              className="w-full bg-background border rounded px-1 py-0.5 text-xs font-medium disabled:cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <input
+                              type="text"
+                              value={e.ort ?? ""}
+                              disabled={isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { ort: ev.target.value || null })}
+                              className="w-full bg-background border rounded px-1 py-0.5 text-xs disabled:cursor-not-allowed"
+                              placeholder="–"
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <input
+                              type="text"
+                              value={e.wohnbereich ?? ""}
+                              disabled={isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { wohnbereich: ev.target.value || null })}
+                              className="w-full bg-background border rounded px-1 py-0.5 text-xs disabled:cursor-not-allowed"
+                              placeholder="–"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-right text-muted-foreground">{e.vs_satz_pfk ?? ""}</td>
+                          <td className="px-2 py-1 text-right text-muted-foreground">{e.vs_satz_phk ?? ""}</td>
+                          <td
+                            className="px-2 py-1 text-muted-foreground font-mono text-[11px]"
+                            title={e.raw_label ?? ""}
+                          >
+                            {e.raw_label
+                              ? e.raw_label.length > 60
+                                ? e.raw_label.slice(0, 60) + "…"
+                                : e.raw_label
+                              : "–"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
-                Tipp: „Zeile" = 1-basierte Excel-Zeilennummer im Blatt <code>Planungsliste</code>.
-                Stimmt ein Eintrag nicht? Den Roh-Text in der Quelle prüfen und ggf. die Excel-Zeile korrigieren.
+                Tipp: Name/Ort/WB können direkt bearbeitet werden. Per Checkbox einzelne Einträge
+                auslassen – Einsätze, die zu ausgelassenen Einrichtungen gehören, werden ebenfalls
+                übersprungen.
+                {droppedEinsaetze > 0 && (
+                  <span className="ml-1 text-warning">
+                    {droppedEinsaetze} Einsätze werden dadurch übersprungen.
+                  </span>
+                )}
               </div>
             </div>
             <div>
@@ -445,10 +556,16 @@ function PlanungslistePanel() {
         {parsed && (
           <div className="mt-4 flex justify-end">
             <Button onClick={runAll} disabled={running}>
-              {running ? "Importiere…" : <><FileSpreadsheet className="h-4 w-4 mr-2" /> Alles importieren</>}
+              {running ? "Importiere…" : (
+                <>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  {activeEinrichtungen.length} Einrichtungen + {filteredEinsaetze.length} Einsätze importieren
+                </>
+              )}
             </Button>
           </div>
         )}
+
 
         {report && (
           <div className="mt-4 space-y-2 text-sm">
