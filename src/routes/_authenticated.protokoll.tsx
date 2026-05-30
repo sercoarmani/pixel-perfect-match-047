@@ -299,7 +299,7 @@ type RetryResult = {
 };
 
 function DetailDialog({
-  eintrag, onClose, onRetry, retrying, retryResult, retryError,
+  eintrag, onClose, onRetry, retrying, retryResult, retryError, pollElapsed = 0,
 }: {
   eintrag: Eintrag | null;
   onClose: () => void;
@@ -307,6 +307,7 @@ function DetailDialog({
   retrying: boolean;
   retryResult?: RetryResult;
   retryError?: Error | null;
+  pollElapsed?: number;
 }) {
   const open = !!eintrag;
   const meta = eintrag?.metadata ?? {};
