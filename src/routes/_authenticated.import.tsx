@@ -411,18 +411,45 @@ function PlanungslistePanel() {
         {parsed && (
           <div className="mt-4 space-y-4">
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
                 <div className="text-xs font-semibold">
-                  Einrichtungen (Vorschau) – {parsed.einrichtungen.length} erkannt
+                  Einrichtungen (Vorschau & Bearbeitung) – {activeEinrichtungen.length} aktiv
+                  {skippedCount > 0 && (
+                    <span className="ml-2 text-muted-foreground font-normal">
+                      ({skippedCount} ausgelassen)
+                    </span>
+                  )}
                 </div>
-                {parsed.einrichtungen.length > 100 && (
-                  <div className="text-[10px] text-muted-foreground">zeige erste 100</div>
-                )}
+                <div className="flex items-center gap-2 text-[11px]">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() =>
+                      setEinrichtungenEdit((prev) => prev.map((e) => ({ ...e, skip: false })))
+                    }
+                  >
+                    Alle aktiv
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={() =>
+                      setEinrichtungenEdit((prev) => prev.map((e) => ({ ...e, skip: true })))
+                    }
+                  >
+                    Alle auslassen
+                  </Button>
+                </div>
               </div>
-              <div className="rounded border max-h-72 overflow-auto text-xs">
+              <div className="rounded border max-h-96 overflow-auto text-xs">
                 <table className="w-full">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr>
+                      <th className="px-2 py-1 text-left w-16">Import</th>
                       <th className="px-2 py-1 text-left w-12">Zeile</th>
                       <th className="px-2 py-1 text-left">Name</th>
                       <th className="px-2 py-1 text-left">Ort</th>
@@ -433,31 +460,81 @@ function PlanungslistePanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {parsed.einrichtungen.slice(0, 100).map((e, i) => (
-                      <tr key={i} className="border-t align-top">
-                        <td className="px-2 py-1 font-mono text-muted-foreground">
-                          {e.source_row ?? "–"}
-                        </td>
-                        <td className="px-2 py-1 font-medium">{e.name}</td>
-                        <td className="px-2 py-1">{e.ort ?? <span className="text-muted-foreground">–</span>}</td>
-                        <td className="px-2 py-1">{e.wohnbereich ?? ""}</td>
-                        <td className="px-2 py-1 text-right">{e.vs_satz_pfk ?? ""}</td>
-                        <td className="px-2 py-1 text-right">{e.vs_satz_phk ?? ""}</td>
-                        <td className="px-2 py-1 text-muted-foreground font-mono text-[11px]" title={e.raw_label ?? ""}>
-                          {e.raw_label
-                            ? e.raw_label.length > 60
-                              ? e.raw_label.slice(0, 60) + "…"
-                              : e.raw_label
-                            : "–"}
-                        </td>
-                      </tr>
-                    ))}
+                    {einrichtungenEdit.map((e, i) => {
+                      const isSkipped = e.skip;
+                      return (
+                        <tr
+                          key={i}
+                          className={`border-t align-top ${isSkipped ? "opacity-40 bg-muted/20" : ""}`}
+                        >
+                          <td className="px-2 py-1">
+                            <input
+                              type="checkbox"
+                              checked={!isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { skip: !ev.target.checked })}
+                              className="h-4 w-4"
+                              aria-label="In Import einbeziehen"
+                            />
+                          </td>
+                          <td className="px-2 py-1 font-mono text-muted-foreground">
+                            {e.source_row ?? "–"}
+                          </td>
+                          <td className="px-2 py-1">
+                            <input
+                              type="text"
+                              value={e.name}
+                              disabled={isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { name: ev.target.value })}
+                              className="w-full bg-background border rounded px-1 py-0.5 text-xs font-medium disabled:cursor-not-allowed"
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <input
+                              type="text"
+                              value={e.ort ?? ""}
+                              disabled={isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { ort: ev.target.value || null })}
+                              className="w-full bg-background border rounded px-1 py-0.5 text-xs disabled:cursor-not-allowed"
+                              placeholder="–"
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <input
+                              type="text"
+                              value={e.wohnbereich ?? ""}
+                              disabled={isSkipped}
+                              onChange={(ev) => updateEinrichtung(i, { wohnbereich: ev.target.value || null })}
+                              className="w-full bg-background border rounded px-1 py-0.5 text-xs disabled:cursor-not-allowed"
+                              placeholder="–"
+                            />
+                          </td>
+                          <td className="px-2 py-1 text-right text-muted-foreground">{e.vs_satz_pfk ?? ""}</td>
+                          <td className="px-2 py-1 text-right text-muted-foreground">{e.vs_satz_phk ?? ""}</td>
+                          <td
+                            className="px-2 py-1 text-muted-foreground font-mono text-[11px]"
+                            title={e.raw_label ?? ""}
+                          >
+                            {e.raw_label
+                              ? e.raw_label.length > 60
+                                ? e.raw_label.slice(0, 60) + "…"
+                                : e.raw_label
+                              : "–"}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
-                Tipp: „Zeile" = 1-basierte Excel-Zeilennummer im Blatt <code>Planungsliste</code>.
-                Stimmt ein Eintrag nicht? Den Roh-Text in der Quelle prüfen und ggf. die Excel-Zeile korrigieren.
+                Tipp: Name/Ort/WB können direkt bearbeitet werden. Per Checkbox einzelne Einträge
+                auslassen – Einsätze, die zu ausgelassenen Einrichtungen gehören, werden ebenfalls
+                übersprungen.
+                {droppedEinsaetze > 0 && (
+                  <span className="ml-1 text-warning">
+                    {droppedEinsaetze} Einsätze werden dadurch übersprungen.
+                  </span>
+                )}
               </div>
             </div>
             <div>
@@ -479,10 +556,16 @@ function PlanungslistePanel() {
         {parsed && (
           <div className="mt-4 flex justify-end">
             <Button onClick={runAll} disabled={running}>
-              {running ? "Importiere…" : <><FileSpreadsheet className="h-4 w-4 mr-2" /> Alles importieren</>}
+              {running ? "Importiere…" : (
+                <>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  {activeEinrichtungen.length} Einrichtungen + {filteredEinsaetze.length} Einsätze importieren
+                </>
+              )}
             </Button>
           </div>
         )}
+
 
         {report && (
           <div className="mt-4 space-y-2 text-sm">
