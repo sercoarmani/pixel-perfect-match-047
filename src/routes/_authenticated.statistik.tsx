@@ -31,9 +31,9 @@ function StatistikPage() {
           <p className="text-sm text-muted-foreground">Monatsvergleich · Jahresübersicht</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setJahr(jahr - 1)}><ChevronLeft className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" aria-label="Vorheriges Jahr" onClick={() => setJahr(jahr - 1)}><ChevronLeft className="h-4 w-4" /></Button>
           <div className="px-3 py-1.5 rounded border bg-card font-semibold min-w-[80px] text-center">{jahr}</div>
-          <Button variant="outline" size="icon" onClick={() => setJahr(jahr + 1)} disabled={jahr >= new Date().getFullYear()}><ChevronRight className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" aria-label="Nächstes Jahr" onClick={() => setJahr(jahr + 1)} disabled={jahr >= new Date().getFullYear()}><ChevronRight className="h-4 w-4" /></Button>
         </div>
       </div>
 

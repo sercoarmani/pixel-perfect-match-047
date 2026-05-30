@@ -184,7 +184,7 @@ function BedarfPage() {
                   </Select>
                   <Input type="number" min={1} max={20} value={b.anzahl} onChange={(e) => updateRow(i, { anzahl: parseInt(e.target.value) || 1 })} className="h-8" />
                   <Badge variant="secondary" className="text-xs">{b.dienst}</Badge>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); removeRow(i); }}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Zeile entfernen" onClick={(e) => { e.stopPropagation(); removeRow(i); }}>
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -276,10 +276,10 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
               {tel && (
                 <>
                   <Button asChild size="icon" variant="outline" className="h-8 w-8" title={`Anrufen: ${m.telefon}`}>
-                    <a href={`tel:${tel}`}><Phone className="h-3.5 w-3.5" /></a>
+                    <a href={`tel:${tel}`} aria-label={`Anrufen: ${m.telefon}`}><Phone className="h-3.5 w-3.5" /></a>
                   </Button>
                   <Button asChild size="icon" variant="outline" className="h-8 w-8" title={`WhatsApp: ${m.telefon}`}>
-                    <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer">
+                    <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" aria-label={`WhatsApp: ${m.telefon}`}>
                       <MessageCircle className="h-3.5 w-3.5" />
                     </a>
                   </Button>
