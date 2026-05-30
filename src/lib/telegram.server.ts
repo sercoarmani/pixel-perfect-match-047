@@ -29,7 +29,10 @@ async function call(method: string, body: Record<string, unknown>) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data?.ok === false) {
-    throw new Error(`Telegram ${method} fehlgeschlagen [${res.status}]: ${JSON.stringify(data)}`);
+    const err: any = new Error(`Telegram ${method} fehlgeschlagen [${res.status}]: ${JSON.stringify(data)}`);
+    err.status = res.status;
+    err.providerBody = data;
+    throw err;
   }
   return data;
 }
