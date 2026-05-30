@@ -7,6 +7,7 @@ type AuthCtx = {
   user: User | null;
   loading: boolean;
   isDispo: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;

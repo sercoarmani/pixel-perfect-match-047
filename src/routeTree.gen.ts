@@ -25,6 +25,7 @@ import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.p
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
 import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated.import'
+import { Route as AuthenticatedHilfeRouteImport } from './routes/_authenticated.hilfe'
 import { Route as AuthenticatedExportRouteImport } from './routes/_authenticated.export'
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
 import { Route as AuthenticatedDispoRouteImport } from './routes/_authenticated.dispo'
@@ -120,6 +121,11 @@ const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
   path: '/import',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedHilfeRoute = AuthenticatedHilfeRouteImport.update({
+  id: '/hilfe',
+  path: '/hilfe',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedExportRoute = AuthenticatedExportRouteImport.update({
   id: '/export',
   path: '/export',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/dispo': typeof AuthenticatedDispoRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/export': typeof AuthenticatedExportRoute
+  '/hilfe': typeof AuthenticatedHilfeRoute
   '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/dispo': typeof AuthenticatedDispoRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/export': typeof AuthenticatedExportRoute
+  '/hilfe': typeof AuthenticatedHilfeRoute
   '/import': typeof AuthenticatedImportRoute
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/_authenticated/dispo': typeof AuthenticatedDispoRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
   '/_authenticated/export': typeof AuthenticatedExportRoute
+  '/_authenticated/hilfe': typeof AuthenticatedHilfeRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/dispo'
     | '/einrichtungen'
     | '/export'
+    | '/hilfe'
     | '/import'
     | '/mitarbeiter'
     | '/nachrichten'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/dispo'
     | '/einrichtungen'
     | '/export'
+    | '/hilfe'
     | '/import'
     | '/mitarbeiter'
     | '/nachrichten'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dispo'
     | '/_authenticated/einrichtungen'
     | '/_authenticated/export'
+    | '/_authenticated/hilfe'
     | '/_authenticated/import'
     | '/_authenticated/mitarbeiter'
     | '/_authenticated/nachrichten'
@@ -495,6 +507,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedImportRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/hilfe': {
+      id: '/_authenticated/hilfe'
+      path: '/hilfe'
+      fullPath: '/hilfe'
+      preLoaderRoute: typeof AuthenticatedHilfeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/export': {
       id: '/_authenticated/export'
       path: '/export'
@@ -605,6 +624,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDispoRoute: typeof AuthenticatedDispoRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
   AuthenticatedExportRoute: typeof AuthenticatedExportRoute
+  AuthenticatedHilfeRoute: typeof AuthenticatedHilfeRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
@@ -623,6 +643,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDispoRoute: AuthenticatedDispoRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
   AuthenticatedExportRoute: AuthenticatedExportRoute,
+  AuthenticatedHilfeRoute: AuthenticatedHilfeRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
