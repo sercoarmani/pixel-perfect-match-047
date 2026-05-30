@@ -504,6 +504,32 @@ function TelegramLink({ mitarbeiterId, token, chatId, username, einmalCode, einm
               <a href={deepLink} target="_blank" rel="noreferrer"><Send className="mr-1 h-3.5 w-3.5" />Öffnen</a>
             </Button>
           </div>
+          {einmalCode && !einmalCodeUsedAt && (
+            <div className="mt-3 border-t pt-3">
+              <p className="mb-1 text-xs text-muted-foreground">
+                Alternative: Persönlicher Kopplungscode (gibt die Person im Bot-Chat ein):
+              </p>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={einmalCode} className="font-mono text-xs tracking-wider" onFocus={(e) => e.currentTarget.select()} />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try { await navigator.clipboard.writeText(einmalCode); toast.success("Code kopiert"); }
+                    catch { toast.error("Konnte nicht kopieren"); }
+                  }}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" />Kopieren
+                </Button>
+              </div>
+            </div>
+          )}
+          {einmalCode && einmalCodeUsedAt && (
+            <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+              Kopplungscode <span className="font-mono">{einmalCode}</span> wurde bereits verwendet.
+            </p>
+          )}
         </>
       )}
     </section>
