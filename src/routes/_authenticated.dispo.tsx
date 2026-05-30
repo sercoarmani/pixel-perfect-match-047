@@ -58,6 +58,15 @@ function BedarfCard({ bedarf }: { bedarf: any }) {
   const [showBc, setShowBc] = useState(false);
   const ort = bedarf.einrichtung?.ort || bedarf.einrichtung?.name || "—";
   const datumStr = format(new Date(bedarf.datum), "dd.MM.yyyy");
+  const sendBroadcast = useServerFn(sendBedarfBroadcast);
+  const mBroadcast = useMutation({
+    mutationFn: () => sendBroadcast({ data: { bedarf_id: bedarf.id } }),
+    onSuccess: (r: any) => {
+      if (r.gesamt === 0) toast.message("Kein passender Mitarbeiter mit verknüpftem Telegram-Bot gefunden.");
+      else toast.success(`Telegram-Broadcast an ${r.gesendet}/${r.gesamt} Mitarbeiter gesendet`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const broadcastText = `Pflegekraft gesucht in ${ort} — ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}dienst am ${datumStr}. Wer kann? Bitte melden.`;
   const copyBroadcast = async () => {
     try { await navigator.clipboard.writeText(broadcastText); toast.success("Broadcast-Text kopiert"); }
