@@ -1,0 +1,67 @@
+name: Stress · Block 5/6 Race-Integrationstests
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Anzahl Wiederholungen pro Job"
+        required: false
+        default: "25"
+      delay_min_ms:
+        description: "Min. Delay zwischen Läufen (ms)"
+        required: false
+        default: "200"
+      delay_max_ms:
+        description: "Max. Delay zwischen Läufen (ms)"
+        required: false
+        default: "1500"
+  schedule:
+    # täglich 03:17 UTC – außerhalb der typischen Edit-Zeiten
+    - cron: "17 3 * * *"
+
+concurrency:
+  group: stress-race-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stress:
+    name: parallel-supabase-race (shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        # Mehrere Shards parallel → erhöht echte DB-Konkurrenz auf dem Index
+        shard: [1, 2, 3]
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      STRESS_RUNS: ${{ github.event.inputs.runs || '25' }}
+      STRESS_DELAY_MIN_MS: ${{ github.event.inputs.delay_min_ms || '200' }}
+      STRESS_DELAY_MAX_MS: ${{ github.event.inputs.delay_max_ms || '1500' }}
+      STRESS_FAIL_FAST: "0"      # ganzen Shard durchlaufen → vollständiges Bild
+      STRESS_SEED: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Sanity-Check (Supabase erreichbar?)
+        run: |
+          test -n "$SUPABASE_URL" || (echo "::error::SUPABASE_URL fehlt" && exit 1)
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || (echo "::error::SUPABASE_SERVICE_ROLE_KEY fehlt" && exit 1)
+          curl -sf -o /dev/null -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_URL/rest/v1/" \
+            || (echo "::error::REST-Endpoint nicht erreichbar" && exit 1)
+
+      - name: Stress-Run · ${{ env.STRESS_RUNS }}× Integrationstests
+        run: bun scripts/stress-run-integration.ts
+
+      - name: Letzten Lauf zur Diagnose loggen
+        if: failure()
+        run: bun test scripts/scenario-bestaetigung-dedupe.integration.test.ts || true
