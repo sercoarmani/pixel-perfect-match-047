@@ -329,7 +329,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
   );
 }
 
-function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }) {
+function StammFields({ form, setForm, row }: { form: any; setForm: (f: any) => void; row: any }) {
   return (
     <div className="grid grid-cols-2 gap-3 text-sm pt-2">
       <Field label="Vorname"><Input value={form.vorname} onChange={(e) => setForm({...form, vorname: e.target.value})} /></Field>
