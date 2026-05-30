@@ -19,15 +19,24 @@ function isEinmalCodeShape(s: string): boolean {
   return /^[A-ZÄÖÜ]{2,4}-[A-Z0-9]{4,8}$/.test(s);
 }
 
-async function greetLinked(chatId: number, vorname: string) {
-  const portalUrl = `${publicOrigin()}/m/`;
+async function greetLinked(chatId: number, vorname: string, zugangsToken?: string) {
+  let token = zugangsToken;
+  if (!token) {
+    const { data } = await supabaseAdmin
+      .from("mitarbeiter")
+      .select("zugangs_token")
+      .eq("telegram_chat_id", chatId)
+      .maybeSingle();
+    token = data?.zugangs_token ?? undefined;
+  }
+  const portalUrl = token ? `${publicOrigin()}/m/${token}` : publicOrigin();
   await tgSendMessage(
     chatId,
     `Hallo ${vorname} 👋\nDu bist mit diesem Bot verknüpft. Trage hier deine Verfügbarkeit ein:`,
     {
       reply_markup: {
         inline_keyboard: [[
-          { text: "📅 Verfügbarkeit eintragen", url: portalUrl + "open" },
+          { text: "📅 Verfügbarkeit eintragen", url: portalUrl },
         ]],
       },
     },
