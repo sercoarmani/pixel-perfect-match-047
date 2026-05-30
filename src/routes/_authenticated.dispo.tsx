@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Phone, PhoneCall, Check, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Phone, PhoneCall, Check, X, Megaphone, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
+
+const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
 export const Route = createFileRoute("/_authenticated/dispo")({
   component: DispoPage,
@@ -50,6 +54,15 @@ function DispoPage() {
 }
 
 function BedarfCard({ bedarf }: { bedarf: any }) {
+  const [showBc, setShowBc] = useState(false);
+  const ort = bedarf.einrichtung?.ort || bedarf.einrichtung?.name || "—";
+  const datumStr = format(new Date(bedarf.datum), "dd.MM.yyyy");
+  const broadcastText = `Pflegekraft gesucht in ${ort} — ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}dienst am ${datumStr}. Wer kann? Bitte melden.`;
+  const copyBroadcast = async () => {
+    try { await navigator.clipboard.writeText(broadcastText); toast.success("Broadcast-Text kopiert"); }
+    catch { toast.error("Konnte nicht kopieren"); }
+  };
+
   return (
     <div className="rounded-md border bg-card overflow-hidden">
       <div className="border-b bg-muted/40 px-4 py-3 flex flex-wrap items-center gap-3">
@@ -63,8 +76,23 @@ function BedarfCard({ bedarf }: { bedarf: any }) {
           {bedarf.einrichtung?.ort ? <span className="text-muted-foreground">, {bedarf.einrichtung.ort}</span> : null}
         </div>
         {bedarf.anzahl > 1 && <Badge variant="outline">×{bedarf.anzahl}</Badge>}
-        {bedarf.notiz && <div className="text-xs text-muted-foreground ml-auto max-w-md truncate">{bedarf.notiz}</div>}
+        {bedarf.notiz && <div className="text-xs text-muted-foreground max-w-md truncate">{bedarf.notiz}</div>}
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => setShowBc((v) => !v)}>
+          <Megaphone className="mr-1 h-3.5 w-3.5" /> Niemand erreicht – Broadcast
+        </Button>
       </div>
+
+      {showBc && (
+        <div className="border-b bg-amber-50 px-4 py-3 dark:bg-amber-950/20">
+          <div className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-300">
+            Broadcast-Text (zum Verteilen, z. B. per WhatsApp-Gruppe):
+          </div>
+          <Textarea readOnly rows={2} value={broadcastText} className="bg-card text-sm" onFocus={(e) => e.currentTarget.select()} />
+          <div className="mt-2 flex justify-end">
+            <Button size="sm" onClick={copyBroadcast}><Copy className="mr-1 h-3.5 w-3.5" /> Text kopieren</Button>
+          </div>
+        </div>
+      )}
 
       {bedarf.anrufliste.length === 0 ? (
         <div className="p-4 text-sm text-muted-foreground">
