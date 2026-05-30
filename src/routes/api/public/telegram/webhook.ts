@@ -3,6 +3,8 @@ import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { telegramWebhookSecret, tgAnswerCallback, tgSendMessage } from "@/lib/telegram.server";
 import { einsatzBelegt } from "@/lib/matching";
+import { createKundenbestaetigungDraft } from "@/lib/kunden-bestaetigung.server";
+
 
 function publicOrigin(): string {
   const env = process.env.PUBLIC_APP_ORIGIN;
