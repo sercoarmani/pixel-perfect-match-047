@@ -128,3 +128,51 @@ export function hatKonflikt(info: KonfliktInfo, mitarbeiter_id: string, datum: s
 // ============================================================
 /** Obergrenze für plausible Reaktionszeiten (Stunden) – Ausreißerfilter. */
 export const REAKTION_MAX_STUNDEN = 24 * 30; // 30 Tage
+
+// ============================================================
+// Geo-Matching (Luftlinie via Haversine)
+// ============================================================
+/** Default-Faktor: max_radius_km * RADIUS_FAKTOR_DEFAULT = effektiver Radius (Luftlinie). */
+export const RADIUS_FAKTOR_DEFAULT = 0.8;
+
+/** Luftlinien-Entfernung in Kilometern zwischen zwei Koordinaten. */
+export function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * Liegt die Einrichtung im Fahrbereich des Mitarbeiters?
+ * - Fehlt eine Koordinate oder der max_radius_km → wird zugelassen (kein Filter).
+ * - Sonst: distanz <= max_radius_km * faktor.
+ * Rückgabe enthält die berechnete Distanz (oder null) zur Anzeige.
+ */
+export function istImRadius(
+  ma: { lat?: number | null; lng?: number | null; max_radius_km?: number | null },
+  ein: { lat?: number | null; lng?: number | null },
+  faktor: number = RADIUS_FAKTOR_DEFAULT,
+): { ok: boolean; distanz_km: number | null; limit_km: number | null } {
+  if (ma.lat == null || ma.lng == null || ein.lat == null || ein.lng == null) {
+    return { ok: true, distanz_km: null, limit_km: null };
+  }
+  const distanz = haversineKm(
+    { lat: ma.lat, lng: ma.lng },
+    { lat: ein.lat, lng: ein.lng },
+  );
+  if (ma.max_radius_km == null || ma.max_radius_km <= 0) {
+    return { ok: true, distanz_km: distanz, limit_km: null };
+  }
+  const limit = ma.max_radius_km * faktor;
+  return { ok: distanz <= limit, distanz_km: distanz, limit_km: limit };
+}
