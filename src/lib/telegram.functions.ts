@@ -55,6 +55,48 @@ export const sendPersonalLink = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Verfügbarkeitslink für einen Monat an alle verknüpften Mitarbeiter senden. */
+export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { monat: string; nur_aktive?: boolean }) =>
+    z.object({
+      monat: z.string().regex(/^\d{4}-\d{2}$/),
+      nur_aktive: z.boolean().optional(),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("mitarbeiter")
+      .select("id, vorname, nachname, telegram_chat_id, zugangs_token, aktiv")
+      .not("telegram_chat_id", "is", null);
+    if (data.nur_aktive !== false) q = q.eq("aktiv", true);
+    const { data: empfaenger, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const [y, m] = data.monat.split("-").map(Number);
+    const monatLabel = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("de-DE", {
+      month: "long",
+      year: "numeric",
+    });
+
+    let gesendet = 0;
+    const fehler: string[] = [];
+    for (const ma of empfaenger ?? []) {
+      try {
+        const link = `${publicOrigin()}/m/${ma.zugangs_token}?monat=${data.monat}`;
+        await tgSendMessage(
+          Number(ma.telegram_chat_id),
+          `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`,
+        );
+        gesendet++;
+      } catch (e: any) {
+        fehler.push(`${ma.nachname}: ${e.message}`);
+      }
+    }
+    return { ok: true, gesendet, gesamt: (empfaenger ?? []).length, fehler };
+  });
+
 /** Broadcast für einen offenen Bedarf an alle passenden, verknüpften Mitarbeiter. */
 export const sendBedarfBroadcast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
