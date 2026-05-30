@@ -381,9 +381,9 @@ function DetailDialog({
                 <Field label="Message-Id" value={meta?.provider_message_id ?? "—"} />
               </div>
               {meta?.provider_response && (
-                <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
-                  {JSON.stringify(meta.provider_response, null, 2)}
-                </pre>
+                <div className="mt-2">
+                  <JsonBlock data={meta.provider_response} label="Provider-Response" maxHeight="max-h-56" />
+                </div>
               )}
             </div>
 
