@@ -271,12 +271,14 @@ type RetryResult = {
 };
 
 function DetailDialog({
-  eintrag, onClose, onRetry, retrying,
+  eintrag, onClose, onRetry, retrying, retryResult, retryError,
 }: {
   eintrag: Eintrag | null;
   onClose: () => void;
   onRetry: (rawId: string) => void;
   retrying: boolean;
+  retryResult?: RetryResult;
+  retryError?: Error | null;
 }) {
   const open = !!eintrag;
   const meta = eintrag?.metadata ?? {};
@@ -287,6 +289,13 @@ function DetailDialog({
     eintrag?.richtung === "out" &&
     (eintrag?.status === "failed" || eintrag?.status === "dlq") &&
     !!meta?.retry?.kind;
+
+  // Live-Status für Retry
+  const retryState: "idle" | "running" | "success" | "failed" =
+    retrying ? "running"
+    : retryError ? "failed"
+    : retryResult ? (retryResult.ok ? "success" : "failed")
+    : "idle";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -345,6 +354,79 @@ function DetailDialog({
               </div>
             )}
 
+            {retryState !== "idle" && (
+              <div
+                className={
+                  "rounded-md border p-3 " +
+                  (retryState === "running"
+                    ? "border-primary/40 bg-primary/5"
+                    : retryState === "success"
+                    ? "border-emerald-500/40 bg-emerald-500/5"
+                    : "border-destructive/40 bg-destructive/5")
+                }
+              >
+                <div className="flex items-center gap-2 text-xs uppercase mb-2">
+                  {retryState === "running" && (
+                    <>
+                      <RotateCw className="h-3.5 w-3.5 animate-spin text-primary" />
+                      <span className="text-primary">Retry läuft…</span>
+                    </>
+                  )}
+                  {retryState === "success" && (
+                    <>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                      <span className="text-emerald-700 dark:text-emerald-400">Retry erfolgreich</span>
+                    </>
+                  )}
+                  {retryState === "failed" && (
+                    <>
+                      <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                      <span className="text-destructive">Retry fehlgeschlagen</span>
+                    </>
+                  )}
+                </div>
+
+                {retryState === "running" && (
+                  <div className="text-xs text-muted-foreground">
+                    Nachricht wird erneut an den Provider gesendet…
+                  </div>
+                )}
+
+                {retryResult && retryState !== "running" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <Field label="HTTP-Status" value={retryResult.provider_status ?? "—"} />
+                      <Field label="Message-Id" value={retryResult.provider_message_id ?? "—"} />
+                      <Field
+                        label="Gestartet"
+                        value={new Date(retryResult.startedAt).toLocaleTimeString("de-DE")}
+                      />
+                      <Field
+                        label="Beendet"
+                        value={new Date(retryResult.finishedAt).toLocaleTimeString("de-DE")}
+                      />
+                    </div>
+                    {retryResult.fehler && (
+                      <div className="mt-2 text-sm text-destructive whitespace-pre-wrap">
+                        {retryResult.fehler}
+                      </div>
+                    )}
+                    {retryResult.provider_response && (
+                      <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
+                        {JSON.stringify(retryResult.provider_response, null, 2)}
+                      </pre>
+                    )}
+                  </>
+                )}
+
+                {retryState === "failed" && !retryResult && retryError && (
+                  <div className="text-sm text-destructive whitespace-pre-wrap">
+                    {retryError.message}
+                  </div>
+                )}
+              </div>
+            )}
+
             {meta && Object.keys(meta).length > 0 && (
               <details className="rounded-md border p-3">
                 <summary className="text-xs uppercase text-muted-foreground cursor-pointer">
@@ -366,7 +448,13 @@ function DetailDialog({
               disabled={retrying}
             >
               <RotateCw className={`h-4 w-4 mr-2 ${retrying ? "animate-spin" : ""}`} />
-              Erneut senden
+              {retrying
+                ? "Sende…"
+                : retryState === "success"
+                ? "Erneut senden"
+                : retryState === "failed"
+                ? "Nochmals versuchen"
+                : "Erneut senden"}
             </Button>
           )}
           {!canRetry && eintrag?.richtung === "out" &&
