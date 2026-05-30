@@ -37,11 +37,11 @@ const SECTIONS: Section[] = [
     title: "Bedarfsassistent",
     intro: "Anfragen-Text per KI in strukturierte Bedarfe umwandeln.",
     steps: [
-      "Anfrage-Text (z. B. aus einer E-Mail) links einfügen → „Mit KI auslesen".",
-      "Erkannte Bedarfe & Einrichtung werden vorgeschlagen — bei Bedarf manuell anpassen.",
-      "Rechts erscheinen verfügbare Mitarbeiter mit Entfernung (km) — die nächsten zuerst.",
-      "Mit „Zusage" wird ein bestätigter Einsatz angelegt.",
-      "„In Planungsmatrix übernehmen" speichert alle Bedarfe — gleichzeitig wird automatisch eine Kundenanfrage erzeugt.",
+      'Anfrage-Text (z. B. aus einer E-Mail) links einfügen, dann auf "Mit KI auslesen" klicken.',
+      "Erkannte Bedarfe und Einrichtung werden vorgeschlagen — bei Bedarf manuell anpassen.",
+      "Rechts erscheinen verfügbare Mitarbeiter mit Entfernung in km — die nächsten zuerst.",
+      'Mit "Zusage" wird ein bestätigter Einsatz angelegt.',
+      '"In Planungsmatrix übernehmen" speichert alle Bedarfe und erzeugt automatisch eine Kundenanfrage.',
     ],
   },
   {
@@ -50,14 +50,14 @@ const SECTIONS: Section[] = [
     intro: "Eingehende E-Mails aus den Postfächern.",
     steps: [
       "Neue Mails werden in der Sidebar mit rotem Punkt signalisiert.",
-      "Mail öffnen → KI-Zusammenfassung & Zuordnung zu Mitarbeiter/Einrichtung.",
-      "Status auf „bearbeitet" setzen, sobald die Mail verarbeitet ist.",
+      "Mail öffnen — KI-Zusammenfassung und Zuordnung zu Mitarbeiter/Einrichtung erscheinen automatisch.",
+      'Status auf "bearbeitet" setzen, sobald die Mail verarbeitet ist.',
     ],
   },
   {
     icon: PhoneCall,
     title: "Disposition",
-    intro: "Schnellplanung & Massen-Versand pro Tag.",
+    intro: "Schnellplanung und Massen-Versand pro Tag.",
     steps: [
       "Tag und Dienst auswählen.",
       "Vorschlagsliste durchgehen, Zusage/Absage erfassen.",
@@ -69,7 +69,7 @@ const SECTIONS: Section[] = [
     title: "Anfragen Kunden",
     intro: "Bedarfsabfragen an Einrichtungen per Token-Link.",
     steps: [
-      "„Neue Anfrage" → Einrichtung, Zeitraum & Vorlage wählen.",
+      '"Neue Anfrage" auswählen, dann Einrichtung, Zeitraum und Vorlage wählen.',
       "Generierter Token-Link an die Einrichtung senden (60 Tage gültig).",
       "Antwort der Einrichtung landet automatisch als Bedarf.",
     ],
@@ -79,7 +79,7 @@ const SECTIONS: Section[] = [
     title: "Verfügbarkeiten",
     intro: "Verfügbarkeitsabfragen an Mitarbeiter per Token-Link.",
     steps: [
-      "„Neue Anfrage" → Mitarbeiter & Zeitraum wählen.",
+      '"Neue Anfrage" auswählen, dann Mitarbeiter und Zeitraum wählen.',
       "Link via Telegram/WhatsApp/E-Mail teilen.",
       "Eingehende Antworten erscheinen in der Sidebar mit Signal.",
     ],
@@ -87,12 +87,12 @@ const SECTIONS: Section[] = [
   {
     icon: CalendarDays,
     title: "Planungsmatrix",
-    intro: "Monatsübersicht aller Einsätze, Abwesenheiten & offenen Bedarfe.",
+    intro: "Monatsübersicht aller Einsätze, Abwesenheiten und offenen Bedarfe.",
     steps: [
       "Filter oben: Monat, Qualifikation, Anstellung, Mitarbeiter.",
-      "Klick in eine Zelle → Einsatz/Abwesenheit anlegen oder bearbeiten.",
+      "Klick in eine Zelle, um Einsatz oder Abwesenheit anzulegen oder zu bearbeiten.",
       "Über jedem Tag werden offene Bedarfe als Pill angezeigt.",
-      "Export als PDF/Excel oben rechts.",
+      "Export als PDF oder Excel oben rechts.",
     ],
   },
   {
@@ -100,18 +100,18 @@ const SECTIONS: Section[] = [
     title: "Mitarbeiter",
     intro: "Stammdaten, Dokumente, Geokodierung.",
     steps: [
-      "Neue MA über „Neu" anlegen — Kürzel ist Pflicht.",
-      "Dokumente per Drag & Drop hochladen — Ablauf wird überwacht.",
-      "„Telegram-Code" generieren, damit der MA sich im Mitarbeiter-Bot verknüpfen kann.",
+      'Neue Mitarbeiter über "Neu" anlegen — Kürzel ist Pflicht.',
+      "Dokumente per Drag-and-Drop hochladen — Ablauf wird überwacht.",
+      'Telegram-Code generieren, damit der Mitarbeiter sich im Mitarbeiter-Bot verknüpfen kann.',
     ],
   },
   {
     icon: Building2,
     title: "Einrichtungen",
-    intro: "Träger, Adresse, VS-Sätze.",
+    intro: "Träger, Adresse, Verrechnungssätze.",
     steps: [
       "Spaltenköpfe anklicken zum Sortieren (Träger, Name, Ort, VS PFK, VS PHK).",
-      "„Portal-Link" generiert einen Kunden-Token-Link für direkte Bedarfsmeldung.",
+      '"Portal-Link" generiert einen Kunden-Token-Link für direkte Bedarfsmeldung.',
       "VS-Satz = Verrechnungssatz pro Stunde, PFK = Pflegefachkraft, PHK = Pflegehilfskraft.",
     ],
   },
@@ -121,7 +121,7 @@ const SECTIONS: Section[] = [
     intro: "Mitarbeiter direkt per Telegram oder WhatsApp anschreiben.",
     steps: [
       "Mitarbeiter-Zeile zeigt Telegram- und WhatsApp-Icon — Klick öffnet den Direkt-Chat.",
-      "Voraussetzung Telegram: MA hat den Bot per Einmal-Code verknüpft.",
+      "Voraussetzung Telegram: Mitarbeiter hat den Bot per Einmal-Code verknüpft.",
       "Voraussetzung WhatsApp: Telefonnummer am Mitarbeiter hinterlegt.",
     ],
   },
@@ -130,9 +130,9 @@ const SECTIONS: Section[] = [
     title: "Kundenbestätigungen",
     intro: "PDF-Bestätigungen mit Mitarbeiter-Unterlagen an Kunden.",
     steps: [
-      "Aus einem bestätigten Einsatz → „Bestätigung an Kunden".",
+      'Aus einem bestätigten Einsatz: "Bestätigung an Kunden".',
       "Dokumente auswählen, die mitgesendet werden sollen.",
-      "Status (Entwurf → gesendet) wird automatisch geführt.",
+      "Status (Entwurf zu gesendet) wird automatisch geführt.",
     ],
   },
   {
@@ -149,7 +149,7 @@ const SECTIONS: Section[] = [
     title: "Datei-Import (Admin)",
     intro: "Excel-Listen importieren — Planungsliste, Stammdaten.",
     steps: [
-      "Datei auswählen → Vorschau prüfen → Import bestätigen.",
+      "Datei auswählen, Vorschau prüfen, Import bestätigen.",
       "Fehlerhafte Zeilen werden markiert und übersprungen.",
     ],
   },
@@ -158,7 +158,7 @@ const SECTIONS: Section[] = [
     title: "Datei-Export (Admin)",
     intro: "Dienstpläne und Listen als PDF/Excel exportieren.",
     steps: [
-      "Monat & Format wählen → herunterladen.",
+      "Monat und Format wählen, herunterladen.",
     ],
   },
   {
@@ -166,7 +166,7 @@ const SECTIONS: Section[] = [
     title: "Verwaltung (Admin)",
     intro: "Verbindungen, Nachrichten-Vorlagen, Tools.",
     steps: [
-      "Status aller Verbindungen (Telegram, E-Mail, …) auf einen Blick.",
+      "Status aller Verbindungen (Telegram, E-Mail, ...) auf einen Blick.",
       "Nachrichten-Vorlagen bearbeiten — Platzhalter {name}, {zeitraum}, {link}.",
       "Geokodierung-Sammellauf für alle Adressen.",
     ],
