@@ -243,6 +243,8 @@ export const upsertEinrichtung = createServerFn({ method: "POST" })
       aktiv: z.boolean().optional(),
       kunde_angelegt: z.boolean().optional(),
       traeger_id: z.string().uuid().optional().nullable(),
+      strasse: z.string().max(200).optional().nullable(),
+      plz: z.string().max(10).optional().nullable(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
