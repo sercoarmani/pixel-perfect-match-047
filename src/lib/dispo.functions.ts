@@ -5,6 +5,23 @@ import {
   qualErfuellt, dienstMoeglich, maEinplanbar, einsatzBelegt,
   REAKTION_MAX_STUNDEN,
 } from "@/lib/matching";
+import { createKundenbestaetigungDraft } from "@/lib/kunden-bestaetigung.server";
+
+/** Best-effort Auto-Trigger für Block 5/6 nach MA-Zusage / Dispo-Zuteilung. */
+async function autoTriggerKundenbestaetigung(input: {
+  mitarbeiter_id: string;
+  einrichtung_id: string;
+  datum: string;
+  dienst: string;
+  einsatz_id?: string | null;
+  bedarf_id?: string | null;
+}): Promise<void> {
+  try {
+    await createKundenbestaetigungDraft(input);
+  } catch (err) {
+    console.error("[auto-trigger kundenbestaetigung] failed:", err);
+  }
+}
 
 /** Übersetzt die DB-Sperre (UNIQUE-Verletzung) in eine verständliche Meldung. */
 function istDoppelbelegungFehler(err: any): boolean {
