@@ -4,6 +4,85 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { telegramWebhookSecret, tgAnswerCallback, tgSendMessage } from "@/lib/telegram.server";
 import { einsatzBelegt } from "@/lib/matching";
 
+function publicOrigin(): string {
+  const env = process.env.PUBLIC_APP_ORIGIN;
+  if (env) return env.replace(/\/$/, "");
+  return "https://project--0ceef16a-44ab-4863-91ea-da069df2e318.lovable.app";
+}
+
+function normCode(s: string): string {
+  return s.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function isEinmalCodeShape(s: string): boolean {
+  // Format: 2-4 Buchstaben + "-" + 4 Zeichen (Buchstaben/Ziffern)
+  return /^[A-ZÄÖÜ]{2,4}-[A-Z0-9]{4,8}$/.test(s);
+}
+
+async function greetLinked(chatId: number, vorname: string) {
+  const portalUrl = `${publicOrigin()}/m/`;
+  await tgSendMessage(
+    chatId,
+    `Hallo ${vorname} 👋\nDu bist mit diesem Bot verknüpft. Trage hier deine Verfügbarkeit ein:`,
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "📅 Verfügbarkeit eintragen", url: portalUrl + "open" },
+        ]],
+      },
+    },
+  );
+}
+
+async function handleEinmalCode(chatId: number, code: string, username: string | null) {
+  const { data: ma } = await supabaseAdmin
+    .from("mitarbeiter")
+    .select("id, vorname, nachname, einmal_code, einmal_code_verbraucht_am, telegram_chat_id")
+    .eq("einmal_code", code)
+    .maybeSingle();
+
+  if (!ma) {
+    await tgSendMessage(
+      chatId,
+      "❌ Dieser Code ist ungültig.\nBitte gib deinen persönlichen Kopplungscode ein (Format z. B. <code>ANNA-7K2X</code>).",
+      { parse_mode: "HTML" },
+    );
+    return;
+  }
+  if (ma.einmal_code_verbraucht_am) {
+    await tgSendMessage(
+      chatId,
+      "❌ Dieser Code wurde bereits verwendet und ist nicht mehr gültig. Bitte beim Dispo melden.",
+    );
+    return;
+  }
+  if (ma.telegram_chat_id && Number(ma.telegram_chat_id) !== chatId) {
+    await tgSendMessage(chatId, "Dieser Mitarbeiter ist bereits mit einem anderen Telegram-Konto verknüpft.");
+    return;
+  }
+
+  const { error: updErr } = await supabaseAdmin
+    .from("mitarbeiter")
+    .update({
+      telegram_chat_id: chatId,
+      telegram_username: username,
+      einmal_code_verbraucht_am: new Date().toISOString(),
+    })
+    .eq("id", ma.id);
+
+  if (updErr) {
+    await tgSendMessage(chatId, "Konnte Kopplung nicht speichern. Bitte später erneut versuchen.");
+    return;
+  }
+
+  await tgSendMessage(
+    chatId,
+    `✅ Kopplung erfolgreich!\nHallo ${ma.vorname}, dein Konto ist jetzt mit diesem Bot verknüpft.`,
+  );
+  await greetLinked(chatId, ma.vorname);
+}
+
+
 function safeEqual(a: string, b: string) {
   const A = Buffer.from(a);
   const B = Buffer.from(b);
