@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tansta
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall, UserCheck, Settings2, Mail, ScrollText } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall, UserCheck, Settings2, Mail, ScrollText, MailCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -25,7 +25,9 @@ const NAV = [
   { to: "/import", label: "Datei-Import", icon: FileSpreadsheet, indent: false },
   { to: "/export", label: "Datei-Export", icon: Download, indent: false },
   { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare, indent: false },
+  { to: "/bestaetigungen", label: "Kundenbestätigungen", icon: MailCheck, indent: false },
   { to: "/protokoll", label: "Versand-Protokoll", icon: ScrollText, indent: false },
+
   { to: "/verwaltung", label: "Verwaltung", icon: Settings2, indent: false },
 ] as const;
 

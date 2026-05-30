@@ -3,6 +3,8 @@ import { timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { telegramWebhookSecret, tgAnswerCallback, tgSendMessage } from "@/lib/telegram.server";
 import { einsatzBelegt } from "@/lib/matching";
+import { createKundenbestaetigungDraft } from "@/lib/kunden-bestaetigung.server";
+
 
 function publicOrigin(): string {
   const env = process.env.PUBLIC_APP_ORIGIN;
@@ -175,7 +177,7 @@ async function handleCallback(callbackId: string, chatId: number, dataStr: strin
       await tgSendMessage(chatId, "Du bist an dem Tag bereits eingeplant oder abwesend.");
       return;
     }
-    const { error: insErr } = await supabaseAdmin.from("einsaetze").insert({
+    const { data: insertedEinsatz, error: insErr } = await supabaseAdmin.from("einsaetze").insert({
       mitarbeiter_id: ma.id,
       einrichtung_id: bedarf.einrichtung_id,
       datum: bedarf.datum,
@@ -183,7 +185,7 @@ async function handleCallback(callbackId: string, chatId: number, dataStr: strin
       status: "BESTAETIGT",
       quelle: "telegram",
       notiz: bedarf.notiz ?? null,
-    });
+    }).select("id").maybeSingle();
     if (insErr) {
       await tgAnswerCallback(callbackId, "Konnte nicht eintragen.");
       return;
@@ -208,8 +210,19 @@ async function handleCallback(callbackId: string, chatId: number, dataStr: strin
       besetzt_durch: ma.id,
     }).eq("id", bedarfId);
 
+    // Block 5 + 6: Kundenbestätigung als Entwurf anlegen (Dispo gibt frei)
+    await createKundenbestaetigungDraft({
+      mitarbeiter_id: ma.id,
+      einrichtung_id: bedarf.einrichtung_id,
+      bedarf_id: bedarfId,
+      einsatz_id: insertedEinsatz?.id ?? null,
+      datum: bedarf.datum,
+      dienst: bedarf.dienst,
+    });
+
     await tgAnswerCallback(callbackId, "Zusage gespeichert. Danke!");
     await tgSendMessage(chatId, "✅ Zusage gespeichert. Der Dispo wurde informiert.");
+
   } else if (action === "a") {
     const { data: bedarf } = await supabaseAdmin.from("bedarfe").select("notiz").eq("id", bedarfId).maybeSingle();
     const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
