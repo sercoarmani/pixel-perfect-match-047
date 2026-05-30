@@ -274,9 +274,15 @@ function ImportPanel({ spec }: { spec: Spec }) {
   );
 }
 
+type EinrichtungEdit = import("@/lib/planungsliste-parser").EinrichtungOut & {
+  original_name: string;
+  skip: boolean;
+};
+
 function PlanungslistePanel() {
   const [filename, setFilename] = useState("");
   const [parsed, setParsed] = useState<import("@/lib/planungsliste-parser").ParseResult | null>(null);
+  const [einrichtungenEdit, setEinrichtungenEdit] = useState<EinrichtungEdit[]>([]);
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<any>(null);
 
@@ -291,6 +297,9 @@ function PlanungslistePanel() {
     try {
       const r = await parsePlanungsliste(f);
       setParsed(r);
+      setEinrichtungenEdit(
+        r.einrichtungen.map((e) => ({ ...e, original_name: e.name, skip: false })),
+      );
       setFilename(f.name);
       toast.success(
         `Erkannt: ${r.einrichtungen.length} Einrichtungen · ${r.mitarbeiter.length} Mitarbeiter · ${r.einsaetze.length} Einsätze · ${r.abwesenheiten.length} Abwesenheiten`,
@@ -300,21 +309,45 @@ function PlanungslistePanel() {
     }
   }
 
+  function updateEinrichtung(idx: number, patch: Partial<EinrichtungEdit>) {
+    setEinrichtungenEdit((prev) => prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)));
+  }
+
+  const activeEinrichtungen = einrichtungenEdit.filter((e) => !e.skip && e.name.trim() !== "");
+  const skippedCount = einrichtungenEdit.length - activeEinrichtungen.length;
+  // Original-Name -> neuer Name oder null (auslassen)
+  const renameMap = new Map<string, string | null>();
+  for (const e of einrichtungenEdit) {
+    renameMap.set(e.original_name, e.skip || !e.name.trim() ? null : e.name.trim());
+  }
+  const filteredEinsaetze = (parsed?.einsaetze ?? [])
+    .map((es) => {
+      const target = renameMap.get(es.einrichtung_name);
+      if (target === undefined) return es;
+      if (target === null) return null;
+      return { ...es, einrichtung_name: target };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+  const droppedEinsaetze = (parsed?.einsaetze.length ?? 0) - filteredEinsaetze.length;
+
   async function runAll() {
     if (!parsed) return;
     setRunning(true);
     setReport(null);
     const out: any = {};
     try {
-      if (parsed.einrichtungen.length)
-        out.einrichtungen = await importEi({ data: { rows: parsed.einrichtungen as any } });
+      const einrichtungenPayload = activeEinrichtungen.map((e) => {
+        const { original_name: _o, skip: _s, source_row: _sr, raw_label: _rl, ...rest } = e;
+        return rest;
+      });
+      if (einrichtungenPayload.length)
+        out.einrichtungen = await importEi({ data: { rows: einrichtungenPayload as any } });
       if (parsed.mitarbeiter.length)
         out.mitarbeiter = await importMa({ data: { rows: parsed.mitarbeiter as any } });
-      if (parsed.einsaetze.length) {
-        // chunk
+      if (filteredEinsaetze.length) {
         const chunks: any[] = [];
-        for (let i = 0; i < parsed.einsaetze.length; i += 1000)
-          chunks.push(parsed.einsaetze.slice(i, i + 1000));
+        for (let i = 0; i < filteredEinsaetze.length; i += 1000)
+          chunks.push(filteredEinsaetze.slice(i, i + 1000));
         let c = 0, u = 0, errs: any[] = [];
         for (const chunk of chunks) {
           const res: any = await importEs({ data: { rows: chunk as any } });
@@ -332,6 +365,7 @@ function PlanungslistePanel() {
       setRunning(false);
     }
   }
+
 
   return (
     <div className="space-y-4">
