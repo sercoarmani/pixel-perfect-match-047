@@ -63,6 +63,7 @@ function EinrichtungenPage() {
               <TableHead>Kontakt</TableHead>
               <TableHead>VS PFK</TableHead>
               <TableHead>VS PHK</TableHead>
+              <TableHead>Geo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aktion</TableHead>
             </TableRow>
