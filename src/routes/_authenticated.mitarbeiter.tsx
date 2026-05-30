@@ -449,7 +449,7 @@ function PersonalLink({ mitarbeiterId, token }: { mitarbeiterId: string; token?:
   );
 }
 
-function TelegramLink({ mitarbeiterId, token, chatId, username }: { mitarbeiterId: string; token?: string; chatId?: number | null; username?: string | null }) {
+function TelegramLink({ mitarbeiterId, token, chatId, username, einmalCode, einmalCodeUsedAt }: { mitarbeiterId: string; token?: string; chatId?: number | null; username?: string | null; einmalCode?: string | null; einmalCodeUsedAt?: string | null }) {
   const fetchBot = useServerFn(getTelegramBotInfo);
   const sendLink = useServerFn(sendPersonalLink);
   const { data: bot } = useQuery({ queryKey: ["tg-bot-info"], queryFn: () => fetchBot(), staleTime: 5 * 60_000 });
@@ -504,6 +504,32 @@ function TelegramLink({ mitarbeiterId, token, chatId, username }: { mitarbeiterI
               <a href={deepLink} target="_blank" rel="noreferrer"><Send className="mr-1 h-3.5 w-3.5" />Öffnen</a>
             </Button>
           </div>
+          {einmalCode && !einmalCodeUsedAt && (
+            <div className="mt-3 border-t pt-3">
+              <p className="mb-1 text-xs text-muted-foreground">
+                Alternative: Persönlicher Kopplungscode (gibt die Person im Bot-Chat ein):
+              </p>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={einmalCode} className="font-mono text-xs tracking-wider" onFocus={(e) => e.currentTarget.select()} />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    try { await navigator.clipboard.writeText(einmalCode); toast.success("Code kopiert"); }
+                    catch { toast.error("Konnte nicht kopieren"); }
+                  }}
+                >
+                  <Copy className="mr-1 h-3.5 w-3.5" />Kopieren
+                </Button>
+              </div>
+            </div>
+          )}
+          {einmalCode && einmalCodeUsedAt && (
+            <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+              Kopplungscode <span className="font-mono">{einmalCode}</span> wurde bereits verwendet.
+            </p>
+          )}
         </>
       )}
     </section>
@@ -523,10 +549,12 @@ function MitarbeiterVerknuepft({ mitarbeiterId }: { mitarbeiterId: string }) {
   const token = (data?.mitarbeiter as any)?.zugangs_token as string | undefined;
   const chatId = (data?.mitarbeiter as any)?.telegram_chat_id as number | null | undefined;
   const tgUser = (data?.mitarbeiter as any)?.telegram_username as string | null | undefined;
+  const einmalCode = (data?.mitarbeiter as any)?.einmal_code as string | null | undefined;
+  const einmalCodeUsedAt = (data?.mitarbeiter as any)?.einmal_code_verbraucht_am as string | null | undefined;
   return (
     <div className="space-y-4 pt-3 text-sm">
       <PersonalLink mitarbeiterId={mitarbeiterId} token={token} />
-      <TelegramLink mitarbeiterId={mitarbeiterId} token={token} chatId={chatId} username={tgUser} />
+      <TelegramLink mitarbeiterId={mitarbeiterId} token={token} chatId={chatId} username={tgUser} einmalCode={einmalCode} einmalCodeUsedAt={einmalCodeUsedAt} />
       <section>
         <h3 className="font-medium mb-2">Verfügbarkeiten ({verf.length})</h3>
         {verf.length === 0 ? <p className="text-muted-foreground text-xs">Keine Verfügbarkeiten erfasst.</p> : (

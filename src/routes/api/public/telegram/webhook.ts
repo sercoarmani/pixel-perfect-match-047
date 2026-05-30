@@ -4,6 +4,94 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { telegramWebhookSecret, tgAnswerCallback, tgSendMessage } from "@/lib/telegram.server";
 import { einsatzBelegt } from "@/lib/matching";
 
+function publicOrigin(): string {
+  const env = process.env.PUBLIC_APP_ORIGIN;
+  if (env) return env.replace(/\/$/, "");
+  return "https://project--0ceef16a-44ab-4863-91ea-da069df2e318.lovable.app";
+}
+
+function normCode(s: string): string {
+  return s.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function isEinmalCodeShape(s: string): boolean {
+  // Format: 2-4 Buchstaben + "-" + 4 Zeichen (Buchstaben/Ziffern)
+  return /^[A-ZÄÖÜ]{2,4}-[A-Z0-9]{4,8}$/.test(s);
+}
+
+async function greetLinked(chatId: number, vorname: string, zugangsToken?: string) {
+  let token = zugangsToken;
+  if (!token) {
+    const { data } = await supabaseAdmin
+      .from("mitarbeiter")
+      .select("zugangs_token")
+      .eq("telegram_chat_id", chatId)
+      .maybeSingle();
+    token = data?.zugangs_token ?? undefined;
+  }
+  const portalUrl = token ? `${publicOrigin()}/m/${token}` : publicOrigin();
+  await tgSendMessage(
+    chatId,
+    `Hallo ${vorname} 👋\nDu bist mit diesem Bot verknüpft. Trage hier deine Verfügbarkeit ein:`,
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "📅 Verfügbarkeit eintragen", url: portalUrl },
+        ]],
+      },
+    },
+  );
+}
+
+async function handleEinmalCode(chatId: number, code: string, username: string | null) {
+  const { data: ma } = await supabaseAdmin
+    .from("mitarbeiter")
+    .select("id, vorname, nachname, einmal_code, einmal_code_verbraucht_am, telegram_chat_id")
+    .eq("einmal_code", code)
+    .maybeSingle();
+
+  if (!ma) {
+    await tgSendMessage(
+      chatId,
+      "❌ Dieser Code ist ungültig.\nBitte gib deinen persönlichen Kopplungscode ein (Format z. B. <code>ANNA-7K2X</code>).",
+      { parse_mode: "HTML" },
+    );
+    return;
+  }
+  if (ma.einmal_code_verbraucht_am) {
+    await tgSendMessage(
+      chatId,
+      "❌ Dieser Code wurde bereits verwendet und ist nicht mehr gültig. Bitte beim Dispo melden.",
+    );
+    return;
+  }
+  if (ma.telegram_chat_id && Number(ma.telegram_chat_id) !== chatId) {
+    await tgSendMessage(chatId, "Dieser Mitarbeiter ist bereits mit einem anderen Telegram-Konto verknüpft.");
+    return;
+  }
+
+  const { error: updErr } = await supabaseAdmin
+    .from("mitarbeiter")
+    .update({
+      telegram_chat_id: chatId,
+      telegram_username: username,
+      einmal_code_verbraucht_am: new Date().toISOString(),
+    })
+    .eq("id", ma.id);
+
+  if (updErr) {
+    await tgSendMessage(chatId, "Konnte Kopplung nicht speichern. Bitte später erneut versuchen.");
+    return;
+  }
+
+  await tgSendMessage(
+    chatId,
+    `✅ Kopplung erfolgreich!\nHallo ${ma.vorname}, dein Konto ist jetzt mit diesem Bot verknüpft.`,
+  );
+  await greetLinked(chatId, ma.vorname);
+}
+
+
 function safeEqual(a: string, b: string) {
   const A = Buffer.from(a);
   const B = Buffer.from(b);
@@ -151,16 +239,39 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             const text: string = update.message.text;
             const chatId: number = update.message.chat.id;
             const username: string | null = update.message.from?.username ?? null;
-            const m = text.match(/^\/start\s+(\S+)/);
-            if (m) {
-              await handleStart(chatId, m[1], username);
-            } else if (text.trim() === "/start") {
+            const trimmed = text.trim();
+            const startToken = trimmed.match(/^\/start\s+(\S+)/);
+            const linked = await findMitarbeiterByChat(chatId);
+
+            if (startToken) {
+              await handleStart(chatId, startToken[1], username);
+            } else if (trimmed === "/start") {
+              if (linked) {
+                await greetLinked(chatId, linked.vorname);
+              } else {
+                await tgSendMessage(
+                  chatId,
+                  "Hallo 👋\nDein Konto ist noch nicht mit diesem Bot verknüpft.\nBitte sende jetzt deinen persönlichen Kopplungscode (Format z. B. <code>ANNA-7K2X</code>).",
+                  { parse_mode: "HTML" },
+                );
+              }
+            } else if (trimmed === "/hilfe" || trimmed === "/help") {
               await tgSendMessage(
                 chatId,
-                "Hallo 👋\nBitte benutze den persönlichen Bot-Link, den du vom Dispo erhalten hast (Format: /start <Token>).",
+                linked
+                  ? "Du kannst hier Anfragen für offene Dienste annehmen (✅/❌) und deine Verfügbarkeit eintragen. Sende /start für das Menü."
+                  : "Bitte sende deinen persönlichen Kopplungscode, um dich mit dem Bot zu verknüpfen.",
               );
-            } else if (text.trim() === "/hilfe" || text.trim() === "/help") {
-              await tgSendMessage(chatId, "Du erhältst hier Anfragen für offene Dienste. Antworte einfach mit ✅ Zusage oder ❌ Absage.");
+            } else if (linked) {
+              await greetLinked(chatId, linked.vorname);
+            } else if (isEinmalCodeShape(normCode(trimmed))) {
+              await handleEinmalCode(chatId, normCode(trimmed), username);
+            } else {
+              await tgSendMessage(
+                chatId,
+                "Bitte sende deinen persönlichen Kopplungscode (Format z. B. <code>ANNA-7K2X</code>), um dich zu verknüpfen.",
+                { parse_mode: "HTML" },
+              );
             }
           } else if (update.callback_query) {
             const cb = update.callback_query;
