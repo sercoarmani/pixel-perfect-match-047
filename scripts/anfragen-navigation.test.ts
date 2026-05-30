@@ -19,8 +19,10 @@ const window = new Window({ url: "http://localhost/anfragen/kunden" });
 (globalThis as any).Node = window.Node;
 (globalThis as any).getComputedStyle = window.getComputedStyle.bind(window);
 
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+
 const React = await import("react");
-const { act } = await import("react");
+const { act } = await import("@testing-library/react");
 const { createRoot } = await import("react-dom/client");
 const {
   createRootRoute,
