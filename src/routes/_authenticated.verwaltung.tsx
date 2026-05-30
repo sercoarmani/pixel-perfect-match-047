@@ -95,6 +95,13 @@ function VerwaltungPage() {
 
 
 
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <FileText className="h-4 w-4" /> Nachrichtenvorlagen
+        </h2>
+        <NachrichtenTemplatesCard />
+      </section>
+
       {Object.entries(grouped).map(([kat, items]) => (
         <section key={kat} className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
