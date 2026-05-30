@@ -69,7 +69,7 @@ function EinrichtungenPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={9} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {filtered.map((e: any) => (
               <TableRow key={e.id}>
                 <TableCell className="text-sm text-muted-foreground">{e.traeger?.name ?? "—"}</TableCell>
@@ -78,6 +78,7 @@ function EinrichtungenPage() {
                 <TableCell className="text-xs">{e.kontakt_name ?? "—"}<br/>{e.kontakt_telefon ?? ""}</TableCell>
                 <TableCell>{e.vs_satz_pfk ? `${e.vs_satz_pfk} €` : "—"}</TableCell>
                 <TableCell>{e.vs_satz_phk ? `${e.vs_satz_phk} €` : "—"}</TableCell>
+                <TableCell><GeocodeStatusBadge status={e.geocode_status} fehler={e.geocode_fehler} lat={e.lat} lng={e.lng} /></TableCell>
                 <TableCell>{e.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
