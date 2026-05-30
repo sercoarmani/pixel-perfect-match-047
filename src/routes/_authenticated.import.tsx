@@ -292,6 +292,7 @@ function PlanungslistePanel() {
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<any>(null);
   const qc = useQueryClient();
+  const router = useRouter();
 
   const importMa = useServerFn(importMitarbeiter);
   const importEi = useServerFn(importEinrichtungen);
