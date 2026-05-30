@@ -36,18 +36,21 @@ export type DraftInput = {
 };
 
 export async function createKundenbestaetigungDraft(input: DraftInput): Promise<string | null> {
-  // Idempotenz: kein doppelter Draft für (einrichtung, mitarbeiter, datum, dienst)
+  // Idempotenz: kein doppelter Draft für (einrichtung, mitarbeiter, bedarf)
   try {
-    const { data: existing } = await supabaseAdmin
+    const baseQ = supabaseAdmin
       .from("kunden_bestaetigungen")
       .select("id")
       .eq("mitarbeiter_id", input.mitarbeiter_id)
       .eq("einrichtung_id", input.einrichtung_id)
-      .eq("bedarf_id", input.bedarf_id ?? null)
       .in("status", ["entwurf", "gesendet"])
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    const { data: existing } = await (input.bedarf_id
+      ? baseQ.eq("bedarf_id", input.bedarf_id)
+      : baseQ.is("bedarf_id", null)
+    ).maybeSingle();
     if (existing) return existing.id;
+
 
     const [{ data: ma }, { data: ein }, dokRes] = await Promise.all([
       supabaseAdmin.from("mitarbeiter").select("vorname, nachname, qualifikation").eq("id", input.mitarbeiter_id).maybeSingle(),
