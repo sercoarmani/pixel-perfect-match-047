@@ -134,6 +134,92 @@ function MitarbeiterPage() {
   );
 }
 
+function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] }) {
+  const [open, setOpen] = useState(false);
+  const [monat, setMonat] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [nurAktive, setNurAktive] = useState(true);
+  const send = useServerFn(sendVerfuegbarkeitsBroadcast);
+
+  const monatsOptionen = useMemo(() => {
+    const base = new Date();
+    base.setDate(1);
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+      return { value, label };
+    });
+  }, []);
+
+  const empfaengerAnzahl = (mitarbeiter ?? []).filter(
+    (m) => m.telegram_chat_id != null && (!nurAktive || m.aktiv),
+  ).length;
+
+  const m = useMutation({
+    mutationFn: () => send({ data: { monat, nur_aktive: nurAktive } }),
+    onSuccess: (r: any) => {
+      const fehler = (r.fehler ?? []).length;
+      toast.success(
+        `${r.gesendet} von ${r.gesamt} Nachrichten gesendet${fehler ? `, ${fehler} Fehler` : ""}.`,
+      );
+      if (fehler) console.warn("Telegram-Broadcast Fehler:", r.fehler);
+      setOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>
+        <Send className="mr-1 h-4 w-4" /> Verfügbarkeitslink senden
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verfügbarkeitslink per Telegram senden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 text-sm">
+            <div className="space-y-1.5">
+              <Label>Monat</Label>
+              <Select value={monat} onValueChange={setMonat}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {monatsOptionen.map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="capitalize">{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-3 rounded border bg-card px-3 py-2">
+              <input
+                id="brd-aktiv"
+                type="checkbox"
+                checked={nurAktive}
+                onChange={(e) => setNurAktive(e.target.checked)}
+                className="h-4 w-4"
+              />
+              <label htmlFor="brd-aktiv" className="cursor-pointer">Nur aktive Mitarbeiter</label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Es wird an <strong>{empfaengerAnzahl}</strong> verknüpfte Mitarbeiter gesendet. Jeder erhält seinen persönlichen Link für den gewählten Monat.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Abbrechen</Button>
+            <Button onClick={() => m.mutate()} disabled={m.isPending || empfaengerAnzahl === 0}>
+              {m.isPending ? "Sende…" : "Jetzt senden"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function PdfButton({ mitarbeiter }: { mitarbeiter: any }) {
   const fetchPlan = useServerFn(getMitarbeiterDienstplan);
   const [loading, setLoading] = useState<null | "pdf" | "xlsx">(null);
