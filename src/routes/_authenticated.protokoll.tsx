@@ -416,8 +416,12 @@ function DetailDialog({
                 </div>
 
                 {retryState === "running" && (
-                  <div className="text-xs text-muted-foreground">
-                    Nachricht wird erneut an den Provider gesendet…
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <span>Nachricht wird erneut an den Provider gesendet…</span>
+                    <span className="font-mono tabular-nums">{pollElapsed}s</span>
+                    <span className="text-[10px] uppercase opacity-70">
+                      Live-Polling alle 2.5 s
+                    </span>
                   </div>
                 )}
 
