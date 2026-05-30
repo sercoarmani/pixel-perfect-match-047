@@ -1,18 +1,25 @@
 /**
  * Szenario-Test: Doppelte MA-Zusage / doppelte Dispo-Zuteilung dürfen nur EINEN
  * Kundenbestätigungs-Entwurf und nur EINE Versandkette (E-Mail + Telegram)
- * erzeugen.
+ * erzeugen — auch unter ECHTER Parallelität (Promise.all).
  *
  * Lauf:  bun test scripts/scenario-bestaetigung-dedupe.test.ts
  *
  * Wir mocken supabaseAdmin / Telegram / versand-log per `mock.module` und
  * exerzieren die echten Helper aus src/lib/kunden-bestaetigung.server.ts.
+ *
+ * Der Fake-Supabase simuliert den partiellen UNIQUE-Index
+ * (mitarbeiter_id, einrichtung_id, COALESCE(bedarf_id, NULL_UUID))
+ * WHERE status IN ('entwurf','gesendet') und gibt bei Verletzung
+ * { error: { code: '23505' } } zurück.
  */
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 
 // ----------------- In-Memory-Fakes -----------------
 
 type Row = Record<string, any>;
+const NULL_UUID = "00000000-0000-0000-0000-000000000000";
+
 const tables: Record<string, Row[]> = {
   mitarbeiter: [],
   einrichtungen: [],
@@ -32,6 +39,37 @@ function reset() {
   tgMessages.length = 0;
   tgDocs.length = 0;
   versandLogs.length = 0;
+}
+
+// Partielle UNIQUE-Constraints pro Tabelle.
+// Key wird aus angegebenen Spalten gebaut; Predicate sagt, ob die Row indiziert ist.
+type UniqueConstraint = {
+  key: (r: Row) => string;
+  active: (r: Row) => boolean;
+};
+const constraints: Record<string, UniqueConstraint[]> = {
+  kunden_bestaetigungen: [
+    {
+      key: (r) =>
+        `${r.mitarbeiter_id}|${r.einrichtung_id}|${r.bedarf_id ?? NULL_UUID}`,
+      active: (r) => r.status === "entwurf" || r.status === "gesendet",
+    },
+  ],
+};
+
+function violatesUnique(table: string, row: Row, ignoreId?: string): boolean {
+  const cs = constraints[table];
+  if (!cs) return false;
+  const rows = tables[table] ?? [];
+  for (const c of cs) {
+    if (!c.active(row)) continue;
+    const k = c.key(row);
+    for (const r of rows) {
+      if (r.id === ignoreId) continue;
+      if (c.active(r) && c.key(r) === k) return true;
+    }
+  }
+  return false;
 }
 
 // Chainable Query Builder (minimaler Mini-PostgREST)
@@ -93,14 +131,30 @@ class Query {
     return this.run().then(onF, onR);
   }
   private async run(): Promise<{ data: Row[] | null; error: any }> {
+    // Mikro-Yield, damit Promise.all echte Interleaving-Reihenfolge erzeugt
+    await Promise.resolve();
     if (this._isInsert) {
       const incoming = Array.isArray(this._isInsert) ? this._isInsert : [this._isInsert];
-      const inserted = incoming.map((r) => ({ id: crypto.randomUUID(), ...r }));
-      this.rows().push(...inserted);
+      const inserted: Row[] = [];
+      for (const r of incoming) {
+        const row = { id: crypto.randomUUID(), ...r };
+        if (violatesUnique(this.tableName, row)) {
+          return { data: null, error: { code: "23505", message: "duplicate key" } };
+        }
+        this.rows().push(row);
+        inserted.push(row);
+      }
       return { data: this._selectAfterInsert ? inserted : null, error: null };
     }
     if (this._isUpdate) {
       const matched = this.apply();
+      // Update atomar: Constraint-Check pro Row
+      for (const r of matched) {
+        const candidate = { ...r, ...this._isUpdate };
+        if (violatesUnique(this.tableName, candidate, r.id)) {
+          return { data: null, error: { code: "23505", message: "duplicate key on update" } };
+        }
+      }
       matched.forEach((r) => Object.assign(r, this._isUpdate));
       return { data: matched, error: null };
     }
@@ -190,73 +244,34 @@ function seed() {
 
 // ----------------- Szenarien -----------------
 
-describe("Block 5/6 Auto-Trigger – Idempotenz", () => {
+describe("Block 5/6 Auto-Trigger – Idempotenz unter Parallelität", () => {
   beforeEach(() => {
     reset();
     seed();
   });
 
-  it("doppelte BESTAETIGT-Updates erzeugen nur EINEN Entwurf", async () => {
-    const a = await createKundenbestaetigungDraft({
+  it("doppelte BESTAETIGT-Updates (sequentiell) erzeugen nur EINEN Entwurf", async () => {
+    const input = {
       mitarbeiter_id: MA_ID,
       einrichtung_id: EIN_ID,
       bedarf_id: BEDARF_ID,
       einsatz_id: "einsatz-1",
       datum: "2026-06-01",
       dienst: "F",
-    });
-    const b = await createKundenbestaetigungDraft({
-      mitarbeiter_id: MA_ID,
-      einrichtung_id: EIN_ID,
-      bedarf_id: BEDARF_ID,
-      einsatz_id: "einsatz-1",
-      datum: "2026-06-01",
-      dienst: "F",
-    });
-    const c = await createKundenbestaetigungDraft({
-      mitarbeiter_id: MA_ID,
-      einrichtung_id: EIN_ID,
-      bedarf_id: BEDARF_ID,
-      einsatz_id: "einsatz-1",
-      datum: "2026-06-01",
-      dienst: "F",
-    });
-
+    };
+    const a = await createKundenbestaetigungDraft(input);
+    const b = await createKundenbestaetigungDraft(input);
+    const c = await createKundenbestaetigungDraft(input);
     expect(a).not.toBeNull();
     expect(b).toBe(a);
     expect(c).toBe(a);
     expect(tables.kunden_bestaetigungen).toHaveLength(1);
   });
 
-  it("doppelte manuelle Dispo-Zuteilungen (mit bedarf_id) erzeugen nur EINEN Entwurf", async () => {
-    // Realitätsnah: Auto-Trigger feuern NACH dem DB-Commit der jeweiligen
-    // Mutation (upsertEinsatz / bedarfZusage / Telegram-Webhook), also
-    // sequentiell. Hier zwei schnelle aufeinanderfolgende Zusage-Klicks.
-    const draftInput = {
-      mitarbeiter_id: MA_ID,
-      einrichtung_id: EIN_ID,
-      bedarf_id: BEDARF_ID,
-      einsatz_id: "einsatz-2",
-      datum: "2026-06-02",
-      dienst: "S",
-    };
-    const r1 = await createKundenbestaetigungDraft(draftInput);
-    const r2 = await createKundenbestaetigungDraft(draftInput);
-    const r3 = await createKundenbestaetigungDraft(draftInput);
-
-    expect(r1).not.toBeNull();
-    expect(r2).toBe(r1);
-    expect(r3).toBe(r1);
-    expect(tables.kunden_bestaetigungen).toHaveLength(1);
-  });
-
-  it("HINWEIS: echte Parallel-Race erzeugt Duplikate (DB-Constraint fehlt)", async () => {
-    // Dokumentiert eine bekannte Lücke: Wenn zwei Trigger gleichzeitig laufen
-    // (Telegram-Zusage + Dispo-Klick im selben ms), greift die SELECT-basierte
-    // Dedupe nicht. In der aktuellen Architektur kann das praktisch nicht
-    // auftreten — sollten parallele Trigger eingeführt werden, braucht
-    // kunden_bestaetigungen einen UNIQUE-Index auf (mitarbeiter_id,
-    // einrichtung_id, bedarf_id) WHERE status IN ('entwurf','gesendet').
+  it("PARALLEL: 5× createDraft via Promise.all erzeugt genau EINEN Entwurf", async () => {
+    // Echte Race-Bedingung: alle 5 lesen "nicht vorhanden", versuchen INSERT,
+    // genau 1 gewinnt den UNIQUE-Index, die anderen 4 fangen 23505 ab und
+    // geben die existierende ID zurück.
     const input = {
       mitarbeiter_id: MA_ID,
       einrichtung_id: EIN_ID,
@@ -265,15 +280,58 @@ describe("Block 5/6 Auto-Trigger – Idempotenz", () => {
       datum: "2026-06-04",
       dienst: "F",
     };
-    await Promise.all([
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => createKundenbestaetigungDraft(input)),
+    );
+    const ids = new Set(results);
+    expect(results.every((r) => r !== null)).toBe(true);
+    expect(ids.size).toBe(1);
+    expect(tables.kunden_bestaetigungen).toHaveLength(1);
+  });
+
+  it("PARALLEL ohne bedarf_id: NULL-Fall ist ebenfalls eindeutig", async () => {
+    const input = {
+      mitarbeiter_id: MA_ID,
+      einrichtung_id: EIN_ID,
+      einsatz_id: "einsatz-null",
+      datum: "2026-06-05",
+      dienst: "S",
+    };
+    const results = await Promise.all([
+      createKundenbestaetigungDraft(input),
       createKundenbestaetigungDraft(input),
       createKundenbestaetigungDraft(input),
     ]);
-    // Erwartet (heutiger Stand): 2 Drafts unter echter Race-Bedingung.
-    expect(tables.kunden_bestaetigungen.length).toBeGreaterThanOrEqual(1);
+    expect(new Set(results).size).toBe(1);
+    expect(tables.kunden_bestaetigungen).toHaveLength(1);
   });
 
-  it("sendKundenbestaetigung mehrfach aufgerufen → nur EINE Versandkette", async () => {
+  it("PARALLEL: Telegram-Zusage + Dispo-Klick gleichzeitig → EIN Entwurf", async () => {
+    // Simuliert den realen Worst-Case: MA tippt JA im Telegram, Disponent
+    // klickt im selben Moment "Zuteilen" — beide Trigger feuern parallel.
+    const fromTelegram = createKundenbestaetigungDraft({
+      mitarbeiter_id: MA_ID,
+      einrichtung_id: EIN_ID,
+      bedarf_id: BEDARF_ID,
+      einsatz_id: "einsatz-mix",
+      datum: "2026-06-06",
+      dienst: "N",
+    });
+    const fromDispo = createKundenbestaetigungDraft({
+      mitarbeiter_id: MA_ID,
+      einrichtung_id: EIN_ID,
+      bedarf_id: BEDARF_ID,
+      einsatz_id: "einsatz-mix",
+      datum: "2026-06-06",
+      dienst: "N",
+    });
+    const [a, b] = await Promise.all([fromTelegram, fromDispo]);
+    expect(a).not.toBeNull();
+    expect(a).toBe(b);
+    expect(tables.kunden_bestaetigungen).toHaveLength(1);
+  });
+
+  it("sendKundenbestaetigung mehrfach (sequentiell) → nur EINE Versandkette", async () => {
     const draftId = await createKundenbestaetigungDraft({
       mitarbeiter_id: MA_ID,
       einrichtung_id: EIN_ID,
@@ -283,8 +341,6 @@ describe("Block 5/6 Auto-Trigger – Idempotenz", () => {
       dienst: "N",
     });
     expect(draftId).not.toBeNull();
-
-    // Einsatz für die Telegram-Detailauflösung anlegen
     tables.einsaetze.push({ id: "einsatz-3", datum: "2026-06-03", dienst: "N" });
 
     const s1 = await sendKundenbestaetigung(draftId!, null);
@@ -295,19 +351,48 @@ describe("Block 5/6 Auto-Trigger – Idempotenz", () => {
     expect(s2.email_status).toBe("skipped");
     expect(s3.email_status).toBe("skipped");
 
-    // Genau eine E-Mail in die Queue
     expect(rpcCalls.filter((c) => c.name === "enqueue_email")).toHaveLength(1);
-    // Genau ein pending-Eintrag im send_log
     expect(tables.email_send_log).toHaveLength(1);
-    // Genau ein Telegram-Header an MA + ein sendDocument pro Doc (hier 1)
     expect(tgMessages).toHaveLength(1);
     expect(tgDocs).toHaveLength(1);
-    // Versand-Log: 1× email + 1× telegram
     expect(versandLogs.filter((v) => v.kanal === "email")).toHaveLength(1);
     expect(versandLogs.filter((v) => v.kanal === "telegram")).toHaveLength(1);
+    expect(tables.kunden_bestaetigungen[0].status).toBe("gesendet");
+  });
 
-    // Status final
-    const row = tables.kunden_bestaetigungen[0];
-    expect(row.status).toBe("gesendet");
+  it("PARALLEL: 4× sendKundenbestaetigung gleichzeitig → genau EINE Versandkette", async () => {
+    const draftId = await createKundenbestaetigungDraft({
+      mitarbeiter_id: MA_ID,
+      einrichtung_id: EIN_ID,
+      bedarf_id: BEDARF_ID,
+      einsatz_id: "einsatz-send-race",
+      datum: "2026-06-07",
+      dienst: "F",
+    });
+    expect(draftId).not.toBeNull();
+    tables.einsaetze.push({ id: "einsatz-send-race", datum: "2026-06-07", dienst: "F" });
+
+    // Echte Parallelität: alle 4 lesen Status="entwurf", aber nur EIN atomarer
+    // Claim-UPDATE (status='entwurf' AND ma_unterlagen_status='pending') matcht.
+    const results = await Promise.all([
+      sendKundenbestaetigung(draftId!, null),
+      sendKundenbestaetigung(draftId!, null),
+      sendKundenbestaetigung(draftId!, null),
+      sendKundenbestaetigung(draftId!, null),
+    ]);
+
+    const queued = results.filter((r) => r.email_status === "queued");
+    const skipped = results.filter((r) => r.email_status === "skipped");
+    expect(queued).toHaveLength(1);
+    expect(skipped).toHaveLength(3);
+
+    // Versandseiteneffekte: exakt 1× je Kanal
+    expect(rpcCalls.filter((c) => c.name === "enqueue_email")).toHaveLength(1);
+    expect(tables.email_send_log).toHaveLength(1);
+    expect(tgMessages).toHaveLength(1);
+    expect(tgDocs).toHaveLength(1);
+    expect(versandLogs.filter((v) => v.kanal === "email")).toHaveLength(1);
+    expect(versandLogs.filter((v) => v.kanal === "telegram")).toHaveLength(1);
+    expect(tables.kunden_bestaetigungen[0].status).toBe("gesendet");
   });
 });
