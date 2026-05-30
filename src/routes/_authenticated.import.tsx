@@ -595,6 +595,14 @@ function PlanungslistePanel() {
                     {((v.created_names?.length ?? 0) + (v.updated_names?.length ?? 0)) > 12 && " …"}
                   </div>
                 )}
+                {v.errors && v.errors.length > 0 && (
+                  <div className="ml-6 text-xs text-destructive space-y-0.5">
+                    {v.errors.slice(0, 10).map((er: any, i: number) => (
+                      <div key={i}>⚠ {er.name ?? `Zeile ${er.row ?? "?"}`}: {er.error}</div>
+                    ))}
+                    {v.errors.length > 10 && <div>… und {v.errors.length - 10} weitere</div>}
+                  </div>
+                )}
               </div>
             ))}
             {report.einrichtungen && (
