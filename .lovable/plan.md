@@ -1,89 +1,60 @@
+# Importierte Einrichtungen überall sichtbar machen
 
-# Ausbauplan – 7 Blöcke
+## Ziel
+Jede beim Planungslisten-Import erkannte (oder vorhandene) Einrichtung ist nach `Import abgeschlossen` ohne weiteres Zutun
+1. in der Einrichtungen-Liste (= Kunden) auffindbar,
+2. in der Planungsmatrix mit den richtigen Einsätzen verknüpft,
+3. im Bedarfsassistenten als auswählbare Einrichtung verfügbar.
 
-Ich schlage vor, die Blöcke **einzeln** umzusetzen und jeweils direkt testbar abzuschließen. So bleibt jede Etappe überschaubar, du kannst nach jedem Block prüfen, und wir verheddern uns nicht in Halbfertigem.
+Heute funktioniert das in der Theorie schon (alle drei Bereiche lesen aus `einrichtungen`), scheitert aber in der Praxis an Namens-Mismatches (Leerzeichen, Groß/Klein) und an fehlender Sichtbarkeit im Import-Report. Genau das wird hier geschlossen.
 
-## Reihenfolge (empfohlen)
+## Was geändert wird
 
-1. **Block 2** – Dokumente (Storage + Felder) → Grundlage für Block 5 & 6
-2. **Block 1** – Reiter „Verwaltung / Verknüpfungen" → Sichtbarkeit aller Kanäle
-3. **Block 7** – Versand-Protokoll (Tabelle) → wird ab Block 4 sofort befüllt
-4. **Block 3** – Bedarfsassistent (E-Mail-Eingang + KI-Parsing + Bestätigung)
-5. **Block 4** – Auto-Outreach an Mitarbeiter (Telegram + WhatsApp)
-6. **Block 5** – Kundenbestätigung nach Zusage (E-Mail mit Anhängen)
-7. **Block 6** – MA-Bestätigung per Telegram/WhatsApp
+### 1. Namens-Normalisierung als gemeinsamer Schlüssel
+- Neue Helfer `normalizeName(s)` (trim + interne Whitespaces auf eines reduzieren) in `src/lib/dispo.functions.ts`.
+- `importEinrichtungen` nutzt `normalizeName` für `eq("name", …)`-Lookup **und** speichert den getrimmten Namen. Damit gibt es keine „doppelten" Einrichtungen mehr, nur weil Excel ein Trailing-Space liefert.
+- `importEinsaetze` baut `einMap` mit `normalizeName(e.name)` als Key und sucht mit `normalizeName(r.einrichtung_name)`. Gleiches für `mitMap` (kuerzel).
 
----
+### 2. Garantierte Anlage vor Einsatz-Import
+- In `src/routes/_authenticated.import.tsx` `runAll()`: nach `importEi` und vor `importEs` einmal `listEinrichtungen` per ServerFn nachladen und prüfen, dass **jeder distinct `einrichtung_name`** aus `filteredEinsaetze` einen Treffer hat.
+- Fehlende Namen → vor dem Einsatz-Import in einem zweiten `importEi`-Call automatisch als Minimal-Einrichtung (`{ name }`) nachgereicht. Damit kann es nie zu „Einrichtung 'X' nicht gefunden"-Fehlern für Zeilen kommen, die wir gerade selbst eingelesen haben.
 
-## Block 1 – Verwaltung / Verknüpfungen
-- Neue Route `/verwaltung/verknuepfungen` (Admin-only via `has_role`)
-- Tabelle `integrations` (id, key, name, kategorie, status, last_active_at, config jsonb, aktiv) – erweiterbar
-- Status-Erkennung pro Eintrag über kleine Server-Functions (Telegram getMe, E-Mail-Domain-Status, WhatsApp Ping)
-- UI: Liste mit Badge (verbunden/Fehler/nicht verbunden) + Connect/Disconnect-Button
-- Seed: E-Mail, Telegram, WhatsApp, Telefon-App, „weitere…"
+### 3. Rückgabe inkl. IDs für Direktlinks
+- `importEinrichtungen` liefert zusätzlich `created_records: { id, name }[]` und `updated_records: { id, name }[]` (gleiche Liste wie bisher `*_names`, nur mit ID).
+- Im Import-Report (`PlanungslistePanel`):
+  - „+ Diakonie" / „↺ Diakonie" werden zu klickbaren Links auf `/einrichtungen` (Liste mit vorausgefülltem Suchparameter — siehe Punkt 5).
+  - Drei feste Quick-Links unter dem Einrichtungen-Block: **„Einrichtungen-Liste"**, **„Planungsmatrix"**, **„Bedarfsassistent"**, damit du direkt verifizieren kannst, dass die Daten überall ankommen.
 
-## Block 2 – Mitarbeiter-Dokumente
-- Storage-Bucket `mitarbeiter-dokumente` (privat) mit Pfadschema `{mitarbeiter_id}/{uuid}-{filename}`
-- Tabelle `mitarbeiter_dokumente`: mitarbeiter_id, typ (enum: zertifikat/fuehrungszeugnis/profil/sonstiges), datei_path, dateiname, ausstellungsdatum, ablaufdatum, weitergabe_erlaubt (bool), erkannt_json (jsonb), erkannt_geprueft (bool), erstellt_am
-- Upload-UI im Mitarbeiter-Detail + Sammel-Import-Dialog (mehrere Dateien → Zuordnung pro Datei)
-- Server-Function `extractDocument`:
-  - PDF → `pdfjs-dist` Textextraktion
-  - Excel → `xlsx` (SheetJS)
-  - Bilder/JPEG → OCR via Lovable AI Gateway (gemini-2.5-flash, multimodal)
-  - Felder (ausstellungs-/ablaufdatum, Name) aus extrahiertem Text via Lovable AI mit JSON-Schema
-  - Resultat als „automatisch erkannt – bitte prüfen" markiert
-- RLS: Admin/Dispo sieht alle; künftiger MA-Zugang nur eigene
-- Ablauf-Warnung: Dashboard-Widget + Verwaltungs-Liste mit `ablaufdatum ≤ heute+60 Tage`
+### 4. Verifikations-Badge im Report
+- Nach `runAll` wird im Report explizit angezeigt: `N von M Einrichtungen aus der Datei sind in der Datenbank vorhanden` (Vergleich zwischen `activeEinrichtungen` und dem frischen `listEinrichtungen`-Snapshot). Bei Lücken Warnung + Auflistung.
 
-## Block 3 – Bedarfsassistent (E-Mail-Eingang)
-- Eingangsweg: dedizierte Inbox-Adresse (z. B. `bedarf@notify.dispoplan.one`) → Inbound-Webhook (Lovable Emails Inbound oder externer Forwarder)
-- Tabelle `bedarf_inbox`: roh_email, status (neu/erkannt/bestaetigt/verworfen), erkannt_json, kunde_einrichtung_id (nullable), erstellt_am
-- KI-Parsing (Lovable AI) extrahiert: kunde, datum, schicht (F/S/N), ort, qualifikation → JSON-Schema
-- UI `/bedarfsassistent`: Liste neuer Mails; Detail mit erkannten Feldern, manuell editierbar; „Bestätigen" legt `bedarfe`-Eintrag an und markiert Inbox als verarbeitet
-- Verknüpfung mit bestehender Planungs-/Verfügbarkeitsmatrix
+### 5. Suche in Einrichtungen-Liste via URL-Param
+- `src/routes/_authenticated.einrichtungen.tsx` bekommt `validateSearch` für `?q=…` und übernimmt den Wert in das vorhandene Suchfeld. Damit funktioniert der Direktlink aus dem Import-Report ohne Zusatz-State.
 
-## Block 4 – Auto-Outreach an Mitarbeiter
-- Aus `bedarfe`-Eintrag: Matching (gleiche Qualifikation, Verfügbarkeit am Datum+Schicht, kein Konflikt)
-- Vorlage erzeugen: `Dienst frei: {schicht} am {datum} in {ort}. Kannst du? JA/NEIN`
-- Telegram: bestehender Bot, Inline-Buttons JA/NEIN → Callback updated `verfuegbarkeiten`/`anfragen`
-- WhatsApp: Business API (Cloud API von Meta) – wegen 24h-Session-Regel **Template Message** für Erstkontakt, Free-Form nach Antwort
-  - **Voraussetzung**: WhatsApp-Connector/Provider (Meta Cloud API mit Phone Number ID + System User Token, oder 360dialog/Twilio). Müssen wir vor diesem Block einrichten.
-- Versand mehrfach parallel, pro MA ein `anfragen`-Eintrag
+### 6. Cache-Konsistenz (bereits getan, hier nur Verifikation)
+- Die im letzten Schritt eingeführte `qc.refetchQueries` + `router.invalidate()`-Logik nach Import deckt Einrichtungen-Tab, Planungsmatrix (`["einsaetze"]`/`["einrichtungen"]`) und Bedarfsassistent (`["einrichtungen"]`) ab. Keine weitere Änderung nötig, nur kurz prüfen.
 
-## Block 5 – Kundenbestätigung nach Zusage
-- Trigger: Mitarbeiter sagt JA → Server-Function `confirmEinsatz`
-- Baut E-Mail (Lovable Emails) an Kontakt der `einrichtung`:
-  - Inhalt: Name, Position, Datum/Schicht
-  - Anhänge: alle Dokumente des MA mit `weitergabe_erlaubt = true` (Profil + Zertifikate)
-- Vorschau-Dialog vor Versand (Empfänger, Betreff, Body, Anhang-Liste editierbar/abwählbar)
-- Nach Freigabe: senden + in `versand_log` protokollieren
+## Was nicht geändert wird
+- Kein neues Datenmodell, keine separate „kunden"-Tabelle — Einrichtungen sind die Kunden (laut Klärung).
+- Keine Anpassung an Bedarfsassistent-Logik selbst; er liest bereits `listEinrichtungen` über denselben Query-Key.
+- Träger bleibt optional und wird wie zuletzt vereinbart nicht erzwungen.
 
-## Block 6 – Unterlagen an den Mitarbeiter
-- Nach Versand an Kunde: automatischer Versand an MA über Telegram + WhatsApp
-- Inhalt: Bestätigung des Einsatzes + PDF (Profil/Bestätigung)
-- Wenn MA nur einen Kanal verknüpft hat → nur dieser
+## Technische Details
 
-## Block 7 – Versand-Protokoll
-- Tabelle `versand_log`: id, kanal (email/telegram/whatsapp), richtung (out/in), empfaenger_typ (kunde/mitarbeiter), empfaenger_id, betreff, body_snippet, anhaenge jsonb, status (ok/fehler/queued), fehler_text, bezug_typ (bedarf/anfrage/einsatz/dokument), bezug_id, erstellt_am
-- View/Seite `/verwaltung/protokoll` mit Filter
-- Jede Server-Function aus Block 3–6 schreibt am Ende in `versand_log`
+### Geänderte/neue Dateien
+- `src/lib/dispo.functions.ts`
+  - neue Helfer `normalizeName`
+  - `importEinrichtungen`: normalisiertes Lookup + `created_records`/`updated_records` mit `id`
+  - `importEinsaetze`: normalisierte Map-Keys
+- `src/routes/_authenticated.import.tsx`
+  - `runAll`: Verifikations-Schritt (Re-Fetch + Nachzügler-Insert + Coverage-Check)
+  - Report-UI: Links auf `/einrichtungen?q=<name>`, Quick-Links auf Planungsmatrix & Bedarfsassistent, Coverage-Badge
+- `src/routes/_authenticated.einrichtungen.tsx`
+  - `validateSearch` für `?q`, Übernahme in Suchfeld via `Route.useSearch()`
 
----
-
-## Sicherheit (gilt durchgängig)
-- Storage-Bucket privat, signierte URLs nur serverseitig, kurze TTL
-- RLS:
-  - `mitarbeiter_dokumente`: `is_dispo(auth.uid())` voll; spätere MA-Policy via `mitarbeiter.user_id`
-  - `bedarf_inbox`, `versand_log`, `integrations`: dispo-only
-- Secrets (WhatsApp-Token, Inbound-Webhook-Secret) ausschließlich in Lovable Secrets
-- Kunden-Mail: hartes Check, dass jeder Anhang `weitergabe_erlaubt = true` hat (auch serverseitig, nicht nur UI)
-
----
-
-## Was du vor Start klären musst
-1. **WhatsApp-Provider**: Hast du einen Meta-Business-Account + Phone Number ID? Oder willst du 360dialog/Twilio? Ohne das funktioniert Block 4/6-WhatsApp nicht.
-2. **E-Mail-Inbound für Bedarfsassistent**: Lovable Emails inbound einrichten oder externer Forwarder (z. B. Cloudflare Email Worker, IMAP-Poll)?
-3. **OCR-Sprache**: Reicht Deutsch+Englisch via Gemini multimodal, oder brauchst du Tesseract on-device?
-4. **Start-Block**: Sollen wir wirklich mit **Block 2 (Dokumente)** anfangen, oder hast du eine andere Priorität?
-
-Sag mir die Antworten – dann lege ich mit dem ersten Block los.
+### Test (manuell)
+1. Planungsliste mit ≥ 3 Einrichtungen importieren (eine bewusst mit Leerzeichen am Ende).
+2. Report zeigt für jede Einrichtung einen Link, Coverage „3/3".
+3. Klick auf Link öffnet `/einrichtungen?q=Name` → Einrichtung sichtbar.
+4. Planungsmatrix öffnen → Einsätze hängen unter derselben Einrichtung.
+5. Bedarfsassistent öffnen → Einrichtung im Dropdown auswählbar.

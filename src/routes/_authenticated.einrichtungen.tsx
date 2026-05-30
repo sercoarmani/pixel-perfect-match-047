@@ -17,27 +17,46 @@ import { toast } from "sonner";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
 
 export const Route = createFileRoute("/_authenticated/einrichtungen")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : "",
+  }),
   component: EinrichtungenPage,
 });
 
 function EinrichtungenPage() {
+  const { q: initialQ } = Route.useSearch();
   const fetchList = useServerFn(listEinrichtungen);
   const { data, isLoading } = useQuery({ queryKey: ["einrichtungen"], queryFn: () => fetchList() });
   const [edit, setEdit] = useState<any | null>(null);
-  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">("alle");
+  const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">(initialQ ? "alle" : "aktiv");
+  const [search, setSearch] = useState<string>(initialQ ?? "");
 
-  const filtered = (data ?? []).filter((e: any) =>
-    filter === "alle" ? true : filter === "aktiv" ? e.aktiv : !e.aktiv,
-  );
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = (data ?? []).filter((e: any) => {
+    const statusOk = filter === "alle" ? true : filter === "aktiv" ? e.aktiv : !e.aktiv;
+    if (!statusOk) return false;
+    if (!normalizedSearch) return true;
+    return (
+      (e.name ?? "").toLowerCase().includes(normalizedSearch) ||
+      (e.ort ?? "").toLowerCase().includes(normalizedSearch) ||
+      (e.traeger?.name ?? "").toLowerCase().includes(normalizedSearch)
+    );
+  });
 
   return (
     <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">Einrichtungen</h1>
           <p className="text-sm text-muted-foreground">{filtered.length} von {data?.length ?? 0} Einrichtungen</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Suchen…"
+            className="h-9 w-48"
+          />
           <div className="flex rounded-md border bg-card p-0.5 text-xs">
             {(["aktiv", "inaktiv", "alle"] as const).map((k) => (
               <button

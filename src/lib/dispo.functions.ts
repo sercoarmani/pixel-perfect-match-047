@@ -403,6 +403,13 @@ export const importMitarbeiter = createServerFn({ method: "POST" })
     return { created, updated, errors };
   });
 
+// Namens-Normalisierung: trim + interne Whitespaces auf eines reduzieren + lowercase.
+// Wird als gemeinsamer Lookup-Key zwischen importEinrichtungen / importEinsaetze und
+// dem Frontend-Coverage-Check benutzt.
+function normalizeName(s: string | null | undefined): string {
+  return (s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 export const importEinrichtungen = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -414,7 +421,21 @@ export const importEinrichtungen = createServerFn({ method: "POST" })
     const errors: { name: string; error: string }[] = [];
     const created_names: string[] = [];
     const updated_names: string[] = [];
+    const created_records: { id: string; name: string }[] = [];
+    const updated_records: { id: string; name: string }[] = [];
+
+    // Bestehende Einrichtungen einmalig laden (case-/whitespace-tolerant matchen).
+    const { data: existingAll } = await supabase.from("einrichtungen").select("id, name");
+    const existingMap = new Map<string, { id: string; name: string }>(
+      (existingAll ?? []).map((e: any) => [normalizeName(e.name), { id: e.id, name: e.name }]),
+    );
+
     for (const row of data.rows) {
+      const cleanName = (row.name ?? "").replace(/\s+/g, " ").trim();
+      if (!cleanName) {
+        errors.push({ name: row.name, error: "Leerer Name" });
+        continue;
+      }
       let traeger_id: string | null = null;
       const traegerName = row.traeger?.trim();
       if (traegerName) {
@@ -432,26 +453,29 @@ export const importEinrichtungen = createServerFn({ method: "POST" })
       }
       const { traeger: _t, ...rest } = row;
       // Träger ist optional – Einrichtung wird auch ohne Träger angelegt (traeger_id = null).
-      const payload = { ...rest, traeger_id };
-      const { data: existing } = await supabase
-        .from("einrichtungen").select("id").eq("name", row.name).maybeSingle();
+      const payload = { ...rest, name: cleanName, traeger_id };
+      const existing = existingMap.get(normalizeName(cleanName));
       if (existing) {
         const { error } = await supabase.from("einrichtungen").update(payload).eq("id", existing.id);
-        if (error) errors.push({ name: row.name, error: error.message });
+        if (error) errors.push({ name: cleanName, error: error.message });
         else {
           updated++;
-          updated_names.push(row.name);
+          updated_names.push(cleanName);
+          updated_records.push({ id: existing.id, name: cleanName });
         }
       } else {
-        const { error } = await supabase.from("einrichtungen").insert(payload);
-        if (error) errors.push({ name: row.name, error: error.message });
+        const { data: ins, error } = await supabase.from("einrichtungen").insert(payload).select("id").single();
+        if (error || !ins) errors.push({ name: cleanName, error: error?.message ?? "Insert ohne ID" });
         else {
           created++;
-          created_names.push(row.name);
+          created_names.push(cleanName);
+          created_records.push({ id: ins.id, name: cleanName });
+          // Cache aktualisieren, damit Folge-Zeilen mit gleichem Namen als Update behandelt werden.
+          existingMap.set(normalizeName(cleanName), { id: ins.id, name: cleanName });
         }
       }
     }
-    return { created, updated, errors, created_names, updated_names };
+    return { created, updated, errors, created_names, updated_names, created_records, updated_records };
   });
 
 export const importEinsaetze = createServerFn({ method: "POST" })
@@ -461,18 +485,18 @@ export const importEinsaetze = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    // pre-load lookup maps
+    // pre-load lookup maps (normalisiert für Whitespace-/Case-Toleranz)
     const { data: mits } = await supabase.from("mitarbeiter").select("id, kuerzel");
     const { data: eins } = await supabase.from("einrichtungen").select("id, name");
-    const mitMap = new Map((mits ?? []).map((m) => [m.kuerzel.toLowerCase(), m.id]));
-    const einMap = new Map((eins ?? []).map((e) => [e.name.toLowerCase(), e.id]));
+    const mitMap = new Map((mits ?? []).map((m) => [normalizeName(m.kuerzel), m.id]));
+    const einMap = new Map((eins ?? []).map((e) => [normalizeName(e.name), e.id]));
     let created = 0, updated = 0;
     const errors: { row: number; error: string }[] = [];
     for (let i = 0; i < data.rows.length; i++) {
       const r = data.rows[i];
       try {
-        const mitarbeiter_id = mitMap.get(r.mitarbeiter_kuerzel.toLowerCase());
-        const einrichtung_id = einMap.get(r.einrichtung_name.toLowerCase());
+        const mitarbeiter_id = mitMap.get(normalizeName(r.mitarbeiter_kuerzel));
+        const einrichtung_id = einMap.get(normalizeName(r.einrichtung_name));
         if (!mitarbeiter_id) throw new Error(`Mitarbeiter '${r.mitarbeiter_kuerzel}' nicht gefunden`);
         if (!einrichtung_id) throw new Error(`Einrichtung '${r.einrichtung_name}' nicht gefunden`);
         const datum = normalizeDate(r.datum);
