@@ -4,6 +4,10 @@ export type EinrichtungOut = {
   name: string; traeger?: string | null; ort?: string | null;
   wohnbereich?: string | null; vs_satz_pfk?: number | null; vs_satz_phk?: number | null;
   notiz?: string | null;
+  /** 1-basierte Excel-Zeilennummer der ersten erkannten Quelle */
+  source_row?: number;
+  /** Originaler Zell-Text aus Spalte B vor der Bereinigung */
+  raw_label?: string;
 };
 export type MitarbeiterOut = {
   vorname: string; nachname: string; kuerzel: string;
@@ -229,6 +233,9 @@ export async function parsePlanungsliste(file: File): Promise<ParseResult> {
             wohnbereich: cleaned.wb ?? null,
             vs_satz_pfk: cleaned.pfk ?? null,
             vs_satz_phk: cleaned.phk ?? null,
+            ort: cleaned.ort ?? null,
+            source_row: r + 1,
+            raw_label: bRaw.trim(),
           });
         }
       }
