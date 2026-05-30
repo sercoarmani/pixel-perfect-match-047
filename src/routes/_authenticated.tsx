@@ -1,22 +1,27 @@
 import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet,
   Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall, UserCheck,
-  Settings2, Mail, ScrollText, MailCheck,
+  Settings2, Mail, ScrollText, MailCheck, LifeBuoy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { getSidebarCounts } from "@/lib/sidebar-counts.functions";
+import { HelpChatbot } from "@/components/help-chatbot";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
 });
 
-type NavItem = { to: string; label: string; icon: typeof LayoutDashboard };
-type NavSection = { label: string; items: NavItem[] };
+type CountKey = "posteingang" | "verfuegbarkeiten" | "anfragenKunden";
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; countKey?: CountKey };
+type NavSection = { label: string; items: NavItem[]; adminOnly?: boolean };
 
 const SECTIONS: NavSection[] = [
   {
@@ -30,10 +35,10 @@ const SECTIONS: NavSection[] = [
     label: "Disposition",
     items: [
       { to: "/bedarf", label: "Bedarfsassistent", icon: Sparkles },
-      { to: "/posteingang", label: "Posteingang", icon: Mail },
+      { to: "/posteingang", label: "Posteingang", icon: Mail, countKey: "posteingang" },
       { to: "/dispo", label: "Disposition", icon: PhoneCall },
-      { to: "/anfragen/kunden", label: "Anfragen Kunden", icon: Inbox },
-      { to: "/anfragen/mitarbeiter", label: "Verfügbarkeiten", icon: UserCheck },
+      { to: "/anfragen/kunden", label: "Anfragen Kunden", icon: Inbox, countKey: "anfragenKunden" },
+      { to: "/anfragen/mitarbeiter", label: "Verfügbarkeiten", icon: UserCheck, countKey: "verfuegbarkeiten" },
       { to: "/plan", label: "Planungsmatrix", icon: CalendarDays },
     ],
   },
@@ -47,13 +52,20 @@ const SECTIONS: NavSection[] = [
   {
     label: "Kommunikation",
     items: [
-      { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare },
+      { to: "/nachrichten", label: "Kontakt", icon: MessageSquare },
       { to: "/bestaetigungen", label: "Kundenbestätigungen", icon: MailCheck },
       { to: "/protokoll", label: "Versand-Protokoll", icon: ScrollText },
     ],
   },
   {
+    label: "Hilfe",
+    items: [
+      { to: "/hilfe", label: "Hilfebereich", icon: LifeBuoy },
+    ],
+  },
+  {
     label: "Daten & System",
+    adminOnly: true,
     items: [
       { to: "/import", label: "Datei-Import", icon: FileSpreadsheet },
       { to: "/export", label: "Datei-Export", icon: Download },
@@ -76,11 +88,22 @@ function BrandMark() {
   );
 }
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
+function NavList({ onNavigate, isAdmin }: { onNavigate?: () => void; isAdmin: boolean }) {
   const { location } = useRouterState();
+  const fetchCounts = useServerFn(getSidebarCounts);
+  const countsQ = useQuery({
+    queryKey: ["sidebar-counts"],
+    queryFn: () => fetchCounts(),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+  const counts = countsQ.data ?? { posteingang: 0, verfuegbarkeiten: 0, anfragenKunden: 0 };
+
+  const visibleSections = SECTIONS.filter((s) => !s.adminOnly || isAdmin);
+
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-3">
-      {SECTIONS.map((section) => (
+      {visibleSections.map((section) => (
         <div key={section.label} className="mb-5">
           <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">
             {section.label}
@@ -89,6 +112,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             {section.items.map((n) => {
               const active = location.pathname.startsWith(n.to);
               const Icon = n.icon;
+              const count = n.countKey ? counts[n.countKey] : 0;
               return (
                 <Link
                   key={n.to}
@@ -105,7 +129,15 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
                     <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
                   )}
                   <Icon className={cn("h-4 w-4 shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-                  <span className="truncate">{n.label}</span>
+                  <span className="truncate flex-1">{n.label}</span>
+                  {count > 0 && (
+                    <span
+                      className="ml-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-destructive-foreground shadow-sm animate-in fade-in"
+                      aria-label={`${count} neu`}
+                    >
+                      {count > 99 ? "99+" : count}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -117,7 +149,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function AuthLayout() {
-  const { session, signOut, user, isDispo, loading } = useAuth();
+  const { session, signOut, user, isDispo, isAdmin, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   if (loading) {
@@ -138,7 +170,7 @@ function AuthLayout() {
         <div className="min-w-0 flex-1">
           <div className="truncate text-[12px] font-medium text-foreground">{user?.email}</div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {isDispo ? "Disponent" : "Eingeschränkt"}
+            {isAdmin ? "Admin" : isDispo ? "Disponent" : "Eingeschränkt"}
           </div>
         </div>
       </div>
@@ -157,7 +189,7 @@ function AuthLayout() {
         <div className="border-b px-4 py-4">
           <BrandMark />
         </div>
-        <NavList />
+        <NavList isAdmin={isAdmin} />
         {footer}
       </aside>
 
@@ -174,7 +206,7 @@ function AuthLayout() {
                 <SheetTitle className="sr-only">Navigation</SheetTitle>
                 <BrandMark />
               </SheetHeader>
-              <NavList onNavigate={() => setMobileOpen(false)} />
+              <NavList isAdmin={isAdmin} onNavigate={() => setMobileOpen(false)} />
               {footer}
             </SheetContent>
           </Sheet>
@@ -184,6 +216,8 @@ function AuthLayout() {
           <Outlet />
         </div>
       </main>
+
+      <HelpChatbot />
     </div>
   );
 }
