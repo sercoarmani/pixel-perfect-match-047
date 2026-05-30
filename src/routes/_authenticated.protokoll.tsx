@@ -107,11 +107,20 @@ function ProtokollPage() {
   });
 
   // Auto-Polling während ein Retry läuft: Liste alle 2.5s neu laden und
-  // verstrichene Sekunden im Dialog anzeigen, bis Erfolg oder Fehler vorliegt.
+  // verstrichene Sekunden im Dialog anzeigen. Stoppt sofort, sobald die
+  // Mutation einen terminalen Status (sent/failed) zurückgibt oder einen
+  // Fehler wirft – jede weitere Anfrage wird unterdrückt.
   const [pollElapsed, setPollElapsed] = useState(0);
   const pollStartRef = useRef<number | null>(null);
+  const retryTerminal =
+    !!retryMutation.data ||
+    !!retryMutation.error ||
+    retryMutation.status === "success" ||
+    retryMutation.status === "error";
+  const shouldPoll = retryMutation.isPending && !retryTerminal;
+
   useEffect(() => {
-    if (!retryMutation.isPending) {
+    if (!shouldPoll) {
       pollStartRef.current = null;
       setPollElapsed(0);
       return;
@@ -124,13 +133,17 @@ function ProtokollPage() {
       }
     }, 500);
     const poll = setInterval(() => {
+      // Defensive Bremse: falls zwischen Tick und Cleanup ein Endzustand
+      // eintritt, hier nichts mehr nachladen.
+      if (!shouldPoll) return;
       refetch();
     }, 2500);
     return () => {
       clearInterval(tick);
       clearInterval(poll);
     };
-  }, [retryMutation.isPending, refetch]);
+  }, [shouldPoll, refetch]);
+
 
   const stats = data?.stats;
 
