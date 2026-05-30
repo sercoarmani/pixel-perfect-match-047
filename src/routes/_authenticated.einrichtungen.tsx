@@ -101,6 +101,8 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
     id: row.id,
     traeger_id: row.traeger_id ?? null,
     name: row.name ?? "",
+    strasse: row.strasse ?? "",
+    plz: row.plz ?? "",
     ort: row.ort ?? "",
     wohnbereich: row.wohnbereich ?? "",
     kontakt_name: row.kontakt_name ?? "",
