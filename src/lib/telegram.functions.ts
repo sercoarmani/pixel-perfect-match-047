@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { tgGetMe, tgSendMessage, tgSetWebhook } from "@/lib/telegram.server";
 import { qualErfuellt } from "@/lib/matching";
+import { logVersand } from "@/lib/versand-log.server";
 
 const DIENST_LANG: Record<string, string> = { F: "Frühdienst", S: "Spätdienst", N: "Nachtdienst" };
 
