@@ -970,7 +970,7 @@ export const bedarfZusage = createServerFn({ method: "POST" })
     }
 
     // 1) Einsatz anlegen (damit Dashboard/Matrix die Besetzung sehen)
-    const { error: insErr } = await supabase.from("einsaetze").insert({
+    const { data: insertedEinsatz, error: insErr } = await supabase.from("einsaetze").insert({
       mitarbeiter_id: data.mitarbeiter_id,
       einrichtung_id: bedarf.einrichtung_id,
       datum: bedarf.datum,
@@ -978,7 +978,7 @@ export const bedarfZusage = createServerFn({ method: "POST" })
       status: "BESTAETIGT",
       quelle: "dispo",
       notiz: bedarf.notiz ?? null,
-    });
+    }).select("id").maybeSingle();
     if (insErr) throw new Error(istDoppelbelegungFehler(insErr) ? doppelbelegungMeldung(bedarf.datum) : insErr.message);
 
     // 2) Zugehörige Verfügbarkeit auf "vergeben" setzen
