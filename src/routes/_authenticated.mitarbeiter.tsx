@@ -307,7 +307,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
               <TabsTrigger value="docs">Dokumente</TabsTrigger>
             </TabsList>
             <TabsContent value="stamm">
-              <StammFields form={form} setForm={setForm} />
+              <StammFields form={form} setForm={setForm} row={row} />
             </TabsContent>
             <TabsContent value="verkn">
               <MitarbeiterVerknuepft mitarbeiterId={row.id} />
@@ -318,7 +318,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
           </Tabs>
 
         ) : (
-          <StammFields form={form} setForm={setForm} />
+          <StammFields form={form} setForm={setForm} row={row} />
         )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
