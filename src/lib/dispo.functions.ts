@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   qualErfuellt, dienstMoeglich, maEinplanbar, einsatzBelegt,
-  REAKTION_MAX_STUNDEN,
+  REAKTION_MAX_STUNDEN, istImRadius, RADIUS_FAKTOR_DEFAULT,
 } from "@/lib/matching";
 import { createKundenbestaetigungDraft } from "@/lib/kunden-bestaetigung.server";
 
@@ -866,8 +866,15 @@ export const getStatistik = createServerFn({ method: "GET" })
 // ---------- Disposition: offene Bedarfe + Anrufliste ----------
 export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input: { radius_faktor?: number } | undefined) =>
+    z
+      .object({ radius_faktor: z.number().min(0).max(5).optional() })
+      .optional()
+      .parse(input ?? {}),
+  )
+  .handler(async ({ context, data }) => {
     const { supabase } = context;
+    const faktor = data?.radius_faktor ?? RADIUS_FAKTOR_DEFAULT;
     const heute = new Date().toISOString().slice(0, 10);
 
     const [bedarfeRes, mitRes, verfRes, einRes, abwRes, einsRes] = await Promise.all([
@@ -884,7 +891,7 @@ export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
         .eq("status", "frei")
         .eq("verfuegbar", true)
         .gte("datum", heute),
-      supabase.from("einrichtungen").select("id, name, ort"),
+      supabase.from("einrichtungen").select("id, name, ort, lat, lng"),
       supabase.from("abwesenheiten").select("mitarbeiter_id, datum").gte("datum", heute),
       supabase.from("einsaetze").select("mitarbeiter_id, datum, status").gte("datum", heute),
     ]);
@@ -893,7 +900,6 @@ export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
     const verfuegbarkeiten = verfRes.data ?? [];
     const einMap = new Map((einRes.data ?? []).map((e) => [e.id, e]));
 
-    // Schlüssel `mitarbeiter_id|datum` für Ausschlüsse
     const abwSet = new Set(
       (abwRes.data ?? []).map((a: any) => `${a.mitarbeiter_id}|${a.datum}`),
     );
@@ -904,15 +910,13 @@ export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
     );
 
     const bedarfeMitAnrufliste = (bedarfeRes.data ?? []).map((b) => {
+      const einrichtung = einMap.get(b.einrichtung_id) ?? null;
       const passend = mitarbeiter
-        // dieselben Eignungsregeln wie im Bedarfsassistenten:
         .filter((m: any) => maEinplanbar(m))
         .filter((m: any) => qualErfuellt(m.qualifikation, b.qualifikation))
         .filter((m: any) => dienstMoeglich(m.dienste_moeglich, b.dienst))
-        // bereits abwesend oder an dem Tag belegt → nicht anrufen:
         .filter((m: any) => !abwSet.has(`${m.id}|${b.datum}`))
         .filter((m: any) => !belegtSet.has(`${m.id}|${b.datum}`))
-        // Anrufliste setzt eine gemeldete Verfügbarkeit ("frei") voraus:
         .filter((m: any) =>
           verfuegbarkeiten.some(
             (v: any) =>
@@ -921,25 +925,40 @@ export const getDispoOffeneBedarfe = createServerFn({ method: "GET" })
               v.dienst === b.dienst,
           ),
         )
-        .map((m: any) => ({
-          id: m.id,
-          kuerzel: m.kuerzel,
-          vorname: m.vorname,
-          nachname: m.nachname,
-          qualifikation: m.qualifikation,
-          telefon: m.telefon,
-          umkreis_km: m.umkreis_km,
-        }))
+        .map((m: any) => {
+          const geo = istImRadius(
+            { lat: m.lat, lng: m.lng, max_radius_km: m.max_radius_km },
+            { lat: einrichtung?.lat ?? null, lng: einrichtung?.lng ?? null },
+            faktor,
+          );
+          return {
+            id: m.id,
+            kuerzel: m.kuerzel,
+            vorname: m.vorname,
+            nachname: m.nachname,
+            qualifikation: m.qualifikation,
+            telefon: m.telefon,
+            umkreis_km: m.umkreis_km,
+            max_radius_km: m.max_radius_km,
+            distanz_km: geo.distanz_km,
+            limit_km: geo.limit_km,
+            im_radius: geo.ok,
+          };
+        })
+        // Radius-Filter (passiert nur, wenn Geo-Daten vorhanden sind)
+        .filter((m: any) => m.im_radius)
         .sort((a: any, b: any) => {
-          const ax = a.umkreis_km ?? Number.POSITIVE_INFINITY;
-          const bx = b.umkreis_km ?? Number.POSITIVE_INFINITY;
+          const ax = a.distanz_km ?? a.umkreis_km ?? Number.POSITIVE_INFINITY;
+          const bx = b.distanz_km ?? b.umkreis_km ?? Number.POSITIVE_INFINITY;
           return ax - bx;
         });
-      return { ...b, einrichtung: einMap.get(b.einrichtung_id) ?? null, anrufliste: passend };
+      return { ...b, einrichtung, anrufliste: passend };
     });
 
-    return { bedarfe: bedarfeMitAnrufliste };
+    return { bedarfe: bedarfeMitAnrufliste, radius_faktor: faktor };
   });
+
+
 
 export const bedarfZusage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

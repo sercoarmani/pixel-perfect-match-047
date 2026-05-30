@@ -5,9 +5,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send } from "lucide-react";
+import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send, Compass } from "lucide-react";
 import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
 import { sendBedarfBroadcast } from "@/lib/telegram.functions";
@@ -20,12 +21,15 @@ export const Route = createFileRoute("/_authenticated/dispo")({
 
 function DispoPage() {
   const fetchOffene = useServerFn(getDispoOffeneBedarfe);
-  const { data, isLoading } = useQuery({
-    queryKey: ["dispo-offene"],
-    queryFn: () => fetchOffene(),
+  const [faktor, setFaktor] = useState(0.8);
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ["dispo-offene", faktor],
+    queryFn: () => fetchOffene({ data: { radius_faktor: faktor } }),
+    placeholderData: (prev) => prev,
   });
 
   const bedarfe = data?.bedarfe ?? [];
+  const trefferGesamt = bedarfe.reduce((s: number, b: any) => s + (b.anrufliste?.length ?? 0), 0);
 
   return (
     <div className="p-6 space-y-4">
@@ -36,6 +40,44 @@ function DispoPage() {
         <p className="text-sm text-muted-foreground">
           {bedarfe.length} offene Kundenanfrage{bedarfe.length === 1 ? "" : "n"} – passende Mitarbeiter mit „Zusage"/„Absage" besetzen.
         </p>
+      </div>
+
+      <div className="rounded-md border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Compass className="h-4 w-4" /> Radius-Faktor
+          </div>
+          <div className="flex items-center gap-3 flex-1 min-w-[260px] max-w-md">
+            <Slider
+              min={0.3}
+              max={2}
+              step={0.05}
+              value={[faktor]}
+              onValueChange={(v) => setFaktor(Number(v[0].toFixed(2)))}
+            />
+            <div className="font-mono tabular-nums text-sm w-12 text-right">
+              {faktor.toFixed(2)}
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {[0.6, 0.8, 1.0, 1.2].map((p) => (
+              <Button
+                key={p}
+                size="sm"
+                variant={Math.abs(faktor - p) < 0.001 ? "default" : "outline"}
+                onClick={() => setFaktor(p)}
+              >
+                {p.toFixed(1)}
+              </Button>
+            ))}
+          </div>
+          <div className="text-sm text-muted-foreground ml-auto">
+            <span className="font-semibold text-foreground tabular-nums">{trefferGesamt}</span>{" "}
+            passende Mitarbeiter · effektiver Radius =&nbsp;
+            <span className="font-mono">max_radius_km × {faktor.toFixed(2)}</span>
+            {isFetching && <span className="ml-2 italic">aktualisiere…</span>}
+          </div>
+        </div>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
@@ -166,8 +208,20 @@ function AnruflisteRow({ bedarf, mitarbeiter }: { bedarf: any; mitarbeiter: any 
       </TableCell>
       <TableCell><Badge variant="secondary">{mitarbeiter.qualifikation}</Badge></TableCell>
       <TableCell className="tabular-nums">
-        {mitarbeiter.umkreis_km != null ? `${mitarbeiter.umkreis_km} km` : <span className="text-muted-foreground">—</span>}
+        {mitarbeiter.distanz_km != null ? (
+          <span>
+            {mitarbeiter.distanz_km.toFixed(1)} km
+            {mitarbeiter.limit_km != null && (
+              <span className="text-xs text-muted-foreground"> / {mitarbeiter.limit_km.toFixed(0)} km</span>
+            )}
+          </span>
+        ) : mitarbeiter.umkreis_km != null ? (
+          `${mitarbeiter.umkreis_km} km`
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
+
       <TableCell>
         {phone ? (
           <a href={`tel:${phone}`} className="inline-flex items-center gap-1 text-primary hover:underline">
