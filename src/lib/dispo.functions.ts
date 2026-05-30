@@ -112,6 +112,12 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
     }
 
     if (data.id) {
+      // Vorherigen Status lesen, um Übergang nach BESTAETIGT zu erkennen
+      const { data: vorher } = await supabase
+        .from("einsaetze")
+        .select("status")
+        .eq("id", data.id)
+        .maybeSingle();
       const { error } = await supabase.from("einsaetze").update({
         mitarbeiter_id: data.mitarbeiter_id,
         einrichtung_id: data.einrichtung_id,
@@ -121,6 +127,15 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
         notiz: data.notiz,
       }).eq("id", data.id);
       if (error) throw new Error(istDoppelbelegungFehler(error) ? doppelbelegungMeldung(data.datum) : error.message);
+      if (status === "BESTAETIGT" && vorher?.status !== "BESTAETIGT") {
+        await autoTriggerKundenbestaetigung({
+          mitarbeiter_id: data.mitarbeiter_id,
+          einrichtung_id: data.einrichtung_id,
+          datum: data.datum,
+          dienst: data.dienst,
+          einsatz_id: data.id,
+        });
+      }
       return { id: data.id };
     }
     const { data: row, error } = await supabase.from("einsaetze").insert({
@@ -132,6 +147,15 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
       notiz: data.notiz,
     }).select("id").single();
     if (error) throw new Error(istDoppelbelegungFehler(error) ? doppelbelegungMeldung(data.datum) : error.message);
+    if (status === "BESTAETIGT") {
+      await autoTriggerKundenbestaetigung({
+        mitarbeiter_id: data.mitarbeiter_id,
+        einrichtung_id: data.einrichtung_id,
+        datum: data.datum,
+        dienst: data.dienst,
+        einsatz_id: row.id,
+      });
+    }
     return { id: row.id };
   });
 
