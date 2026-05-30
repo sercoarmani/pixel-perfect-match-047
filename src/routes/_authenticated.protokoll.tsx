@@ -95,9 +95,12 @@ function ProtokollPage() {
 
   const retryMutation = useMutation({
     mutationFn: (rawId: string) => retryFn({ data: { id: rawId } }),
-    onSuccess: () => {
-      toast.success("Erneuter Versand erfolgreich.");
-      setSelected(null);
+    onSuccess: (res: any) => {
+      if (res?.ok) {
+        toast.success("Erneuter Versand erfolgreich.");
+      } else {
+        toast.error(`Retry fehlgeschlagen: ${res?.fehler ?? "Unbekannt"}`);
+      }
       refetch();
     },
     onError: (e: any) => toast.error(`Retry fehlgeschlagen: ${e?.message ?? "Unbekannt"}`),
