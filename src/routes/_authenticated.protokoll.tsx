@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { listProtokoll } from "@/lib/versand-log.functions";
+import { listProtokoll, retryVersand } from "@/lib/versand-log.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,37 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ScrollText, RefreshCw, ArrowDownLeft, ArrowUpRight, Mail, MessageSquare, Phone, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
+  ScrollText, RefreshCw, ArrowDownLeft, ArrowUpRight, Mail, MessageSquare,
+  Phone, AlertCircle, CheckCircle2, RotateCw,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/protokoll")({
   component: ProtokollPage,
 });
+
+type Eintrag = {
+  id: string;
+  quelle: "versand" | "email_out" | "email_in";
+  created_at: string;
+  kanal: string;
+  richtung: "out" | "in";
+  status: string;
+  empfaenger: string | null;
+  absender: string | null;
+  betreff: string | null;
+  inhalt: string | null;
+  mitarbeiter_id: string | null;
+  einrichtung_id: string | null;
+  fehler: string | null;
+  metadata: any;
+  mitarbeiter_name?: string | null;
+  einrichtung_name?: string | null;
+};
 
 function statusBadge(status: string) {
   const s = status.toLowerCase();
@@ -41,10 +67,12 @@ function kanalIcon(kanal: string) {
 
 function ProtokollPage() {
   const fetchProtokoll = useServerFn(listProtokoll);
+  const retryFn = useServerFn(retryVersand);
   const [kanal, setKanal] = useState<string>("all");
   const [richtung, setRichtung] = useState<"all" | "out" | "in">("all");
   const [status, setStatus] = useState<string>("all");
   const [suche, setSuche] = useState<string>("");
+  const [selected, setSelected] = useState<Eintrag | null>(null);
 
   const queryKey = useMemo(
     () => ["protokoll", kanal, richtung, status, suche],
@@ -63,6 +91,16 @@ function ProtokollPage() {
           limit: 300,
         },
       }),
+  });
+
+  const retryMutation = useMutation({
+    mutationFn: (rawId: string) => retryFn({ data: { id: rawId } }),
+    onSuccess: () => {
+      toast.success("Erneuter Versand erfolgreich.");
+      setSelected(null);
+      refetch();
+    },
+    onError: (e: any) => toast.error(`Retry fehlgeschlagen: ${e?.message ?? "Unbekannt"}`),
   });
 
   const stats = data?.stats;
@@ -146,8 +184,12 @@ function ProtokollPage() {
             <div className="text-sm text-muted-foreground">Keine Einträge gefunden.</div>
           ) : (
             <div className="divide-y">
-              {data.eintraege.map((e) => (
-                <div key={e.id} className="py-3 flex gap-3 items-start">
+              {data.eintraege.map((e: any) => (
+                <button
+                  key={e.id}
+                  onClick={() => setSelected(e)}
+                  className="w-full py-3 flex gap-3 items-start text-left hover:bg-accent/40 rounded-md px-2 -mx-2 transition-colors"
+                >
                   <div className="mt-1 text-muted-foreground">{kanalIcon(e.kanal)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -156,14 +198,24 @@ function ProtokollPage() {
                       </span>
                       {statusBadge(e.status)}
                       <Badge variant="outline" className="text-xs uppercase">{e.kanal}</Badge>
-                      {(e as any).mitarbeiter_name && (
-                        <Badge variant="secondary" className="text-xs">
-                          MA: {(e as any).mitarbeiter_name}
+                      {e.metadata?.provider_message_id != null && (
+                        <Badge variant="outline" className="text-xs font-mono">
+                          msg #{String(e.metadata.provider_message_id)}
                         </Badge>
                       )}
-                      {(e as any).einrichtung_name && (
+                      {e.metadata?.provider_status != null && (
+                        <Badge variant="outline" className="text-xs font-mono">
+                          HTTP {String(e.metadata.provider_status)}
+                        </Badge>
+                      )}
+                      {e.mitarbeiter_name && (
                         <Badge variant="secondary" className="text-xs">
-                          {(e as any).einrichtung_name}
+                          MA: {e.mitarbeiter_name}
+                        </Badge>
+                      )}
+                      {e.einrichtung_name && (
+                        <Badge variant="secondary" className="text-xs">
+                          {e.einrichtung_name}
                         </Badge>
                       )}
                       <span className="ml-auto text-xs text-muted-foreground">
@@ -174,7 +226,7 @@ function ProtokollPage() {
                       <div className="text-sm font-medium mt-1 truncate">{e.betreff}</div>
                     )}
                     {e.inhalt && (
-                      <div className="text-sm text-muted-foreground mt-0.5 line-clamp-3 whitespace-pre-wrap">
+                      <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2 whitespace-pre-wrap">
                         {e.inhalt}
                       </div>
                     )}
@@ -185,12 +237,140 @@ function ProtokollPage() {
                       </div>
                     )}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <DetailDialog
+        eintrag={selected}
+        onClose={() => setSelected(null)}
+        onRetry={(rawId) => retryMutation.mutate(rawId)}
+        retrying={retryMutation.isPending}
+      />
+    </div>
+  );
+}
+
+function DetailDialog({
+  eintrag, onClose, onRetry, retrying,
+}: {
+  eintrag: Eintrag | null;
+  onClose: () => void;
+  onRetry: (rawId: string) => void;
+  retrying: boolean;
+}) {
+  const open = !!eintrag;
+  const meta = eintrag?.metadata ?? {};
+  const isVersand = eintrag?.id.startsWith("v:");
+  const rawId = isVersand && eintrag ? eintrag.id.slice(2) : null;
+  const canRetry =
+    !!rawId &&
+    eintrag?.richtung === "out" &&
+    (eintrag?.status === "failed" || eintrag?.status === "dlq") &&
+    !!meta?.retry?.kind;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {eintrag && kanalIcon(eintrag.kanal)}
+            {eintrag?.betreff ?? "Versand-Detail"}
+          </DialogTitle>
+          <DialogDescription>
+            {eintrag && new Date(eintrag.created_at).toLocaleString("de-DE")}
+          </DialogDescription>
+        </DialogHeader>
+
+        {eintrag && (
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Kanal" value={eintrag.kanal} />
+              <Field label="Richtung" value={eintrag.richtung} />
+              <Field label="Status" value={<span>{statusBadge(eintrag.status)}</span>} />
+              <Field label="Quelle" value={eintrag.quelle} />
+              <Field label="Empfänger" value={eintrag.empfaenger ?? "—"} />
+              <Field label="Absender" value={eintrag.absender ?? "—"} />
+              {eintrag.mitarbeiter_name && (
+                <Field label="Mitarbeiter" value={eintrag.mitarbeiter_name} />
+              )}
+              {eintrag.einrichtung_name && (
+                <Field label="Einrichtung" value={eintrag.einrichtung_name} />
+              )}
+            </div>
+
+            <div className="rounded-md border p-3 bg-muted/40">
+              <div className="text-xs uppercase text-muted-foreground mb-1">Inhalt</div>
+              <div className="whitespace-pre-wrap text-sm">{eintrag.inhalt ?? "—"}</div>
+            </div>
+
+            <div className="rounded-md border p-3">
+              <div className="text-xs uppercase text-muted-foreground mb-2">Provider-Response</div>
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <Field label="HTTP-Status" value={meta?.provider_status ?? "—"} />
+                <Field label="Message-Id" value={meta?.provider_message_id ?? "—"} />
+              </div>
+              {meta?.provider_response && (
+                <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
+                  {JSON.stringify(meta.provider_response, null, 2)}
+                </pre>
+              )}
+            </div>
+
+            {eintrag.fehler && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                <div className="text-xs uppercase text-destructive mb-1 flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" /> Fehlermeldung
+                </div>
+                <div className="text-sm text-destructive whitespace-pre-wrap">{eintrag.fehler}</div>
+              </div>
+            )}
+
+            {meta && Object.keys(meta).length > 0 && (
+              <details className="rounded-md border p-3">
+                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">
+                  Komplette Metadaten
+                </summary>
+                <pre className="mt-2 max-h-64 overflow-auto text-xs">
+                  {JSON.stringify(meta, null, 2)}
+                </pre>
+              </details>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          {canRetry && rawId && (
+            <Button
+              variant="default"
+              onClick={() => onRetry(rawId)}
+              disabled={retrying}
+            >
+              <RotateCw className={`h-4 w-4 mr-2 ${retrying ? "animate-spin" : ""}`} />
+              Erneut senden
+            </Button>
+          )}
+          {!canRetry && eintrag?.richtung === "out" &&
+            (eintrag?.status === "failed" || eintrag?.status === "dlq") && (
+            <span className="text-xs text-muted-foreground self-center">
+              Kein automatischer Retry möglich (kein gespeicherter Plan).
+            </span>
+          )}
+          <Button variant="outline" onClick={onClose}>Schließen</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs uppercase text-muted-foreground">{label}</div>
+      <div className="text-sm">{value}</div>
     </div>
   );
 }
