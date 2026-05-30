@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Phone, FileText, FileSpreadsheet, Trash2, Link2, Copy, RefreshCw } from "lucide-react";
+import { Plus, Phone, FileText, FileSpreadsheet, Trash2, Link2, Copy, RefreshCw, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { generateDienstplanExcel } from "@/lib/excel-dienstplan";
