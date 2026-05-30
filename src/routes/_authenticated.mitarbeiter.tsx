@@ -3,16 +3,18 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listMitarbeiter, upsertMitarbeiter, deleteMitarbeiter, getMitarbeiterDienstplan, getMitarbeiterDetail } from "@/lib/dispo.functions";
+import { regenerateZugangsToken } from "@/lib/mitarbeiter-portal.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Phone, FileText, FileSpreadsheet, Trash2 } from "lucide-react";
+import { Plus, Phone, FileText, FileSpreadsheet, Trash2, Link2, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { generateDienstplanExcel } from "@/lib/excel-dienstplan";
@@ -181,6 +183,9 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
     max_einsaetze: row.max_einsaetze ?? 20,
     umkreis_km: row.umkreis_km ?? null,
     status: row.status ?? "aktiv",
+    plz: row.plz ?? "",
+    fuehrerschein: row.fuehrerschein ?? false,
+    profil_text: row.profil_text ?? "",
   });
   const save = useServerFn(upsertMitarbeiter);
   const qc = useQueryClient();
@@ -239,6 +244,13 @@ function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }
       <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
       <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
       <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <Field label="PLZ"><Input value={form.plz} onChange={(e) => setForm({ ...form, plz: e.target.value })} /></Field>
+      <Field label="Führerschein">
+        <div className="flex items-center gap-3 rounded border bg-card px-3 py-2 h-10">
+          <input id="ma-fs-tog" type="checkbox" checked={form.fuehrerschein} onChange={(e) => setForm({ ...form, fuehrerschein: e.target.checked })} className="h-4 w-4" />
+          <label htmlFor="ma-fs-tog" className="text-sm cursor-pointer">{form.fuehrerschein ? "vorhanden" : "kein Führerschein"}</label>
+        </div>
+      </Field>
       <Field label="Umkreis (km)">
         <Input
           type="number" min={0} inputMode="numeric"
@@ -305,7 +317,45 @@ function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }
           <label htmlFor="ma-aktiv-tog" className="text-sm cursor-pointer">{form.aktiv ? "Aktiv – wird in Planung & Listen angezeigt" : "Inaktiv – ausgeblendet"}</label>
         </div>
       </div>
+      <div className="space-y-1.5 col-span-2">
+        <Label>Profiltext / Notiz</Label>
+        <Textarea rows={2} value={form.profil_text} onChange={(e) => setForm({ ...form, profil_text: e.target.value })} placeholder="Kurzprofil, Besonderheiten, Einsatzwünsche …" />
+      </div>
     </div>
+  );
+}
+
+function PersonalLink({ mitarbeiterId, token }: { mitarbeiterId: string; token?: string }) {
+  const qc = useQueryClient();
+  const regen = useServerFn(regenerateZugangsToken);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const url = token ? `${origin}/m/${token}` : "";
+
+  const regenMut = useMutation({
+    mutationFn: () => regen({ data: { mitarbeiter_id: mitarbeiterId } }),
+    onSuccess: () => { toast.success("Neuer Link erzeugt – der alte ist jetzt ungültig."); qc.invalidateQueries({ queryKey: ["mitarbeiter-detail", mitarbeiterId] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); toast.success("Link kopiert"); }
+    catch { toast.error("Konnte nicht kopieren"); }
+  };
+
+  return (
+    <section className="rounded-md border bg-muted/30 p-3">
+      <h3 className="mb-2 flex items-center gap-2 font-medium"><Link2 className="h-4 w-4" /> Persönlicher Link</h3>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Diesen Link an den/die Mitarbeiter:in senden. Damit kann er/sie ohne Login die eigene Verfügbarkeit eintragen – ohne Zugriff auf andere Daten.
+      </p>
+      <div className="flex items-center gap-2">
+        <Input readOnly value={url} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
+        <Button type="button" size="sm" variant="outline" onClick={copy} disabled={!url}><Copy className="mr-1 h-3.5 w-3.5" /> Kopieren</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => regenMut.mutate()} disabled={regenMut.isPending} title="Neuen Link erzeugen (alten ungültig machen)">
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </section>
   );
 }
 
