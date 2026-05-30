@@ -98,6 +98,7 @@ export async function createKundenbestaetigungDraft(input: DraftInput): Promise<
         betreff,
         body_text: body,
         dokument_ids: dokIds,
+        ma_unterlagen_status: "pending",
       })
       .select("id")
       .single();
