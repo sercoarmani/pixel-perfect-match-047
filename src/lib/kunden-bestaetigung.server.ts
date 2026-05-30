@@ -102,6 +102,22 @@ export async function createKundenbestaetigungDraft(input: DraftInput): Promise<
       .select("id")
       .single();
     if (error) {
+      // 23505 = unique_violation → Race: anderer Trigger war schneller, vorhandene ID zurückgeben
+      if ((error as any).code === "23505") {
+        const reread = await (input.bedarf_id
+          ? supabaseAdmin.from("kunden_bestaetigungen").select("id")
+              .eq("mitarbeiter_id", input.mitarbeiter_id)
+              .eq("einrichtung_id", input.einrichtung_id)
+              .eq("bedarf_id", input.bedarf_id)
+              .in("status", ["entwurf", "gesendet"]).limit(1)
+          : supabaseAdmin.from("kunden_bestaetigungen").select("id")
+              .eq("mitarbeiter_id", input.mitarbeiter_id)
+              .eq("einrichtung_id", input.einrichtung_id)
+              .is("bedarf_id", null)
+              .in("status", ["entwurf", "gesendet"]).limit(1)
+        ).maybeSingle();
+        return reread.data?.id ?? null;
+      }
       console.error("[kunden-bestaetigung] draft insert failed", error);
       return null;
     }
