@@ -576,9 +576,19 @@ function PlanungslistePanel() {
         {report && (
           <div className="mt-4 space-y-2 text-sm">
             {Object.entries(report).map(([k, v]: [string, any]) => (
-              <div key={k} className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-status-bestaetigt" />
-                <span className="capitalize"><b>{k}</b>: neu {v.created ?? 0} · aktualisiert {v.updated ?? 0} · Fehler {v.errors?.length ?? 0}</span>
+              <div key={k} className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-status-bestaetigt" />
+                  <span className="capitalize"><b>{k}</b>: neu {v.created ?? 0} · aktualisiert {v.updated ?? 0} · Fehler {v.errors?.length ?? 0}</span>
+                </div>
+                {k === "einrichtungen" && ((v.created_names?.length ?? 0) > 0 || (v.updated_names?.length ?? 0) > 0) && (
+                  <div className="ml-6 text-xs text-muted-foreground">
+                    {[...(v.created_names ?? []).map((name: string) => `+ ${name}`), ...(v.updated_names ?? []).map((name: string) => `↺ ${name}`)]
+                      .slice(0, 12)
+                      .join(" · ")}
+                    {((v.created_names?.length ?? 0) + (v.updated_names?.length ?? 0)) > 12 && " …"}
+                  </div>
+                )}
               </div>
             ))}
           </div>
