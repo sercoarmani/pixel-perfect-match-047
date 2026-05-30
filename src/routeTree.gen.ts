@@ -26,6 +26,8 @@ import { Route as AuthenticatedDispoRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
 import { Route as AuthenticatedBedarfRouteImport } from './routes/_authenticated.bedarf'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
+import { Route as AuthenticatedAnfragenMitarbeiterRouteImport } from './routes/_authenticated.anfragen.mitarbeiter'
+import { Route as AuthenticatedAnfragenKundenRouteImport } from './routes/_authenticated.anfragen.kunden'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 
 const LoginRoute = LoginRouteImport.update({
@@ -115,6 +117,18 @@ const AuthenticatedAnfragenRoute = AuthenticatedAnfragenRouteImport.update({
   path: '/anfragen',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAnfragenMitarbeiterRoute =
+  AuthenticatedAnfragenMitarbeiterRouteImport.update({
+    id: '/mitarbeiter',
+    path: '/mitarbeiter',
+    getParentRoute: () => AuthenticatedAnfragenRoute,
+  } as any)
+const AuthenticatedAnfragenKundenRoute =
+  AuthenticatedAnfragenKundenRouteImport.update({
+    id: '/kunden',
+    path: '/kunden',
+    getParentRoute: () => AuthenticatedAnfragenRoute,
+  } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -125,7 +139,7 @@ const LovableEmailQueueProcessRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/dispo': typeof AuthenticatedDispoRoute
@@ -139,12 +153,14 @@ export interface FileRoutesByFullPath {
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
+  '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
+  '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/anfragen': typeof AuthenticatedAnfragenRoute
+  '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/dispo': typeof AuthenticatedDispoRoute
@@ -158,6 +174,8 @@ export interface FileRoutesByTo {
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
+  '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
+  '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -165,7 +183,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authenticated/anfragen': typeof AuthenticatedAnfragenRoute
+  '/_authenticated/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/dispo': typeof AuthenticatedDispoRoute
@@ -179,6 +197,8 @@ export interface FileRoutesById {
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/v/$token': typeof VTokenRoute
+  '/_authenticated/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
+  '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -200,6 +220,8 @@ export interface FileRouteTypes {
     | '/b/$token'
     | '/kunde/$token'
     | '/v/$token'
+    | '/anfragen/kunden'
+    | '/anfragen/mitarbeiter'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -219,6 +241,8 @@ export interface FileRouteTypes {
     | '/b/$token'
     | '/kunde/$token'
     | '/v/$token'
+    | '/anfragen/kunden'
+    | '/anfragen/mitarbeiter'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -239,6 +263,8 @@ export interface FileRouteTypes {
     | '/b/$token'
     | '/kunde/$token'
     | '/v/$token'
+    | '/_authenticated/anfragen/kunden'
+    | '/_authenticated/anfragen/mitarbeiter'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -373,6 +399,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnfragenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/anfragen/mitarbeiter': {
+      id: '/_authenticated/anfragen/mitarbeiter'
+      path: '/mitarbeiter'
+      fullPath: '/anfragen/mitarbeiter'
+      preLoaderRoute: typeof AuthenticatedAnfragenMitarbeiterRouteImport
+      parentRoute: typeof AuthenticatedAnfragenRoute
+    }
+    '/_authenticated/anfragen/kunden': {
+      id: '/_authenticated/anfragen/kunden'
+      path: '/kunden'
+      fullPath: '/anfragen/kunden'
+      preLoaderRoute: typeof AuthenticatedAnfragenKundenRouteImport
+      parentRoute: typeof AuthenticatedAnfragenRoute
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -383,8 +423,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAnfragenRouteChildren {
+  AuthenticatedAnfragenKundenRoute: typeof AuthenticatedAnfragenKundenRoute
+  AuthenticatedAnfragenMitarbeiterRoute: typeof AuthenticatedAnfragenMitarbeiterRoute
+}
+
+const AuthenticatedAnfragenRouteChildren: AuthenticatedAnfragenRouteChildren = {
+  AuthenticatedAnfragenKundenRoute: AuthenticatedAnfragenKundenRoute,
+  AuthenticatedAnfragenMitarbeiterRoute: AuthenticatedAnfragenMitarbeiterRoute,
+}
+
+const AuthenticatedAnfragenRouteWithChildren =
+  AuthenticatedAnfragenRoute._addFileChildren(
+    AuthenticatedAnfragenRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRoute
+  AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRouteWithChildren
   AuthenticatedBedarfRoute: typeof AuthenticatedBedarfRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDispoRoute: typeof AuthenticatedDispoRoute
@@ -398,7 +453,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAnfragenRoute: AuthenticatedAnfragenRoute,
+  AuthenticatedAnfragenRoute: AuthenticatedAnfragenRouteWithChildren,
   AuthenticatedBedarfRoute: AuthenticatedBedarfRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDispoRoute: AuthenticatedDispoRoute,
@@ -427,3 +482,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
