@@ -243,18 +243,31 @@ function AnruflisteRow({ bedarf, mitarbeiter }: { bedarf: any; mitarbeiter: any 
       <TableCell><Badge variant="secondary">{mitarbeiter.qualifikation}</Badge></TableCell>
       <TableCell className="tabular-nums">
         {mitarbeiter.distanz_km != null ? (
-          <span>
-            {mitarbeiter.distanz_km.toFixed(1)} km
-            {mitarbeiter.limit_km != null && (
-              <span className="text-xs text-muted-foreground"> / {mitarbeiter.limit_km.toFixed(0)} km</span>
-            )}
-          </span>
+          (() => {
+            const d = mitarbeiter.distanz_km as number;
+            const limit = mitarbeiter.limit_km as number | null;
+            const knapp = limit != null && d >= limit * 0.9;
+            return (
+              <div className="flex items-center gap-2">
+                <span>≈ {d < 10 ? d.toFixed(1) : Math.round(d)} km Luftlinie</span>
+                {limit != null && (
+                  <span className="text-xs text-muted-foreground">/ {Math.round(limit)} km</span>
+                )}
+                {knapp && (
+                  <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0">
+                    knapp
+                  </Badge>
+                )}
+              </div>
+            );
+          })()
         ) : mitarbeiter.umkreis_km != null ? (
           `${mitarbeiter.umkreis_km} km`
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground" title="Keine Geo-Daten">—</span>
         )}
       </TableCell>
+
 
       <TableCell>
         {phone ? (
