@@ -449,7 +449,7 @@ function PersonalLink({ mitarbeiterId, token }: { mitarbeiterId: string; token?:
   );
 }
 
-function TelegramLink({ mitarbeiterId, token, chatId, username }: { mitarbeiterId: string; token?: string; chatId?: number | null; username?: string | null }) {
+function TelegramLink({ mitarbeiterId, token, chatId, username, einmalCode, einmalCodeUsedAt }: { mitarbeiterId: string; token?: string; chatId?: number | null; username?: string | null; einmalCode?: string | null; einmalCodeUsedAt?: string | null }) {
   const fetchBot = useServerFn(getTelegramBotInfo);
   const sendLink = useServerFn(sendPersonalLink);
   const { data: bot } = useQuery({ queryKey: ["tg-bot-info"], queryFn: () => fetchBot(), staleTime: 5 * 60_000 });
