@@ -417,13 +417,23 @@ function DetailDialog({
                   {retryState === "success" && (
                     <>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                      <span className="text-emerald-700 dark:text-emerald-400">Retry erfolgreich</span>
+                      <span className="text-emerald-700 dark:text-emerald-400">
+                        Retry erfolgreich · Final
+                      </span>
+                      <span className="ml-auto text-[10px] uppercase opacity-70">
+                        Auto-Polling gestoppt
+                      </span>
                     </>
                   )}
                   {retryState === "failed" && (
                     <>
                       <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-                      <span className="text-destructive">Retry fehlgeschlagen</span>
+                      <span className="text-destructive">
+                        Retry endgültig fehlgeschlagen
+                      </span>
+                      <span className="ml-auto text-[10px] uppercase opacity-70">
+                        Auto-Polling gestoppt
+                      </span>
                     </>
                   )}
                 </div>
@@ -440,6 +450,9 @@ function DetailDialog({
 
                 {retryResult && retryState !== "running" && (
                   <>
+                    <div className="text-[11px] uppercase text-muted-foreground mb-1 mt-1">
+                      Finale Provider-Antwort
+                    </div>
                     <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                       <Field label="HTTP-Status" value={retryResult.provider_status ?? "—"} />
                       <Field label="Message-Id" value={retryResult.provider_message_id ?? "—"} />
@@ -451,16 +464,37 @@ function DetailDialog({
                         label="Beendet"
                         value={new Date(retryResult.finishedAt).toLocaleTimeString("de-DE")}
                       />
+                      <Field
+                        label="Dauer"
+                        value={
+                          Math.max(
+                            0,
+                            Math.round(
+                              (new Date(retryResult.finishedAt).getTime() -
+                                new Date(retryResult.startedAt).getTime()) /
+                                100,
+                            ) / 10,
+                          ) + " s"
+                        }
+                      />
+                      <Field
+                        label="Ergebnis"
+                        value={retryResult.ok ? "sent" : "failed"}
+                      />
                     </div>
                     {retryResult.fehler && (
                       <div className="mt-2 text-sm text-destructive whitespace-pre-wrap">
                         {retryResult.fehler}
                       </div>
                     )}
-                    {retryResult.provider_response && (
+                    {retryResult.provider_response ? (
                       <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
                         {JSON.stringify(retryResult.provider_response, null, 2)}
                       </pre>
+                    ) : (
+                      <div className="mt-2 text-xs text-muted-foreground italic">
+                        Keine Provider-Antwort vorhanden.
+                      </div>
                     )}
                   </>
                 )}
