@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Link2, Copy } from "lucide-react";
+import { Plus, Trash2, Link2, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
 
@@ -30,6 +30,13 @@ function EinrichtungenPage() {
   const [edit, setEdit] = useState<any | null>(null);
   const [filter, setFilter] = useState<"alle" | "aktiv" | "inaktiv">(initialQ ? "alle" : "aktiv");
   const [search, setSearch] = useState<string>(initialQ ?? "");
+  type SortKey = "traeger" | "name" | "ort" | "vs_pfk" | "vs_phk";
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir("asc"); }
+  };
 
   const normalizedSearch = search.trim().toLowerCase();
   const filtered = (data ?? []).filter((e: any) => {
@@ -41,6 +48,23 @@ function EinrichtungenPage() {
       (e.ort ?? "").toLowerCase().includes(normalizedSearch) ||
       (e.traeger?.name ?? "").toLowerCase().includes(normalizedSearch)
     );
+  });
+
+  const sorted = [...filtered].sort((a: any, b: any) => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    const get = (row: any) => {
+      switch (sortKey) {
+        case "traeger": return (row.traeger?.name ?? "").toLowerCase();
+        case "name": return (row.name ?? "").toLowerCase();
+        case "ort": return (row.ort ?? "").toLowerCase();
+        case "vs_pfk": return row.vs_satz_pfk == null ? -Infinity : Number(row.vs_satz_pfk);
+        case "vs_phk": return row.vs_satz_phk == null ? -Infinity : Number(row.vs_satz_phk);
+      }
+    };
+    const va = get(a); const vb = get(b);
+    if (va < vb) return -1 * dir;
+    if (va > vb) return 1 * dir;
+    return 0;
   });
 
   return (
@@ -76,12 +100,12 @@ function EinrichtungenPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Träger</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Ort</TableHead>
+              <SortableHead sortKey="traeger" current={sortKey} dir={sortDir} onClick={toggleSort}>Träger</SortableHead>
+              <SortableHead sortKey="name" current={sortKey} dir={sortDir} onClick={toggleSort}>Name</SortableHead>
+              <SortableHead sortKey="ort" current={sortKey} dir={sortDir} onClick={toggleSort}>Ort</SortableHead>
               <TableHead>Kontakt</TableHead>
-              <TableHead>VS PFK</TableHead>
-              <TableHead>VS PHK</TableHead>
+              <SortableHead sortKey="vs_pfk" current={sortKey} dir={sortDir} onClick={toggleSort}>VS PFK</SortableHead>
+              <SortableHead sortKey="vs_phk" current={sortKey} dir={sortDir} onClick={toggleSort}>VS PHK</SortableHead>
               <TableHead>Geo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aktion</TableHead>
@@ -89,7 +113,7 @@ function EinrichtungenPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={9} className="text-muted-foreground">Lade…</TableCell></TableRow>}
-            {filtered.map((e: any) => (
+            {sorted.map((e: any) => (
               <TableRow key={e.id}>
                 <TableCell className="text-sm text-muted-foreground">{e.traeger?.name ?? "—"}</TableCell>
                 <TableCell className="font-medium cursor-pointer" onClick={() => setEdit(e)}>{e.name}</TableCell>
@@ -214,6 +238,25 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
 
 function F({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
   return <div className={"space-y-1.5 " + (full ? "col-span-2" : "")}><Label>{label}</Label>{children}</div>;
+}
+
+function SortableHead({ sortKey, current, dir, onClick, children }: {
+  sortKey: any; current: any; dir: "asc" | "desc"; onClick: (k: any) => void; children: React.ReactNode;
+}) {
+  const active = current === sortKey;
+  const Icon = !active ? ArrowUpDown : dir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead>
+      <button
+        type="button"
+        onClick={() => onClick(sortKey)}
+        className={"inline-flex items-center gap-1 hover:text-foreground transition-colors " + (active ? "text-foreground" : "text-muted-foreground")}
+      >
+        {children}
+        <Icon className="h-3 w-3" />
+      </button>
+    </TableHead>
+  );
 }
 
 function DeleteEinrichtungButton({ einrichtung }: { einrichtung: any }) {

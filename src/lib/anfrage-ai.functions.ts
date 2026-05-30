@@ -6,6 +6,26 @@ import {
   ANSTELLUNG_RANK, qualRank,
 } from "@/lib/matching";
 
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function randomTokenStr(len = 24) {
+  const a = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  for (let i = 0; i < len; i++) s += a[Math.floor(Math.random() * a.length)];
+  return s;
+}
+
+
 // ============================================================
 // AI: parst E-Mail-/Freitext zu strukturierten Bedarfen
 // ============================================================
@@ -127,16 +147,20 @@ export const getVerfuegbareMitarbeiter = createServerFn({ method: "POST" })
       datum: z.string(),
       dienst: z.enum(["F", "S", "N"]),
       qualifikation: z.enum(["PFK", "PHK"]).optional(),
+      einrichtung_id: z.string().uuid().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const monatStart = data.datum.slice(0, 8) + "01";
-    // letzten Tag des Monats berechnen
     const d = new Date(monatStart);
     const monatEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
 
-    const [mitR, abwR, einR] = await Promise.all([
+    const einPromise = data.einrichtung_id
+      ? supabase.from("einrichtungen").select("id,lat,lng,name,ort").eq("id", data.einrichtung_id).maybeSingle()
+      : Promise.resolve({ data: null } as any);
+
+    const [mitR, abwR, einR, einrichtungR] = await Promise.all([
       supabase.from("mitarbeiter").select("*").eq("aktiv", true),
       supabase.from("abwesenheiten").select("mitarbeiter_id,datum").eq("datum", data.datum),
       supabase
@@ -144,7 +168,12 @@ export const getVerfuegbareMitarbeiter = createServerFn({ method: "POST" })
         .select("mitarbeiter_id,datum,einrichtung_id,dienst")
         .gte("datum", monatStart)
         .lte("datum", monatEnd),
+      einPromise,
     ]);
+
+    const einrichtung = (einrichtungR as any)?.data ?? null;
+    const einLat = einrichtung?.lat != null ? Number(einrichtung.lat) : null;
+    const einLng = einrichtung?.lng != null ? Number(einrichtung.lng) : null;
 
     const abwSet = new Set((abwR.data ?? []).map((a: any) => a.mitarbeiter_id));
     const monatCount = new Map<string, number>();
@@ -163,21 +192,41 @@ export const getVerfuegbareMitarbeiter = createServerFn({ method: "POST" })
       .map((m: any) => {
         const eingeplant = monatCount.get(m.id) ?? 0;
         const frei = Math.max(0, (m.max_einsaetze ?? 20) - eingeplant);
-        return { ...m, eingeplant, frei };
+        let distanz_km: number | null = null;
+        let im_radius: boolean | null = null;
+        if (einLat != null && einLng != null && m.lat != null && m.lng != null) {
+          distanz_km = Math.round(haversineKm({ lat: einLat, lng: einLng }, { lat: Number(m.lat), lng: Number(m.lng) }) * 10) / 10;
+          const radius = m.max_radius_km ?? m.umkreis_km ?? null;
+          if (radius != null) im_radius = distanz_km <= Number(radius);
+        }
+        return { ...m, eingeplant, frei, distanz_km, im_radius };
       })
       .filter((m: any) => m.frei > 0)
       .sort((a: any, b: any) => {
+        // 1. innerhalb Radius zuerst
+        if (a.im_radius !== b.im_radius) {
+          if (a.im_radius === true) return -1;
+          if (b.im_radius === true) return 1;
+        }
+        // 2. nach Distanz (wenn vorhanden)
+        if (a.distanz_km != null && b.distanz_km != null) {
+          if (a.distanz_km !== b.distanz_km) return a.distanz_km - b.distanz_km;
+        } else if (a.distanz_km != null) return -1;
+        else if (b.distanz_km != null) return 1;
+        // 3. Qualifikation
         const qa = qualRank(a.qualifikation);
         const qb = qualRank(b.qualifikation);
         if (qa !== qb) return qa - qb;
+        // 4. Anstellung
         const aa = ANSTELLUNG_RANK[a.anstellung] ?? 9;
         const ab = ANSTELLUNG_RANK[b.anstellung] ?? 9;
         if (aa !== ab) return aa - ab;
         return b.frei - a.frei;
       });
 
-    return { vorschlaege };
+    return { vorschlaege, einrichtung_geocoded: einLat != null && einLng != null };
   });
+
 
 // ============================================================
 // Bedarfe in Planungsmatrix übernehmen
@@ -211,5 +260,31 @@ export const createBedarfeBulk = createServerFn({ method: "POST" })
     }));
     const { error } = await context.supabase.from("bedarfe").insert(rows);
     if (error) throw new Error(error.message);
-    return { count: rows.length };
+
+    // Automatisch eine "Anfrage Kunde" anlegen (typ=bedarf, empfaenger=einrichtung)
+    const daten = data.bedarfe.map((b) => b.datum).sort();
+    const zeitraum_von = daten[0];
+    const zeitraum_bis = daten[daten.length - 1];
+    let anfrage_id: string | null = null;
+    try {
+      const { data: anf, error: anfErr } = await context.supabase
+        .from("anfragen")
+        .insert({
+          typ: "bedarf",
+          empfaenger_typ: "einrichtung",
+          empfaenger_id: data.einrichtung_id,
+          zeitraum_von,
+          zeitraum_bis,
+          status: "offen",
+          token: randomTokenStr(24),
+          erstellt_von: context.userId,
+        })
+        .select("id")
+        .single();
+      if (anfErr) console.error("[createBedarfeBulk] anfrage insert failed:", anfErr);
+      else anfrage_id = anf?.id ?? null;
+    } catch (e) {
+      console.error("[createBedarfeBulk] anfrage exception:", e);
+    }
+    return { count: rows.length, anfrage_id };
   });

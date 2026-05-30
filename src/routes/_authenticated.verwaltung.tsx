@@ -1,12 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { listVerbindungen, type VerbindungInfo } from "@/lib/verwaltung.functions";
+import { listTemplates, updateTemplate } from "@/lib/dispo.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash, FileText, Save } from "lucide-react";
 import { GeocodeRunAllCard } from "@/components/geocode-run-all-card";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/verwaltung")({
   component: VerwaltungPage,
@@ -90,6 +95,13 @@ function VerwaltungPage() {
 
 
 
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <FileText className="h-4 w-4" /> Nachrichtenvorlagen
+        </h2>
+        <NachrichtenTemplatesCard />
+      </section>
+
       {Object.entries(grouped).map(([kat, items]) => (
         <section key={kat} className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
@@ -127,6 +139,67 @@ function VerwaltungPage() {
           – Status, „zuletzt aktiv" und Beschreibung werden hier automatisch angezeigt.
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function NachrichtenTemplatesCard() {
+  const fetchTpl = useServerFn(listTemplates);
+  const saveTpl = useServerFn(updateTemplate);
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ["templates"], queryFn: () => fetchTpl() });
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (data) {
+      const m: Record<string, string> = {};
+      for (const t of data) m[t.id] = t.text;
+      setDrafts(m);
+    }
+  }, [data]);
+
+  const save = useMutation({
+    mutationFn: (vars: { id: string; text: string }) => saveTpl({ data: vars }),
+    onSuccess: () => { toast.success("Vorlage gespeichert"); qc.invalidateQueries({ queryKey: ["templates"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading) return <Card><CardContent className="py-6 text-sm text-muted-foreground">Lade Vorlagen…</CardContent></Card>;
+  if (!data || data.length === 0) return (
+    <Card><CardContent className="py-6 text-sm text-muted-foreground">Keine Vorlagen vorhanden.</CardContent></Card>
+  );
+
+  return (
+    <div className="grid gap-3">
+      {data.map((t: any) => (
+        <Card key={t.id}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between gap-2">
+              <span>{t.bezeichnung}</span>
+              <Badge variant="outline" className="font-mono text-[10px]">{t.schluessel}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Label htmlFor={`tpl-${t.id}`} className="sr-only">Vorlagentext</Label>
+            <Textarea
+              id={`tpl-${t.id}`}
+              value={drafts[t.id] ?? ""}
+              onChange={(e) => setDrafts({ ...drafts, [t.id]: e.target.value })}
+              rows={5}
+              className="font-mono text-xs"
+            />
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => save.mutate({ id: t.id, text: drafts[t.id] ?? "" })}
+                disabled={save.isPending || (drafts[t.id] ?? "") === t.text}
+              >
+                <Save className="h-3.5 w-3.5 mr-1" /> Speichern
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
