@@ -16,7 +16,7 @@ export type ProtokollEintrag = {
   mitarbeiter_id: string | null;
   einrichtung_id: string | null;
   fehler: string | null;
-  metadata: Record<string, unknown>;
+  metadata: any;
 };
 
 export const listProtokoll = createServerFn({ method: "POST" })

@@ -17,7 +17,7 @@ export type VersandLogInput = {
   referenz_id?: string | null;
   ausgeloest_von?: string | null;
   fehler?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: any;
 };
 
 export async function logVersand(entry: VersandLogInput): Promise<void> {
