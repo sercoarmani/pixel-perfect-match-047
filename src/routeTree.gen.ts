@@ -29,6 +29,7 @@ import { Route as AuthenticatedExportRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedEinrichtungenRouteImport } from './routes/_authenticated.einrichtungen'
 import { Route as AuthenticatedDispoRouteImport } from './routes/_authenticated.dispo'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedBestaetigungenRouteImport } from './routes/_authenticated.bestaetigungen'
 import { Route as AuthenticatedBedarfRouteImport } from './routes/_authenticated.bedarf'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
 import { Route as AuthenticatedAnfragenMitarbeiterRouteImport } from './routes/_authenticated.anfragen.mitarbeiter'
@@ -140,6 +141,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBestaetigungenRoute =
+  AuthenticatedBestaetigungenRouteImport.update({
+    id: '/bestaetigungen',
+    path: '/bestaetigungen',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedBedarfRoute = AuthenticatedBedarfRouteImport.update({
   id: '/bedarf',
   path: '/bedarf',
@@ -185,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
+  '/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/dispo': typeof AuthenticatedDispoRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
@@ -213,6 +221,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
+  '/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/dispo': typeof AuthenticatedDispoRoute
   '/einrichtungen': typeof AuthenticatedEinrichtungenRoute
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
+  '/_authenticated/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/dispo': typeof AuthenticatedDispoRoute
   '/_authenticated/einrichtungen': typeof AuthenticatedEinrichtungenRoute
@@ -273,6 +283,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/anfragen'
     | '/bedarf'
+    | '/bestaetigungen'
     | '/dashboard'
     | '/dispo'
     | '/einrichtungen'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/anfragen'
     | '/bedarf'
+    | '/bestaetigungen'
     | '/dashboard'
     | '/dispo'
     | '/einrichtungen'
@@ -330,6 +342,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/anfragen'
     | '/_authenticated/bedarf'
+    | '/_authenticated/bestaetigungen'
     | '/_authenticated/dashboard'
     | '/_authenticated/dispo'
     | '/_authenticated/einrichtungen'
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bestaetigungen': {
+      id: '/_authenticated/bestaetigungen'
+      path: '/bestaetigungen'
+      fullPath: '/bestaetigungen'
+      preLoaderRoute: typeof AuthenticatedBestaetigungenRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/bedarf': {
       id: '/_authenticated/bedarf'
       path: '/bedarf'
@@ -580,6 +600,7 @@ const AuthenticatedAnfragenRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAnfragenRoute: typeof AuthenticatedAnfragenRouteWithChildren
   AuthenticatedBedarfRoute: typeof AuthenticatedBedarfRoute
+  AuthenticatedBestaetigungenRoute: typeof AuthenticatedBestaetigungenRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDispoRoute: typeof AuthenticatedDispoRoute
   AuthenticatedEinrichtungenRoute: typeof AuthenticatedEinrichtungenRoute
@@ -597,6 +618,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAnfragenRoute: AuthenticatedAnfragenRouteWithChildren,
   AuthenticatedBedarfRoute: AuthenticatedBedarfRoute,
+  AuthenticatedBestaetigungenRoute: AuthenticatedBestaetigungenRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDispoRoute: AuthenticatedDispoRoute,
   AuthenticatedEinrichtungenRoute: AuthenticatedEinrichtungenRoute,
@@ -631,3 +653,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
