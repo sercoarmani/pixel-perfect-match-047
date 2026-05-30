@@ -50,10 +50,23 @@ export const sendPersonalLink = createServerFn({ method: "POST" })
     if (error || !m) throw new Error(error?.message ?? "Mitarbeiter nicht gefunden");
     if (!m.telegram_chat_id) throw new Error("Mitarbeiter hat den Bot noch nicht gestartet.");
     const link = `${publicOrigin()}/m/${m.zugangs_token}`;
-    await tgSendMessage(
-      Number(m.telegram_chat_id),
-      `Hallo ${m.vorname}, dein persönlicher Verfügbarkeits-Link:\n${link}`,
-    );
+    const text = `Hallo ${m.vorname}, dein persönlicher Verfügbarkeits-Link:\n${link}`;
+    try {
+      await tgSendMessage(Number(m.telegram_chat_id), text);
+      await logVersand({
+        kanal: "telegram", richtung: "out", status: "sent",
+        empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
+        inhalt: text, mitarbeiter_id: m.id,
+        referenz_typ: "personal_link",
+      });
+    } catch (e: any) {
+      await logVersand({
+        kanal: "telegram", richtung: "out", status: "failed",
+        empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
+        inhalt: text, mitarbeiter_id: m.id, fehler: e.message,
+      });
+      throw e;
+    }
     return { ok: true };
   });
 
