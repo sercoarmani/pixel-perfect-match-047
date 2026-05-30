@@ -453,7 +453,8 @@ export const importEinrichtungen = createServerFn({ method: "POST" })
       }
       const { traeger: _t, ...rest } = row;
       // Träger ist optional – Einrichtung wird auch ohne Träger angelegt (traeger_id = null).
-      const payload = { ...rest, name: cleanName, traeger_id };
+      // kunde_angelegt: true → jede importierte Einrichtung gilt automatisch als verknüpfter Kunde.
+      const payload = { ...rest, name: cleanName, traeger_id, kunde_angelegt: true };
       const existing = existingMap.get(normalizeName(cleanName));
       if (existing) {
         const { error } = await supabase.from("einrichtungen").update(payload).eq("id", existing.id);
