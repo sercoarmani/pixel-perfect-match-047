@@ -25,7 +25,9 @@ const NAV = [
   { to: "/import", label: "Datei-Import", icon: FileSpreadsheet, indent: false },
   { to: "/export", label: "Datei-Export", icon: Download, indent: false },
   { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare, indent: false },
+  { to: "/bestaetigungen", label: "Kundenbestätigungen", icon: MailCheck, indent: false },
   { to: "/protokoll", label: "Versand-Protokoll", icon: ScrollText, indent: false },
+
   { to: "/verwaltung", label: "Verwaltung", icon: Settings2, indent: false },
 ] as const;
 
