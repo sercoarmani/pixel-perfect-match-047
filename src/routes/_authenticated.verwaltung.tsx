@@ -142,3 +142,64 @@ function VerwaltungPage() {
     </div>
   );
 }
+
+function NachrichtenTemplatesCard() {
+  const fetchTpl = useServerFn(listTemplates);
+  const saveTpl = useServerFn(updateTemplate);
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ["templates"], queryFn: () => fetchTpl() });
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (data) {
+      const m: Record<string, string> = {};
+      for (const t of data) m[t.id] = t.text;
+      setDrafts(m);
+    }
+  }, [data]);
+
+  const save = useMutation({
+    mutationFn: (vars: { id: string; text: string }) => saveTpl({ data: vars }),
+    onSuccess: () => { toast.success("Vorlage gespeichert"); qc.invalidateQueries({ queryKey: ["templates"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isLoading) return <Card><CardContent className="py-6 text-sm text-muted-foreground">Lade Vorlagen…</CardContent></Card>;
+  if (!data || data.length === 0) return (
+    <Card><CardContent className="py-6 text-sm text-muted-foreground">Keine Vorlagen vorhanden.</CardContent></Card>
+  );
+
+  return (
+    <div className="grid gap-3">
+      {data.map((t: any) => (
+        <Card key={t.id}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between gap-2">
+              <span>{t.bezeichnung}</span>
+              <Badge variant="outline" className="font-mono text-[10px]">{t.schluessel}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Label htmlFor={`tpl-${t.id}`} className="sr-only">Vorlagentext</Label>
+            <Textarea
+              id={`tpl-${t.id}`}
+              value={drafts[t.id] ?? ""}
+              onChange={(e) => setDrafts({ ...drafts, [t.id]: e.target.value })}
+              rows={5}
+              className="font-mono text-xs"
+            />
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => save.mutate({ id: t.id, text: drafts[t.id] ?? "" })}
+                disabled={save.isPending || (drafts[t.id] ?? "") === t.text}
+              >
+                <Save className="h-3.5 w-3.5 mr-1" /> Speichern
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
