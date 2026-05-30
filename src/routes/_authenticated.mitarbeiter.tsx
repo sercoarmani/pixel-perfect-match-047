@@ -432,9 +432,12 @@ function MitarbeiterVerknuepft({ mitarbeiterId }: { mitarbeiterId: string }) {
   const eins = data?.einsaetze ?? [];
   const anf = data?.anfragen ?? [];
   const token = (data?.mitarbeiter as any)?.zugangs_token as string | undefined;
+  const chatId = (data?.mitarbeiter as any)?.telegram_chat_id as number | null | undefined;
+  const tgUser = (data?.mitarbeiter as any)?.telegram_username as string | null | undefined;
   return (
     <div className="space-y-4 pt-3 text-sm">
       <PersonalLink mitarbeiterId={mitarbeiterId} token={token} />
+      <TelegramLink mitarbeiterId={mitarbeiterId} token={token} chatId={chatId} username={tgUser} />
       <section>
         <h3 className="font-medium mb-2">Verfügbarkeiten ({verf.length})</h3>
         {verf.length === 0 ? <p className="text-muted-foreground text-xs">Keine Verfügbarkeiten erfasst.</p> : (
