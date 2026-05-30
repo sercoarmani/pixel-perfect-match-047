@@ -230,16 +230,39 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
             const text: string = update.message.text;
             const chatId: number = update.message.chat.id;
             const username: string | null = update.message.from?.username ?? null;
-            const m = text.match(/^\/start\s+(\S+)/);
-            if (m) {
-              await handleStart(chatId, m[1], username);
-            } else if (text.trim() === "/start") {
+            const trimmed = text.trim();
+            const startToken = trimmed.match(/^\/start\s+(\S+)/);
+            const linked = await findMitarbeiterByChat(chatId);
+
+            if (startToken) {
+              await handleStart(chatId, startToken[1], username);
+            } else if (trimmed === "/start") {
+              if (linked) {
+                await greetLinked(chatId, linked.vorname);
+              } else {
+                await tgSendMessage(
+                  chatId,
+                  "Hallo 👋\nDein Konto ist noch nicht mit diesem Bot verknüpft.\nBitte sende jetzt deinen persönlichen Kopplungscode (Format z. B. <code>ANNA-7K2X</code>).",
+                  { parse_mode: "HTML" },
+                );
+              }
+            } else if (trimmed === "/hilfe" || trimmed === "/help") {
               await tgSendMessage(
                 chatId,
-                "Hallo 👋\nBitte benutze den persönlichen Bot-Link, den du vom Dispo erhalten hast (Format: /start <Token>).",
+                linked
+                  ? "Du kannst hier Anfragen für offene Dienste annehmen (✅/❌) und deine Verfügbarkeit eintragen. Sende /start für das Menü."
+                  : "Bitte sende deinen persönlichen Kopplungscode, um dich mit dem Bot zu verknüpfen.",
               );
-            } else if (text.trim() === "/hilfe" || text.trim() === "/help") {
-              await tgSendMessage(chatId, "Du erhältst hier Anfragen für offene Dienste. Antworte einfach mit ✅ Zusage oder ❌ Absage.");
+            } else if (linked) {
+              await greetLinked(chatId, linked.vorname);
+            } else if (isEinmalCodeShape(normCode(trimmed))) {
+              await handleEinmalCode(chatId, normCode(trimmed), username);
+            } else {
+              await tgSendMessage(
+                chatId,
+                "Bitte sende deinen persönlichen Kopplungscode (Format z. B. <code>ANNA-7K2X</code>), um dich zu verknüpfen.",
+                { parse_mode: "HTML" },
+              );
             }
           } else if (update.callback_query) {
             const cb = update.callback_query;
