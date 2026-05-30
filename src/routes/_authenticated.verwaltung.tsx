@@ -79,6 +79,17 @@ function VerwaltungPage() {
 
       {isLoading && <div className="text-sm text-muted-foreground">Lade Verbindungen…</div>}
 
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          Werkzeuge
+        </h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <GeocodeRunAllCard />
+        </div>
+      </section>
+
+
+
       {Object.entries(grouped).map(([kat, items]) => (
         <section key={kat} className="space-y-3">
           <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
