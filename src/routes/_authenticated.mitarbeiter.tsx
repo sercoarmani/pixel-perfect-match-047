@@ -22,6 +22,7 @@ import { generateDienstplanExcel } from "@/lib/excel-dienstplan";
 import { format, addDays } from "date-fns";
 import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
 import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
+import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
 
 
 
@@ -57,6 +58,7 @@ function MitarbeiterPage() {
         <div className="flex items-center gap-2">
           <VerfuegbarkeitsBroadcastButton mitarbeiter={data ?? []} />
           <DokumenteSammelImport mitarbeiter={data ?? []} />
+          <GeocodeBulkButton tabelle="mitarbeiter" invalidateKey="mitarbeiter" />
           <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
         </div>
       </div>
@@ -101,12 +103,13 @@ function MitarbeiterPage() {
               <TableHead>Anstellung</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Wohnort</TableHead>
+              <TableHead>Geo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={9} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {filtered.map((m: any) => (
               <TableRow key={m.id}>
                 <TableCell className="font-mono cursor-pointer" onClick={() => setEdit(m)}>{m.kuerzel}</TableCell>
@@ -120,7 +123,8 @@ function MitarbeiterPage() {
                     </a>
                   ) : "—"}
                 </TableCell>
-                <TableCell>{m.wohnort ?? "—"}</TableCell>
+                <TableCell>{m.ort ?? m.wohnort ?? "—"}</TableCell>
+                <TableCell><GeocodeStatusBadge status={m.geocode_status} fehler={m.geocode_fehler} lat={m.lat} lng={m.lng} /></TableCell>
                 <TableCell>{m.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
@@ -278,6 +282,9 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
     umkreis_km: row.umkreis_km ?? null,
     status: row.status ?? "aktiv",
     plz: row.plz ?? "",
+    strasse: row.strasse ?? "",
+    ort: row.ort ?? "",
+    max_radius_km: row.max_radius_km ?? null,
     fuehrerschein: row.fuehrerschein ?? false,
     profil_text: row.profil_text ?? "",
   });
@@ -300,7 +307,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
               <TabsTrigger value="docs">Dokumente</TabsTrigger>
             </TabsList>
             <TabsContent value="stamm">
-              <StammFields form={form} setForm={setForm} />
+              <StammFields form={form} setForm={setForm} row={row} />
             </TabsContent>
             <TabsContent value="verkn">
               <MitarbeiterVerknuepft mitarbeiterId={row.id} />
@@ -311,7 +318,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
           </Tabs>
 
         ) : (
-          <StammFields form={form} setForm={setForm} />
+          <StammFields form={form} setForm={setForm} row={row} />
         )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
@@ -322,7 +329,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
   );
 }
 
-function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }) {
+function StammFields({ form, setForm, row }: { form: any; setForm: (f: any) => void; row: any }) {
   return (
     <div className="grid grid-cols-2 gap-3 text-sm pt-2">
       <Field label="Vorname"><Input value={form.vorname} onChange={(e) => setForm({...form, vorname: e.target.value})} /></Field>
@@ -342,8 +349,32 @@ function StammFields({ form, setForm }: { form: any; setForm: (f: any) => void }
       </Field>
       <Field label="Telefon"><Input value={form.telefon} onChange={(e) => setForm({...form, telefon: e.target.value})} /></Field>
       <Field label="E-Mail"><Input type="email" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} /></Field>
-      <Field label="Wohnort"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <Field label="Straße & Nr."><Input value={form.strasse} onChange={(e) => setForm({...form, strasse: e.target.value})} placeholder="z. B. Hauptstr. 7" /></Field>
       <Field label="PLZ"><Input value={form.plz} onChange={(e) => setForm({ ...form, plz: e.target.value })} /></Field>
+      <Field label="Ort"><Input value={form.ort} onChange={(e) => setForm({...form, ort: e.target.value})} placeholder="für Geocoding" /></Field>
+      <Field label="Wohnort (Anzeige)"><Input value={form.wohnort} onChange={(e) => setForm({...form, wohnort: e.target.value})} /></Field>
+      <Field label="Max. Radius (km, Luftlinie)">
+        <Input
+          type="number" min={0} inputMode="numeric"
+          value={form.max_radius_km ?? ""}
+          placeholder="z. B. 30"
+          onChange={(e) => setForm({ ...form, max_radius_km: e.target.value === "" ? null : Number(e.target.value) })}
+        />
+      </Field>
+      {row?.id && (
+        <div className="col-span-2 space-y-1.5">
+          <Label>Geocoding</Label>
+          <div className="flex items-center gap-2 rounded border bg-card px-3 py-2">
+            <GeocodeStatusBadge status={row.geocode_status} fehler={row.geocode_fehler} lat={row.lat} lng={row.lng} />
+            <span className="text-xs text-muted-foreground flex-1 truncate">
+              {row.lat != null && row.lng != null
+                ? `${Number(row.lat).toFixed(5)}, ${Number(row.lng).toFixed(5)}`
+                : (row.geocode_fehler ?? "Adresse speichern, dann geokodieren")}
+            </span>
+            <GeocodeSingleButton tabelle="mitarbeiter" id={row.id} invalidateKey="mitarbeiter" />
+          </div>
+        </div>
+      )}
       <Field label="Führerschein">
         <div className="flex items-center gap-3 rounded border bg-card px-3 py-2 h-10">
           <input id="ma-fs-tog" type="checkbox" checked={form.fuehrerschein} onChange={(e) => setForm({ ...form, fuehrerschein: e.target.checked })} className="h-4 w-4" />

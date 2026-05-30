@@ -198,6 +198,9 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
       umkreis_km: z.number().min(0).max(2000).optional().nullable(),
       status: z.enum(["aktiv", "austritt", "schwanger", "gesperrt", "inaktiv"]).optional(),
       plz: z.string().max(10).optional().nullable(),
+      strasse: z.string().max(200).optional().nullable(),
+      ort: z.string().max(100).optional().nullable(),
+      max_radius_km: z.number().min(0).max(2000).optional().nullable(),
       fuehrerschein: z.boolean().optional(),
       profil_text: z.string().max(4000).optional().nullable(),
     }).parse(input),
@@ -240,6 +243,8 @@ export const upsertEinrichtung = createServerFn({ method: "POST" })
       aktiv: z.boolean().optional(),
       kunde_angelegt: z.boolean().optional(),
       traeger_id: z.string().uuid().optional().nullable(),
+      strasse: z.string().max(200).optional().nullable(),
+      plz: z.string().max(10).optional().nullable(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
