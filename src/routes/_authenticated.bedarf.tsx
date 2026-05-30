@@ -213,8 +213,13 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
   const fetchVor = useServerFn(getVerfuegbareMitarbeiter);
   const upsertFn = useServerFn(upsertEinsatz);
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["vorschlaege", bedarf?.datum, bedarf?.dienst, bedarf?.qualifikation],
-    queryFn: () => fetchVor({ data: { datum: bedarf!.datum, dienst: bedarf!.dienst, qualifikation: bedarf!.qualifikation } }),
+    queryKey: ["vorschlaege", bedarf?.datum, bedarf?.dienst, bedarf?.qualifikation, einrichtungId],
+    queryFn: () => fetchVor({ data: {
+      datum: bedarf!.datum,
+      dienst: bedarf!.dienst,
+      qualifikation: bedarf!.qualifikation,
+      einrichtung_id: einrichtungId || undefined,
+    } }),
     enabled: !!bedarf,
   });
 
@@ -246,6 +251,8 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
     );
   }
 
+  const hasGeo = data?.einrichtung_geocoded;
+
   return (
     <Card>
       <CardHeader>
@@ -254,6 +261,12 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
           Verfügbare Mitarbeiter
           <Badge variant="outline" className="ml-auto">{bedarf.datum} · {bedarf.dienst} · {bedarf.qualifikation}</Badge>
         </CardTitle>
+        {einrichtungId && !hasGeo && (
+          <p className="text-xs text-muted-foreground">Einrichtung nicht geokodiert – Sortierung nach Nähe nicht verfügbar.</p>
+        )}
+        {hasGeo && (
+          <p className="text-xs text-muted-foreground">Sortiert nach Entfernung zur Einrichtung (nächste zuerst).</p>
+        )}
       </CardHeader>
       <CardContent className="space-y-2">
         {isLoading && <div className="text-sm text-muted-foreground">Lade…</div>}
@@ -263,13 +276,22 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
         {(data?.vorschlaege ?? []).map((m: any) => {
           const tel = normalizePhone(m.telefon);
           const wa = tel.replace(/^\+/, "");
+          const radius = m.max_radius_km ?? m.umkreis_km;
           return (
             <div key={m.id} className="flex items-center gap-2 p-2 border rounded hover:bg-accent/40">
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{m.nachname}, {m.vorname}</div>
+                <div className="font-medium truncate flex items-center gap-2">
+                  {m.nachname}, {m.vorname}
+                  {m.distanz_km != null && (
+                    <Badge variant={m.im_radius === false ? "outline" : "default"} className="text-[10px]">
+                      {m.distanz_km} km{m.im_radius === false ? " · außerh. Radius" : ""}
+                    </Badge>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   <Badge variant="secondary" className="mr-1">{m.qualifikation}</Badge>
                   <Badge variant="outline" className="mr-1">{m.anstellung}</Badge>
+                  {radius != null && <span className="mr-1">Radius {radius} km · </span>}
                   {m.eingeplant}/{m.max_einsaetze ?? 20} Einsätze · noch {m.frei} frei
                 </div>
               </div>
