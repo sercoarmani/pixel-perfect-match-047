@@ -1,43 +1,56 @@
 ## Ziel
 
-Die Verbesserungen aus `dispoplan-optimiert-2.zip` (Runde 3: **Mitarbeiter-Self-Service-Portal**) in das aktuelle Projekt integrieren – **ohne** die kürzlich umgesetzten Änderungen zu überschreiben (Sidebar mit „Anfragen von Kunden" / „Verfügbarkeiten Mitarbeiter", `_authenticated.anfragen.tsx` als Redirect, E-Mail-Infrastruktur).
+Pro Monat (z. B. Juni) einen Broadcast über den Telegram-Bot auslösen, der jedem verknüpften Mitarbeiter seinen persönlichen Link schickt. Im Portal sieht der Mitarbeiter genau diesen Monat als Tagesliste und kann je Tag Früh-/Spät-/Nachtdienst eintragen.
 
-Das ältere ZIP (`dispoplan-optimiert.zip`, Runde 1+2) bringt keine neuen Inhalte mehr – die Migrations sind bereits sinngemäß in `20260529165325` / `20260529165344` umgesetzt. Wir verwenden ausschließlich Runde-3-Deltas aus dem neueren ZIP.
+## Was der Mitarbeiter bekommt
 
-## Was neu reinkommt
+Telegram-Nachricht, z. B.:
 
-**Datenbank** – eine neue Migration:
-- `20260530xxxxxx_mitarbeiter_portal.sql` (Inhalt aus `20260529180000_mitarbeiter_portal.sql`): fügt `mitarbeiter.zugangs_token` (eindeutig, Default-Generator), `plz`, `fuehrerschein`, `profil_text` hinzu und vergibt Tokens für Bestands-Mitarbeiter.
+> Hallo Saeed, bitte trage deine Verfügbarkeit für **Juni 2026** ein:
+> https://…/m/<token>?monat=2026-06
 
-**Server-Functions**:
-- Neu: `src/lib/mitarbeiter-portal.functions.ts` – Token-Auflösung serverseitig, nur Zugriff auf die eigene `mitarbeiter_id` (Self-Service-Schichtmeldungen, 28-Tage-Fenster, keine fremden Daten).
-- Update `src/lib/dispo.functions.ts`: erweiterter `upsertMitarbeiter`-Validator (`plz`, `fuehrerschein`, `profil_text`, `zugangs_token`) + Funktion zum Neu-Erzeugen des Tokens.
+Klick → Portalseite zeigt nur Juni, gruppiert nach Wochen, mit F/S/N-Buttons pro Tag und „Speichern". Bereits gemeldete/vergebene Schichten bleiben sichtbar und geschützt (wie heute).
 
-**Routen / UI**:
-- Neu: `src/routes/m.$token.tsx` – öffentliche, mobiloptimierte Self-Service-Seite (Schichten der nächsten 28 Tage melden/zurücknehmen, vergebene Tage gesperrt).
-- Update `src/routes/_authenticated.mitarbeiter.tsx`: im Tab „Verfügbarkeiten & Dienste" Block „Persönlicher Link" mit Kopieren / Neu erzeugen + Felder PLZ, Führerschein, Profiltext.
-- Update `src/routes/_authenticated.dispo.tsx`: Broadcast-Knopf „Niemand erreicht" pro offener Anfrage, der einen kopierbaren Standardtext einblendet.
+## Was die Dispo bekommt
 
-**Typen**: `src/integrations/supabase/types.ts` wird nach der Migration automatisch aktualisiert – nicht manuell editieren.
+Auf der Seite **Mitarbeiter** (oben rechts) ein neuer Button **„Verfügbarkeitslink senden"**:
 
-## Was bewusst NICHT überschrieben wird
+1. Dialog öffnet sich.
+2. Monatsauswahl (Default: nächster Monat, wählbar bis 6 Monate voraus).
+3. Optional Filter: „Nur aktive Mitarbeiter" (Default an).
+4. Vorschau: „Wird an N verknüpfte Mitarbeiter gesendet" (Anzahl der Mitarbeiter mit `telegram_chat_id`).
+5. Button „Jetzt senden" → Server-Funktion verschickt die Nachrichten und gibt Statistik zurück (gesendet, übersprungen, Fehler).
 
-- `src/routes/_authenticated.tsx` – aktuelle Sidebar bleibt (Disposition + indentierte „Anfragen von Kunden" / „Verfügbarkeiten Mitarbeiter").
-- `src/routes/_authenticated.anfragen.tsx` – bleibt der Redirect auf `/anfragen/kunden`.
-- `src/components/anfragen-view.tsx`, `_authenticated.anfragen.kunden.tsx`, `_authenticated.anfragen.mitarbeiter.tsx` – bleiben.
-- E-Mail-Infrastruktur (`src/routes/lovable/email/queue/process.ts`, `20260530155054/06/49_email_infra.sql`) – bleibt.
-- Alle bereits identischen Dateien (shadcn-UI, `matching.ts`, `plan.tsx`, Parser/Exporte etc.) – kein Touch.
+## Technische Umsetzung
 
-## Schritte
+### Portal (`src/routes/m.$token.tsx`)
+- Liest `?monat=YYYY-MM` aus der URL (Fallback: aktueller Monat).
+- Ersetzt die bisherige „28 Tage ab heute"-Liste durch eine **Monatsansicht**: alle Tage des gewählten Monats, gruppiert nach Kalenderwochen, Wochenenden gehighlightet, Tage in der Vergangenheit ausgegraut.
+- Header zeigt „Verfügbarkeit für Juni 2026" plus kleine Navigation „◀ Mai / Juli ▶" (nur Monate ≥ aktueller Monat).
+- F/S/N-Logik, Speichern, „Vergeben"-Sperre bleiben unverändert.
+- Bestehender Server-Endpoint `getMitarbeiterPortal` bekommt optionalen Parameter `monat`, damit nur die relevanten Verfügbarkeiten geladen werden.
 
-1. **Migration ausführen** (Inhalt von `20260529180000_mitarbeiter_portal.sql`) – fügt Spalten + Token-Generator + Backfill hinzu. RLS-Policies aus dem ZIP übernehmen; Service-Role-Zugriff für die neuen Server-Functions sicherstellen.
-2. **Neue Datei anlegen**: `src/lib/mitarbeiter-portal.functions.ts` (1:1 aus ZIP).
-3. **`src/lib/dispo.functions.ts` mergen**: nur die im ZIP neuen/erweiterten Felder im `upsertMitarbeiter`-Validator und der neue Token-Refresh ergänzen – bestehende Logik (Doppelbelegungs-Klartext, Bedarfs-Zähler, E-Mail-Hooks) bleibt.
-4. **Neue Route**: `src/routes/m.$token.tsx` (1:1 aus ZIP) + automatische Route-Tree-Generierung abwarten.
-5. **`_authenticated.mitarbeiter.tsx` mergen**: Block „Persönlicher Link" + Felder PLZ/Führerschein/Profiltext im Tab „Verfügbarkeiten & Dienste" einfügen.
-6. **`_authenticated.dispo.tsx` mergen**: Broadcast-Knopf „Niemand erreicht" pro offener Bedarfszeile ergänzen (Textbaustein + Kopieren-Button).
-7. Build/Typecheck läuft automatisch; danach kurze manuelle Verifikation: Mitarbeiter öffnen → Link kopieren → `/m/{token}` in privatem Tab öffnen, Schicht melden, in Disposition prüfen.
+### Server-Funktion (`src/lib/telegram.functions.ts`)
+Neue Funktion `sendVerfuegbarkeitsBroadcast({ monat: "YYYY-MM", nur_aktive?: boolean })`:
+- Lädt alle Mitarbeiter mit `telegram_chat_id IS NOT NULL` (optional `aktiv=true`).
+- Baut pro Mitarbeiter den Link `${publicOrigin()}/m/${token}?monat=${monat}`.
+- Versendet die Nachricht via vorhandenem `tgSendMessage` (sequenziell, Fehler pro Empfänger werden gesammelt, nicht abbrechend).
+- Rückgabe: `{ gesendet, gesamt, fehler: string[] }`.
 
-## Offene Frage
+Die bestehende Bedarfs-Broadcast-Funktion bleibt unverändert.
 
-Soll ich Schritt 1–7 jetzt umsetzen (Build-Modus nötig)?
+### Dispo-UI (`src/routes/_authenticated.mitarbeiter.tsx`)
+- Neuer Button „Verfügbarkeitslink senden" in der Toolbar.
+- Dialog mit Monats-Dropdown (aktueller + 5 folgende Monate) + Checkbox „nur aktive Mitarbeiter".
+- Anzeige der Empfängerzahl (geladen aus bestehendem Mitarbeiter-Query, gefiltert auf `telegram_chat_id`).
+- Beim Senden Toast mit Ergebnis (z. B. „12 von 15 Nachrichten gesendet, 3 Fehler").
+
+### Datenbank
+Keine Schemaänderung nötig. Verwendet bestehende Tabellen `mitarbeiter` (für Chat-IDs und Token) und `verfuegbarkeiten` (für die Einträge). Optional später: Audit-Eintrag in `audit_log` für jeden Broadcast (kann ich auf Wunsch hinzufügen).
+
+## Offene Punkte (bitte bestätigen oder korrigieren)
+
+1. **Default-Monat im Dialog**: nächster Monat (aktuell wäre das Juni 2026). OK?
+2. **Empfängerkreis**: alle Mitarbeiter mit Telegram-Chat **und** `aktiv = true`. OK?
+3. **Nachrichtentext** wie oben („Hallo {Vorname}, bitte trage deine Verfügbarkeit für {Monat} ein: <link>"). OK oder anderer Wortlaut?
+4. **Mehrfaches Senden** im selben Monat erlauben (z. B. als Erinnerung)? Default: ja.

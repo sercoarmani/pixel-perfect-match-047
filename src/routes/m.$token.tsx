@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
-import { addDays, format } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
+import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Trash2, CalendarPlus, CheckCircle2 } from "lucide-react";
+import { Trash2, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   getMitarbeiterPortal,
   submitMeineVerfuegbarkeit,
@@ -23,7 +23,6 @@ export const Route = createFileRoute("/m/$token")({
 const DIENSTE = ["F", "S", "N"] as const;
 type Dienst = (typeof DIENSTE)[number];
 const DIENST_LABEL: Record<Dienst, string> = { F: "Früh", S: "Spät", N: "Nacht" };
-// Schichtfarben (Früh = morgens/amber, Spät = blau, Nacht = indigo)
 const DIENST_BTN: Record<Dienst, string> = {
   F: "bg-amber-500 text-white border-amber-500",
   S: "bg-sky-600 text-white border-sky-600",
@@ -35,34 +34,89 @@ const DIENST_CHIP: Record<Dienst, string> = {
   N: "bg-indigo-100 text-indigo-900 dark:bg-indigo-900/40 dark:text-indigo-200",
 };
 
-const TAGE_VORAUS = 28;
+function currentMonthStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
 
 function PortalPage() {
   const { token } = Route.useParams();
+
+  // Monat aus ?monat=YYYY-MM lesen (clientseitig, SSR-Fallback = aktueller Monat)
+  const [monat, setMonat] = useState<string>(() => {
+    if (typeof window === "undefined") return currentMonthStr();
+    const p = new URLSearchParams(window.location.search).get("monat");
+    return p && /^\d{4}-\d{2}$/.test(p) ? p : currentMonthStr();
+  });
+
+  // URL synchron halten, wenn der Mitarbeiter den Monat wechselt
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const u = new URL(window.location.href);
+    if (u.searchParams.get("monat") !== monat) {
+      u.searchParams.set("monat", monat);
+      window.history.replaceState({}, "", u.toString());
+    }
+  }, [monat]);
+
   const fetchPortal = useServerFn(getMitarbeiterPortal);
   const { data, isLoading } = useQuery({
-    queryKey: ["portal", token],
-    queryFn: () => fetchPortal({ data: { token } }),
+    queryKey: ["portal", token, monat],
+    queryFn: () => fetchPortal({ data: { token, monat } }),
   });
 
   if (isLoading) return <Centered>Lade…</Centered>;
   if (!data) return <Centered title="Link ungültig">Dieser persönliche Link ist nicht gültig. Bitte wende dich an die Disposition.</Centered>;
 
-  return <Portal token={token} data={data} />;
+  return <Portal token={token} monat={monat} setMonat={setMonat} data={data} />;
 }
 
-function Portal({ token, data }: { token: string; data: any }) {
+function Portal({
+  token,
+  monat,
+  setMonat,
+  data,
+}: {
+  token: string;
+  monat: string;
+  setMonat: (m: string) => void;
+  data: any;
+}) {
   const qc = useQueryClient();
   const submit = useServerFn(submitMeineVerfuegbarkeit);
   const del = useServerFn(deleteMeineVerfuegbarkeit);
 
-  const tage = useMemo(
-    () => Array.from({ length: TAGE_VORAUS }, (_, i) => addDays(new Date(), i)),
-    [],
+  const heute = format(new Date(), "yyyy-MM-dd");
+  const minMonat = currentMonthStr();
+
+  // Alle Tage des gewählten Monats
+  const tage = useMemo(() => {
+    const [y, m] = monat.split("-").map(Number);
+    const ref = new Date(y, m - 1, 1);
+    const ende = endOfMonth(ref).getDate();
+    return Array.from({ length: ende }, (_, i) => new Date(y, m - 1, i + 1));
+  }, [monat]);
+
+  const monatLabel = useMemo(
+    () => format(startOfMonth(new Date(Number(monat.slice(0, 4)), Number(monat.slice(5, 7)) - 1, 1)), "LLLL yyyy", { locale: de }),
+    [monat],
   );
 
-  // additive Auswahl: marks[iso] = Set<Dienst>
+  const prevMonat = useMemo(() => {
+    const [y, m] = monat.split("-").map(Number);
+    const p = addMonths(new Date(y, m - 1, 1), -1);
+    return currentMonthStr(p);
+  }, [monat]);
+  const nextMonat = useMemo(() => {
+    const [y, m] = monat.split("-").map(Number);
+    const n = addMonths(new Date(y, m - 1, 1), 1);
+    return currentMonthStr(n);
+  }, [monat]);
+  const prevDisabled = prevMonat < minMonat;
+
   const [marks, setMarks] = useState<Record<string, Set<Dienst>>>({});
+  // Auswahl zurücksetzen, wenn Monat wechselt
+  useEffect(() => { setMarks({}); }, [monat]);
+
   const toggle = (iso: string, d: Dienst) =>
     setMarks((m) => {
       const next = { ...m };
@@ -73,7 +127,6 @@ function Portal({ token, data }: { token: string; data: any }) {
     });
   const anyMarks = Object.values(marks).some((s) => s.size > 0);
 
-  // bereits gemeldete Verfügbarkeiten als Schlüssel `${iso}|${dienst}` → status
   const vorhanden = useMemo(() => {
     const map = new Map<string, string>();
     (data.verfuegbarkeiten ?? []).forEach((v: any) => {
@@ -93,14 +146,14 @@ function Portal({ token, data }: { token: string; data: any }) {
     onSuccess: (r: any) => {
       toast.success(r.anzahl > 0 ? `${r.anzahl} Schicht(en) gemeldet – danke!` : "Nichts Neues zu melden.");
       setMarks({});
-      qc.invalidateQueries({ queryKey: ["portal", token] });
+      qc.invalidateQueries({ queryKey: ["portal", token, monat] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const delMut = useMutation({
     mutationFn: (v: { datum: string; dienst: Dienst }) => del({ data: { token, ...v } }),
-    onSuccess: () => { toast.success("Verfügbarkeit zurückgenommen"); qc.invalidateQueries({ queryKey: ["portal", token] }); },
+    onSuccess: () => { toast.success("Verfügbarkeit zurückgenommen"); qc.invalidateQueries({ queryKey: ["portal", token, monat] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -111,15 +164,25 @@ function Portal({ token, data }: { token: string; data: any }) {
       <div>
         <h1 className="text-2xl font-semibold">Hallo {data.mitarbeiter.vorname} 👋</h1>
         <p className="text-sm text-muted-foreground">
-          Trag hier ein, wann du in den nächsten {TAGE_VORAUS} Tagen einsatzbereit bist. F = Früh, S = Spät, N = Nacht.
+          Trag hier ein, an welchen Tagen im Monat du Früh- (F), Spät- (S) oder Nachtdienste (N) übernehmen kannst.
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CalendarPlus className="h-4 w-4" /> Verfügbarkeit hinzufügen
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarPlus className="h-4 w-4" /> Verfügbarkeit für <span className="capitalize">{monatLabel}</span>
+            </CardTitle>
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="ghost" disabled={prevDisabled} onClick={() => setMonat(prevMonat)} aria-label="Vorheriger Monat">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="ghost" onClick={() => setMonat(nextMonat)} aria-label="Nächster Monat">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           <CardDescription>Tippe die Schichten an, die du übernehmen kannst.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -127,12 +190,14 @@ function Portal({ token, data }: { token: string; data: any }) {
             const iso = format(d, "yyyy-MM-dd");
             const set = marks[iso] ?? new Set<Dienst>();
             const wknd = [0, 6].includes(d.getDay());
+            const past = iso < heute;
             return (
               <div
                 key={iso}
                 className={cn(
                   "flex items-center justify-between gap-2 rounded-md border p-2",
                   wknd && "bg-muted/40",
+                  past && "opacity-50",
                 )}
               >
                 <div className="text-sm font-medium">{format(d, "EEE dd.MM.", { locale: de })}</div>
@@ -142,7 +207,7 @@ function Portal({ token, data }: { token: string; data: any }) {
                     const active = set.has(di);
                     if (status === "vergeben") {
                       return (
-                        <span key={di} className={cn("flex h-10 w-12 items-center justify-center rounded text-sm font-semibold opacity-60", DIENST_CHIP[di])} title="bereits eingeteilt">
+                        <span key={di} className={cn("flex h-10 w-12 items-center justify-center rounded text-sm font-semibold opacity-70", DIENST_CHIP[di])} title="bereits eingeteilt">
                           {di}✓
                         </span>
                       );
@@ -151,11 +216,13 @@ function Portal({ token, data }: { token: string; data: any }) {
                       <button
                         key={di}
                         type="button"
+                        disabled={past}
                         onClick={() => toggle(iso, di)}
                         className={cn(
                           "h-10 w-12 rounded border text-sm font-semibold transition-colors",
                           active ? DIENST_BTN[di] : "bg-muted text-muted-foreground hover:bg-accent",
                           status === "frei" && !active && "ring-1 ring-inset ring-emerald-400",
+                          past && "cursor-not-allowed",
                         )}
                         title={status === "frei" ? "schon gemeldet" : DIENST_LABEL[di]}
                       >
@@ -176,8 +243,8 @@ function Portal({ token, data }: { token: string; data: any }) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Deine gemeldeten Tage ({gemeldet.length})</CardTitle>
-          <CardDescription>„vergeben" = bereits für einen Einsatz eingeteilt.</CardDescription>
+          <CardTitle className="text-base">Gemeldete Tage in {monatLabel} ({gemeldet.length})</CardTitle>
+          <CardDescription>„eingeteilt" = bereits für einen Einsatz fest geplant.</CardDescription>
         </CardHeader>
         <CardContent>
           {gemeldet.length === 0 ? (

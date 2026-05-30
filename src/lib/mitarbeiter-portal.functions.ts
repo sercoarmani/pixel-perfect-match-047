@@ -23,20 +23,35 @@ async function mitarbeiterAusToken(token: string) {
 
 // ---------- Public: eigenes Profil + eigene Verfügbarkeiten ----------
 export const getMitarbeiterPortal = createServerFn({ method: "GET" })
-  .inputValidator((input: { token: string }) =>
-    z.object({ token: TokenSchema }).parse(input),
+  .inputValidator((input: { token: string; monat?: string }) =>
+    z.object({
+      token: TokenSchema,
+      monat: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+    }).parse(input),
   )
   .handler(async ({ data }) => {
     const ma = await mitarbeiterAusToken(data.token);
     if (!ma) return null;
 
-    const heute = new Date().toISOString().slice(0, 10);
-    const { data: verf } = await supabaseAdmin
+    let von: string;
+    let bis: string | null = null;
+    if (data.monat) {
+      const [y, m] = data.monat.split("-").map(Number);
+      von = `${data.monat}-01`;
+      const ende = new Date(Date.UTC(y, m, 0)); // letzter Tag des Monats
+      bis = ende.toISOString().slice(0, 10);
+    } else {
+      von = new Date().toISOString().slice(0, 10);
+    }
+
+    let q = supabaseAdmin
       .from("verfuegbarkeiten")
       .select("id, datum, dienst, verfuegbar, status")
-      .eq("mitarbeiter_id", ma.id) // strikt nur eigene Datensätze
-      .gte("datum", heute)
+      .eq("mitarbeiter_id", ma.id)
+      .gte("datum", von)
       .order("datum");
+    if (bis) q = q.lte("datum", bis);
+    const { data: verf } = await q;
 
     return {
       mitarbeiter: { vorname: ma.vorname, nachname: ma.nachname, status: ma.status, aktiv: ma.aktiv },
