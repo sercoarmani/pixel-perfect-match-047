@@ -82,4 +82,56 @@ test.describe("/nachrichten Anrufen-Button", () => {
       }
     }
   });
+
+  test("Klick auf Anrufen löst Navigation zum tel:-Ziel aus", async ({ page }) => {
+    await login(page);
+
+    // Vor dem Laden der Seite: tel:-Navigation abfangen, damit der Browser
+    // nicht versucht, einen externen Protokoll-Handler zu öffnen (Chromium
+    // blockt das in Headless ohnehin). Wir merken uns das href stattdessen
+    // auf window.__lastTelHref.
+    await page.addInitScript(() => {
+      (window as any).__lastTelHref = null;
+      document.addEventListener(
+        "click",
+        (e) => {
+          const a = (e.target as HTMLElement | null)?.closest?.("a");
+          const href = a?.getAttribute("href") ?? "";
+          if (href.startsWith("tel:")) {
+            (window as any).__lastTelHref = href;
+            e.preventDefault();
+          }
+        },
+        true,
+      );
+    });
+
+    await page.goto("/nachrichten");
+    await expect(page.getByRole("heading", { name: "Mitarbeiterkontakt" })).toBeVisible();
+
+    const rows = page.locator('[class*="rounded-lg"][class*="border"][class*="bg-card"]');
+    await expect(rows.first()).toBeVisible({ timeout: 10_000 });
+
+    // Ersten Mitarbeiter mit aktivem Anrufen-Link finden
+    const count = await rows.count();
+    let targetHref: string | null = null;
+    for (let i = 0; i < count; i++) {
+      const link = rows.nth(i).getByRole("link", { name: /anrufen/i });
+      if ((await link.count()) === 0) continue;
+
+      targetHref = await link.first().getAttribute("href");
+      await link.first().click();
+      break;
+    }
+
+    test.skip(!targetHref, "Kein Mitarbeiter mit Telefonnummer – Klick-Test übersprungen.");
+
+    // Pfad innerhalb der App darf sich nicht geändert haben (tel: ist external)
+    await expect(page).toHaveURL(/\/nachrichten$/);
+
+    // Capture-Handler muss das tel:-Ziel registriert haben
+    const captured = await page.evaluate(() => (window as any).__lastTelHref as string | null);
+    expect(captured).toBe(targetHref);
+    expect(captured).toMatch(/^tel:\+?\d+/);
+  });
 });
