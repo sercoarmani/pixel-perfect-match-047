@@ -221,7 +221,7 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
 export const listEinrichtungen = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.from("einrichtungen").select("*, traeger:traeger_id(name)").order("name");
+    const { data, error } = await context.supabase.from("einrichtungen").select("*, traeger(name)").order("name");
     if (error) throw new Error(error.message);
     return data;
   });

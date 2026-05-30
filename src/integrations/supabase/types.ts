@@ -287,13 +287,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "einrichtungen_traeger_fk"
-            columns: ["traeger_id"]
-            isOneToOne: false
-            referencedRelation: "traeger"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "einrichtungen_traeger_id_fkey"
             columns: ["traeger_id"]
             isOneToOne: false
