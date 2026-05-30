@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, PhoneCall, Check, X, Megaphone, Copy } from "lucide-react";
+import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send } from "lucide-react";
 import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
+import { sendBedarfBroadcast } from "@/lib/telegram.functions";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
