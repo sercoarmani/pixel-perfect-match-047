@@ -11,7 +11,12 @@ import { Card } from "@/components/ui/card";
 import {
   importMitarbeiter, importEinrichtungen,
   importEinsaetze, importAbwesenheiten,
+  listEinrichtungen,
 } from "@/lib/dispo.functions";
+
+function normalizeName(s: string | null | undefined): string {
+  return (s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+}
 
 export const Route = createFileRoute("/_authenticated/import")({
   component: ImportPage,
