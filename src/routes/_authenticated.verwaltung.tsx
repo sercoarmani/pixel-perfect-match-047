@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash } from "lucide-react";
+import { GeocodeRunAllCard } from "@/components/geocode-run-all-card";
 
 export const Route = createFileRoute("/_authenticated/verwaltung")({
   component: VerwaltungPage,
