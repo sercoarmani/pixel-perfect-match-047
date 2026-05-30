@@ -135,7 +135,7 @@ function PlanPage() {
   }, [bedarfByDate]);
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-dvh flex-col">
       <header className="flex items-center justify-between border-b bg-card px-6 py-3">
         <div>
           <h1 className="text-lg font-semibold">Planungsmatrix</h1>
@@ -154,11 +154,11 @@ function PlanPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setAnchor(startOfMonth(addMonths(anchor, -1)))}>
+          <Button variant="outline" size="icon" aria-label="Vorheriger Monat" onClick={() => setAnchor(startOfMonth(addMonths(anchor, -1)))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAnchor(startOfMonth(new Date()))}>Heute</Button>
-          <Button variant="outline" size="icon" onClick={() => setAnchor(startOfMonth(addMonths(anchor, 1)))}>
+          <Button variant="outline" size="icon" aria-label="Nächster Monat" onClick={() => setAnchor(startOfMonth(addMonths(anchor, 1)))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Select value={maFilter} onValueChange={setMaFilter}>

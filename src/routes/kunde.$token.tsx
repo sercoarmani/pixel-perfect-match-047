@@ -118,7 +118,7 @@ function KundenPortal() {
                     <Textarea rows={2} value={e.notiz} onChange={(ev) => upd(i, { notiz: ev.target.value })} placeholder="z. B. Wohnbereich, besondere Anforderungen…" />
                   </div>
                   {eintraege.length > 1 && (
-                    <Button variant="ghost" size="icon" onClick={() => setEintraege(eintraege.filter((_, x) => x !== i))} className="text-destructive">
+                    <Button variant="ghost" size="icon" aria-label="Eintrag löschen" onClick={() => setEintraege(eintraege.filter((_, x) => x !== i))} className="text-destructive">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
