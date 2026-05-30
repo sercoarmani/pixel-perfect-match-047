@@ -112,7 +112,7 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
       const link = `${publicOrigin()}/m/${ma.zugangs_token}?monat=${data.monat}`;
       const text = `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`;
       try {
-        await tgSendMessage(Number(ma.telegram_chat_id), text);
+        const res = await tgSendMessage(Number(ma.telegram_chat_id), text);
         gesendet++;
         await logVersand({
           kanal: "telegram", richtung: "out", status: "sent",
@@ -120,7 +120,12 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
           betreff: `Verfügbarkeit ${monatLabel}`,
           inhalt: text, mitarbeiter_id: ma.id,
           referenz_typ: "verfuegbarkeit_broadcast",
-          metadata: { monat: data.monat },
+          metadata: {
+            monat: data.monat,
+            provider_message_id: res?.result?.message_id ?? null,
+            provider_status: 200,
+            provider_response: res,
+          },
         });
       } catch (e: any) {
         fehler.push(`${ma.nachname}: ${e.message}`);
@@ -129,6 +134,13 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
           empfaenger: String(ma.telegram_chat_id),
           betreff: `Verfügbarkeit ${monatLabel}`,
           inhalt: text, mitarbeiter_id: ma.id, fehler: e.message,
+          referenz_typ: "verfuegbarkeit_broadcast",
+          metadata: {
+            monat: data.monat,
+            provider_status: e?.status ?? null,
+            provider_response: e?.providerBody ?? null,
+            retry: { kind: "telegram_send", chat_id: Number(ma.telegram_chat_id), text },
+          },
         });
       }
     }
