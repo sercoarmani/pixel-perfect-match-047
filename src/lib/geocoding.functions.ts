@@ -2,16 +2,24 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 
+const DEFAULT_NOMINATIM = 'https://nominatim.openstreetmap.org';
 function resolveNominatimBase(): string {
   const raw = (process.env.NOMINATIM_BASE_URL || '').trim();
-  if (!raw) return 'https://nominatim.openstreetmap.org';
-  // Protokoll ergänzen falls vergessen (z.B. "nominatim.openstreetmap.org")
+  if (!raw) return DEFAULT_NOMINATIM;
   const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   try {
-    // trailing slash entfernen, damit `${base}/search` nicht zu `//search` wird
-    return new URL(withProto).toString().replace(/\/+$/, '');
+    const u = new URL(withProto);
+    const host = u.hostname;
+    // Hostnamen ohne Punkt (z.B. "benli") sind im Internet nicht auflösbar
+    // -> auf Default zurückfallen, statt ENOTFOUND zu produzieren.
+    const isLocal = host === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(host);
+    if (!isLocal && !host.includes('.')) {
+      console.warn(`[geocode] NOMINATIM_BASE_URL host "${host}" sieht ungültig aus, nutze Default.`);
+      return DEFAULT_NOMINATIM;
+    }
+    return u.toString().replace(/\/+$/, '');
   } catch {
-    return 'https://nominatim.openstreetmap.org';
+    return DEFAULT_NOMINATIM;
   }
 }
 const NOMINATIM_BASE = resolveNominatimBase();
@@ -76,9 +84,12 @@ async function geocodeAddress(params: {
       error: baseMsg,
       cause: causeMsg,
     });
+    const isDns = /ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT/i.test(causeMsg);
     return {
       ok: false,
-      error: causeMsg ? `${baseMsg} (${causeMsg})` : baseMsg,
+      error: isDns
+        ? 'Geocoding-Dienst nicht erreichbar – bitte Konfiguration prüfen'
+        : causeMsg ? `${baseMsg} (${causeMsg})` : baseMsg,
     };
   }
 }
