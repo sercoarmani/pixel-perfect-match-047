@@ -157,8 +157,21 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
             </div>
           </F>
           <F label="Name" full><Input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} /></F>
+          <F label="Straße & Nr." full><Input value={form.strasse} onChange={(e) => setForm({...form, strasse: e.target.value})} placeholder="z. B. Bahnhofstr. 12" /></F>
+          <F label="PLZ"><Input value={form.plz} onChange={(e) => setForm({...form, plz: e.target.value})} /></F>
           <F label="Ort"><Input value={form.ort} onChange={(e) => setForm({...form, ort: e.target.value})} /></F>
-          <F label="Wohnbereich"><Input value={form.wohnbereich} onChange={(e) => setForm({...form, wohnbereich: e.target.value})} /></F>
+          {row.id && (
+            <F label="Geocoding" full>
+              <div className="flex items-center gap-2 rounded border bg-card px-3 py-2">
+                <GeocodeStatusBadge status={row.geocode_status} fehler={row.geocode_fehler} lat={row.lat} lng={row.lng} />
+                <span className="text-xs text-muted-foreground flex-1">
+                  {row.lat != null && row.lng != null ? `${Number(row.lat).toFixed(5)}, ${Number(row.lng).toFixed(5)}` : (row.geocode_fehler ?? "Adresse speichern, dann geokodieren")}
+                </span>
+                <GeocodeSingleButton tabelle="einrichtungen" id={row.id} invalidateKey="einrichtungen" />
+              </div>
+            </F>
+          )}
+          <F label="Wohnbereich" full><Input value={form.wohnbereich} onChange={(e) => setForm({...form, wohnbereich: e.target.value})} /></F>
           <F label="Kontaktperson"><Input value={form.kontakt_name} onChange={(e) => setForm({...form, kontakt_name: e.target.value})} /></F>
           <F label="Telefon"><Input value={form.kontakt_telefon} onChange={(e) => setForm({...form, kontakt_telefon: e.target.value})} /></F>
           <F label="E-Mail" full><Input type="email" value={form.kontakt_email} onChange={(e) => setForm({...form, kontakt_email: e.target.value})} /></F>
