@@ -5,6 +5,23 @@ import {
   qualErfuellt, dienstMoeglich, maEinplanbar, einsatzBelegt,
   REAKTION_MAX_STUNDEN,
 } from "@/lib/matching";
+import { createKundenbestaetigungDraft } from "@/lib/kunden-bestaetigung.server";
+
+/** Best-effort Auto-Trigger für Block 5/6 nach MA-Zusage / Dispo-Zuteilung. */
+async function autoTriggerKundenbestaetigung(input: {
+  mitarbeiter_id: string;
+  einrichtung_id: string;
+  datum: string;
+  dienst: string;
+  einsatz_id?: string | null;
+  bedarf_id?: string | null;
+}): Promise<void> {
+  try {
+    await createKundenbestaetigungDraft(input);
+  } catch (err) {
+    console.error("[auto-trigger kundenbestaetigung] failed:", err);
+  }
+}
 
 /** Übersetzt die DB-Sperre (UNIQUE-Verletzung) in eine verständliche Meldung. */
 function istDoppelbelegungFehler(err: any): boolean {
@@ -95,6 +112,12 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
     }
 
     if (data.id) {
+      // Vorherigen Status lesen, um Übergang nach BESTAETIGT zu erkennen
+      const { data: vorher } = await supabase
+        .from("einsaetze")
+        .select("status")
+        .eq("id", data.id)
+        .maybeSingle();
       const { error } = await supabase.from("einsaetze").update({
         mitarbeiter_id: data.mitarbeiter_id,
         einrichtung_id: data.einrichtung_id,
@@ -104,6 +127,15 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
         notiz: data.notiz,
       }).eq("id", data.id);
       if (error) throw new Error(istDoppelbelegungFehler(error) ? doppelbelegungMeldung(data.datum) : error.message);
+      if (status === "BESTAETIGT" && vorher?.status !== "BESTAETIGT") {
+        await autoTriggerKundenbestaetigung({
+          mitarbeiter_id: data.mitarbeiter_id,
+          einrichtung_id: data.einrichtung_id,
+          datum: data.datum,
+          dienst: data.dienst,
+          einsatz_id: data.id,
+        });
+      }
       return { id: data.id };
     }
     const { data: row, error } = await supabase.from("einsaetze").insert({
@@ -115,6 +147,15 @@ export const upsertEinsatz = createServerFn({ method: "POST" })
       notiz: data.notiz,
     }).select("id").single();
     if (error) throw new Error(istDoppelbelegungFehler(error) ? doppelbelegungMeldung(data.datum) : error.message);
+    if (status === "BESTAETIGT") {
+      await autoTriggerKundenbestaetigung({
+        mitarbeiter_id: data.mitarbeiter_id,
+        einrichtung_id: data.einrichtung_id,
+        datum: data.datum,
+        dienst: data.dienst,
+        einsatz_id: row.id,
+      });
+    }
     return { id: row.id };
   });
 
@@ -929,7 +970,7 @@ export const bedarfZusage = createServerFn({ method: "POST" })
     }
 
     // 1) Einsatz anlegen (damit Dashboard/Matrix die Besetzung sehen)
-    const { error: insErr } = await supabase.from("einsaetze").insert({
+    const { data: insertedEinsatz, error: insErr } = await supabase.from("einsaetze").insert({
       mitarbeiter_id: data.mitarbeiter_id,
       einrichtung_id: bedarf.einrichtung_id,
       datum: bedarf.datum,
@@ -937,7 +978,7 @@ export const bedarfZusage = createServerFn({ method: "POST" })
       status: "BESTAETIGT",
       quelle: "dispo",
       notiz: bedarf.notiz ?? null,
-    });
+    }).select("id").maybeSingle();
     if (insErr) throw new Error(istDoppelbelegungFehler(insErr) ? doppelbelegungMeldung(bedarf.datum) : insErr.message);
 
     // 2) Zugehörige Verfügbarkeit auf "vergeben" setzen
@@ -970,6 +1011,16 @@ export const bedarfZusage = createServerFn({ method: "POST" })
       })
       .eq("id", data.bedarf_id);
     if (updBedarfErr) throw updBedarfErr;
+
+    // 4) Block 5 + 6: Kundenbestätigung als Entwurf anlegen (Auto-Trigger bei Dispo-Zuteilung)
+    await autoTriggerKundenbestaetigung({
+      mitarbeiter_id: data.mitarbeiter_id,
+      einrichtung_id: bedarf.einrichtung_id,
+      bedarf_id: data.bedarf_id,
+      einsatz_id: insertedEinsatz?.id ?? null,
+      datum: bedarf.datum,
+      dienst: bedarf.dienst,
+    });
 
     return { ok: true, besetzt: besetztAnzahl, benoetigt: bedarf.anzahl ?? 1, vollständig };
   });
