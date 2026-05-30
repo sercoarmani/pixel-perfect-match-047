@@ -281,6 +281,7 @@ function ProtokollPage() {
         retrying={retryMutation.isPending}
         retryResult={retryMutation.data as RetryResult | undefined}
         retryError={retryMutation.error as Error | null}
+        pollElapsed={pollElapsed}
       />
     </div>
   );
