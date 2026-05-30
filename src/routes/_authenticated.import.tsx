@@ -375,18 +375,55 @@ function PlanungslistePanel() {
         )}
 
         {parsed && (
-          <div className="mt-4 grid md:grid-cols-2 gap-4">
+          <div className="mt-4 space-y-4">
             <div>
-              <div className="text-xs font-semibold mb-1">Einrichtungen (Vorschau)</div>
-              <div className="rounded border max-h-48 overflow-auto text-xs">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs font-semibold">
+                  Einrichtungen (Vorschau) – {parsed.einrichtungen.length} erkannt
+                </div>
+                {parsed.einrichtungen.length > 100 && (
+                  <div className="text-[10px] text-muted-foreground">zeige erste 100</div>
+                )}
+              </div>
+              <div className="rounded border max-h-72 overflow-auto text-xs">
                 <table className="w-full">
-                  <thead className="bg-muted/50 sticky top-0"><tr><th className="px-2 py-1 text-left">Name</th><th className="px-2 py-1">WB</th><th className="px-2 py-1">PFK</th><th className="px-2 py-1">PHK</th></tr></thead>
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1 text-left w-12">Zeile</th>
+                      <th className="px-2 py-1 text-left">Name</th>
+                      <th className="px-2 py-1 text-left">Ort</th>
+                      <th className="px-2 py-1 text-left">WB</th>
+                      <th className="px-2 py-1 text-right">PFK</th>
+                      <th className="px-2 py-1 text-right">PHK</th>
+                      <th className="px-2 py-1 text-left">Quelle (Roh-Text)</th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {parsed.einrichtungen.slice(0, 40).map((e, i) => (
-                      <tr key={i} className="border-t"><td className="px-2 py-1">{e.name}</td><td className="px-2 py-1">{e.wohnbereich ?? ""}</td><td className="px-2 py-1">{e.vs_satz_pfk ?? ""}</td><td className="px-2 py-1">{e.vs_satz_phk ?? ""}</td></tr>
+                    {parsed.einrichtungen.slice(0, 100).map((e, i) => (
+                      <tr key={i} className="border-t align-top">
+                        <td className="px-2 py-1 font-mono text-muted-foreground">
+                          {e.source_row ?? "–"}
+                        </td>
+                        <td className="px-2 py-1 font-medium">{e.name}</td>
+                        <td className="px-2 py-1">{e.ort ?? <span className="text-muted-foreground">–</span>}</td>
+                        <td className="px-2 py-1">{e.wohnbereich ?? ""}</td>
+                        <td className="px-2 py-1 text-right">{e.vs_satz_pfk ?? ""}</td>
+                        <td className="px-2 py-1 text-right">{e.vs_satz_phk ?? ""}</td>
+                        <td className="px-2 py-1 text-muted-foreground font-mono text-[11px]" title={e.raw_label ?? ""}>
+                          {e.raw_label
+                            ? e.raw_label.length > 60
+                              ? e.raw_label.slice(0, 60) + "…"
+                              : e.raw_label
+                            : "–"}
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Tipp: „Zeile" = 1-basierte Excel-Zeilennummer im Blatt <code>Planungsliste</code>.
+                Stimmt ein Eintrag nicht? Den Roh-Text in der Quelle prüfen und ggf. die Excel-Zeile korrigieren.
               </div>
             </div>
             <div>
