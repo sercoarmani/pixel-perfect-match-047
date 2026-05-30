@@ -509,6 +509,69 @@ export type Database = {
         }
         Relationships: []
       }
+      mitarbeiter_dokumente: {
+        Row: {
+          ablaufdatum: string | null
+          ausstellungsdatum: string | null
+          created_at: string
+          datei_path: string
+          dateiname: string
+          erkannt_fehler: string | null
+          erkannt_geprueft: boolean
+          erkannt_json: Json | null
+          erkannt_status: string
+          groesse_bytes: number | null
+          hochgeladen_von: string | null
+          id: string
+          mime_type: string | null
+          mitarbeiter_id: string
+          notiz: string | null
+          typ: Database["public"]["Enums"]["dokument_typ"]
+          updated_at: string
+          weitergabe_erlaubt: boolean
+        }
+        Insert: {
+          ablaufdatum?: string | null
+          ausstellungsdatum?: string | null
+          created_at?: string
+          datei_path: string
+          dateiname: string
+          erkannt_fehler?: string | null
+          erkannt_geprueft?: boolean
+          erkannt_json?: Json | null
+          erkannt_status?: string
+          groesse_bytes?: number | null
+          hochgeladen_von?: string | null
+          id?: string
+          mime_type?: string | null
+          mitarbeiter_id: string
+          notiz?: string | null
+          typ?: Database["public"]["Enums"]["dokument_typ"]
+          updated_at?: string
+          weitergabe_erlaubt?: boolean
+        }
+        Update: {
+          ablaufdatum?: string | null
+          ausstellungsdatum?: string | null
+          created_at?: string
+          datei_path?: string
+          dateiname?: string
+          erkannt_fehler?: string | null
+          erkannt_geprueft?: boolean
+          erkannt_json?: Json | null
+          erkannt_status?: string
+          groesse_bytes?: number | null
+          hochgeladen_von?: string | null
+          id?: string
+          mime_type?: string | null
+          mitarbeiter_id?: string
+          notiz?: string | null
+          typ?: Database["public"]["Enums"]["dokument_typ"]
+          updated_at?: string
+          weitergabe_erlaubt?: boolean
+        }
+        Relationships: []
+      }
       nachrichten_templates: {
         Row: {
           bezeichnung: string
@@ -730,6 +793,7 @@ export type Database = {
       app_role: "admin" | "disponent"
       bedarf_status: "offen" | "in_bearbeitung" | "besetzt" | "abgesagt"
       dienst: "F" | "S" | "N"
+      dokument_typ: "zertifikat" | "fuehrungszeugnis" | "profil" | "sonstiges"
       einsatz_status:
         | "GEPLANT"
         | "INTERN"
@@ -890,6 +954,7 @@ export const Constants = {
       app_role: ["admin", "disponent"],
       bedarf_status: ["offen", "in_bearbeitung", "besetzt", "abgesagt"],
       dienst: ["F", "S", "N"],
+      dokument_typ: ["zertifikat", "fuehrungszeugnis", "profil", "sonstiges"],
       einsatz_status: [
         "GEPLANT",
         "INTERN",
