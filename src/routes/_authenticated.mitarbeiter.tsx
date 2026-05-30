@@ -103,12 +103,13 @@ function MitarbeiterPage() {
               <TableHead>Anstellung</TableHead>
               <TableHead>Telefon</TableHead>
               <TableHead>Wohnort</TableHead>
+              <TableHead>Geo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aktionen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={8} className="text-muted-foreground">Lade…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={9} className="text-muted-foreground">Lade…</TableCell></TableRow>}
             {filtered.map((m: any) => (
               <TableRow key={m.id}>
                 <TableCell className="font-mono cursor-pointer" onClick={() => setEdit(m)}>{m.kuerzel}</TableCell>
@@ -122,7 +123,8 @@ function MitarbeiterPage() {
                     </a>
                   ) : "—"}
                 </TableCell>
-                <TableCell>{m.wohnort ?? "—"}</TableCell>
+                <TableCell>{m.ort ?? m.wohnort ?? "—"}</TableCell>
+                <TableCell><GeocodeStatusBadge status={m.geocode_status} fehler={m.geocode_fehler} lat={m.lat} lng={m.lng} /></TableCell>
                 <TableCell>{m.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
