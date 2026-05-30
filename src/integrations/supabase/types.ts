@@ -216,15 +216,22 @@ export type Database = {
         Row: {
           aktiv: boolean
           created_at: string
+          geocode_fehler: string | null
+          geocode_status: string
+          geocodiert_am: string | null
           id: string
           kontakt_email: string | null
           kontakt_name: string | null
           kontakt_telefon: string | null
           kunde_angelegt: boolean
+          lat: number | null
+          lng: number | null
           name: string
           notiz: string | null
           ort: string | null
+          plz: string | null
           portal_token: string | null
+          strasse: string | null
           traeger_id: string | null
           vs_satz_pfk: number | null
           vs_satz_phk: number | null
@@ -233,15 +240,22 @@ export type Database = {
         Insert: {
           aktiv?: boolean
           created_at?: string
+          geocode_fehler?: string | null
+          geocode_status?: string
+          geocodiert_am?: string | null
           id?: string
           kontakt_email?: string | null
           kontakt_name?: string | null
           kontakt_telefon?: string | null
           kunde_angelegt?: boolean
+          lat?: number | null
+          lng?: number | null
           name: string
           notiz?: string | null
           ort?: string | null
+          plz?: string | null
           portal_token?: string | null
+          strasse?: string | null
           traeger_id?: string | null
           vs_satz_pfk?: number | null
           vs_satz_phk?: number | null
@@ -250,15 +264,22 @@ export type Database = {
         Update: {
           aktiv?: boolean
           created_at?: string
+          geocode_fehler?: string | null
+          geocode_status?: string
+          geocodiert_am?: string | null
           id?: string
           kontakt_email?: string | null
           kontakt_name?: string | null
           kontakt_telefon?: string | null
           kunde_angelegt?: boolean
+          lat?: number | null
+          lng?: number | null
           name?: string
           notiz?: string | null
           ort?: string | null
+          plz?: string | null
           portal_token?: string | null
+          strasse?: string | null
           traeger_id?: string | null
           vs_satz_pfk?: number | null
           vs_satz_phk?: number | null
@@ -586,15 +607,23 @@ export type Database = {
           einmal_code_verbraucht_am: string | null
           email: string | null
           fuehrerschein: boolean
+          geocode_fehler: string | null
+          geocode_status: string
+          geocodiert_am: string | null
           id: string
           kuerzel: string
+          lat: number | null
+          lng: number | null
           max_einsaetze: number
+          max_radius_km: number | null
           nachname: string
           notiz: string | null
+          ort: string | null
           plz: string | null
           profil_text: string | null
           qualifikation: Database["public"]["Enums"]["qualifikation"]
           status: Database["public"]["Enums"]["ma_status"]
+          strasse: string | null
           telefon: string | null
           telegram_chat_id: number | null
           telegram_username: string | null
@@ -613,15 +642,23 @@ export type Database = {
           einmal_code_verbraucht_am?: string | null
           email?: string | null
           fuehrerschein?: boolean
+          geocode_fehler?: string | null
+          geocode_status?: string
+          geocodiert_am?: string | null
           id?: string
           kuerzel: string
+          lat?: number | null
+          lng?: number | null
           max_einsaetze?: number
+          max_radius_km?: number | null
           nachname: string
           notiz?: string | null
+          ort?: string | null
           plz?: string | null
           profil_text?: string | null
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
+          strasse?: string | null
           telefon?: string | null
           telegram_chat_id?: number | null
           telegram_username?: string | null
@@ -640,15 +677,23 @@ export type Database = {
           einmal_code_verbraucht_am?: string | null
           email?: string | null
           fuehrerschein?: boolean
+          geocode_fehler?: string | null
+          geocode_status?: string
+          geocodiert_am?: string | null
           id?: string
           kuerzel?: string
+          lat?: number | null
+          lng?: number | null
           max_einsaetze?: number
+          max_radius_km?: number | null
           nachname?: string
           notiz?: string | null
+          ort?: string | null
           plz?: string | null
           profil_text?: string | null
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
+          strasse?: string | null
           telefon?: string | null
           telegram_chat_id?: number | null
           telegram_username?: string | null
