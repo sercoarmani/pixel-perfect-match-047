@@ -635,18 +635,38 @@ function PlanungslistePanel() {
 
         {report && (
           <div className="mt-4 space-y-2 text-sm">
-            {Object.entries(report).map(([k, v]: [string, any]) => (
+            {Object.entries(report)
+              .filter(([k]) => k !== "coverage" && k !== "einrichtungen_nachzuegler")
+              .map(([k, v]: [string, any]) => (
               <div key={k} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-status-bestaetigt" />
                   <span className="capitalize"><b>{k}</b>: neu {v.created ?? 0} · aktualisiert {v.updated ?? 0} · Fehler {v.errors?.length ?? 0}</span>
                 </div>
-                {k === "einrichtungen" && ((v.created_names?.length ?? 0) > 0 || (v.updated_names?.length ?? 0) > 0) && (
-                  <div className="ml-6 text-xs text-muted-foreground">
-                    {[...(v.created_names ?? []).map((name: string) => `+ ${name}`), ...(v.updated_names ?? []).map((name: string) => `↺ ${name}`)]
-                      .slice(0, 12)
-                      .join(" · ")}
-                    {((v.created_names?.length ?? 0) + (v.updated_names?.length ?? 0)) > 12 && " …"}
+                {k === "einrichtungen" && ((v.created_records?.length ?? 0) > 0 || (v.updated_records?.length ?? 0) > 0 || (v.created_names?.length ?? 0) > 0 || (v.updated_names?.length ?? 0) > 0) && (
+                  <div className="ml-6 text-xs text-muted-foreground flex flex-wrap gap-x-2 gap-y-1">
+                    {[
+                      ...((v.created_records ?? []).length
+                        ? (v.created_records as { id: string; name: string }[]).map((r) => ({ prefix: "+", name: r.name }))
+                        : (v.created_names ?? []).map((name: string) => ({ prefix: "+", name }))),
+                      ...((v.updated_records ?? []).length
+                        ? (v.updated_records as { id: string; name: string }[]).map((r) => ({ prefix: "↺", name: r.name }))
+                        : (v.updated_names ?? []).map((name: string) => ({ prefix: "↺", name }))),
+                    ]
+                      .slice(0, 20)
+                      .map((item, i) => (
+                        <Link
+                          key={i}
+                          to="/einrichtungen"
+                          search={{ q: item.name }}
+                          className="underline-offset-2 hover:underline text-foreground/80"
+                        >
+                          {item.prefix} {item.name}
+                        </Link>
+                      ))}
+                    {((v.created_records?.length ?? v.created_names?.length ?? 0) + (v.updated_records?.length ?? v.updated_names?.length ?? 0)) > 20 && (
+                      <span>…</span>
+                    )}
                   </div>
                 )}
                 {v.errors && v.errors.length > 0 && (
@@ -659,10 +679,33 @@ function PlanungslistePanel() {
                 )}
               </div>
             ))}
+
+            {report.coverage && (
+              <div
+                className={
+                  "rounded-md border px-3 py-2 text-xs " +
+                  (report.coverage.missing.length === 0
+                    ? "border-status-bestaetigt/30 bg-status-bestaetigt/10 text-foreground"
+                    : "border-destructive/40 bg-destructive/10 text-destructive")
+                }
+              >
+                {report.coverage.present} von {report.coverage.required} Einrichtungen aus der Datei sind in der Datenbank vorhanden.
+                {report.coverage.missing.length > 0 && (
+                  <div className="mt-1">Fehlt: {report.coverage.missing.slice(0, 8).join(", ")}{report.coverage.missing.length > 8 ? " …" : ""}</div>
+                )}
+              </div>
+            )}
+
             {report.einrichtungen && (
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap gap-2">
                 <Button asChild variant="outline" size="sm">
-                  <Link to="/_authenticated/einrichtungen">Einrichtungen öffnen</Link>
+                  <Link to="/einrichtungen">Einrichtungen-Liste</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/plan">Planungsmatrix</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/bedarf">Bedarfsassistent</Link>
                 </Button>
               </div>
             )}
