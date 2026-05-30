@@ -512,6 +512,69 @@ export type Database = {
         }
         Relationships: []
       }
+      kunden_bestaetigungen: {
+        Row: {
+          bedarf_id: string | null
+          betreff: string
+          body_text: string
+          created_at: string
+          created_by: string | null
+          dokument_ids: string[]
+          einrichtung_id: string
+          einsatz_id: string | null
+          empfaenger_email: string | null
+          empfaenger_name: string | null
+          fehler: string | null
+          gesendet_am: string | null
+          id: string
+          ma_unterlagen_fehler: string | null
+          ma_unterlagen_status: string
+          mitarbeiter_id: string
+          status: Database["public"]["Enums"]["kundenbestaetigung_status"]
+          updated_at: string
+        }
+        Insert: {
+          bedarf_id?: string | null
+          betreff?: string
+          body_text?: string
+          created_at?: string
+          created_by?: string | null
+          dokument_ids?: string[]
+          einrichtung_id: string
+          einsatz_id?: string | null
+          empfaenger_email?: string | null
+          empfaenger_name?: string | null
+          fehler?: string | null
+          gesendet_am?: string | null
+          id?: string
+          ma_unterlagen_fehler?: string | null
+          ma_unterlagen_status?: string
+          mitarbeiter_id: string
+          status?: Database["public"]["Enums"]["kundenbestaetigung_status"]
+          updated_at?: string
+        }
+        Update: {
+          bedarf_id?: string | null
+          betreff?: string
+          body_text?: string
+          created_at?: string
+          created_by?: string | null
+          dokument_ids?: string[]
+          einrichtung_id?: string
+          einsatz_id?: string | null
+          empfaenger_email?: string | null
+          empfaenger_name?: string | null
+          fehler?: string | null
+          gesendet_am?: string | null
+          id?: string
+          ma_unterlagen_fehler?: string | null
+          ma_unterlagen_status?: string
+          mitarbeiter_id?: string
+          status?: Database["public"]["Enums"]["kundenbestaetigung_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mitarbeiter: {
         Row: {
           aktiv: boolean
@@ -959,6 +1022,7 @@ export type Database = {
         | "archiviert"
         | "fehler"
       empfaenger_typ: "mitarbeiter" | "einrichtung"
+      kundenbestaetigung_status: "entwurf" | "gesendet" | "fehler"
       ma_status: "aktiv" | "austritt" | "schwanger" | "gesperrt" | "inaktiv"
       qualifikation:
         | "PFK"
@@ -1132,6 +1196,7 @@ export const Constants = {
         "fehler",
       ],
       empfaenger_typ: ["mitarbeiter", "einrichtung"],
+      kundenbestaetigung_status: ["entwurf", "gesendet", "fehler"],
       ma_status: ["aktiv", "austritt", "schwanger", "gesperrt", "inaktiv"],
       qualifikation: [
         "PFK",
