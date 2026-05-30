@@ -432,6 +432,8 @@ export type Database = {
           austritt_datum: string | null
           created_at: string
           dienste_moeglich: Database["public"]["Enums"]["dienst"][]
+          einmal_code: string | null
+          einmal_code_verbraucht_am: string | null
           email: string | null
           fuehrerschein: boolean
           id: string
@@ -457,6 +459,8 @@ export type Database = {
           austritt_datum?: string | null
           created_at?: string
           dienste_moeglich?: Database["public"]["Enums"]["dienst"][]
+          einmal_code?: string | null
+          einmal_code_verbraucht_am?: string | null
           email?: string | null
           fuehrerschein?: boolean
           id?: string
@@ -482,6 +486,8 @@ export type Database = {
           austritt_datum?: string | null
           created_at?: string
           dienste_moeglich?: Database["public"]["Enums"]["dienst"][]
+          einmal_code?: string | null
+          einmal_code_verbraucht_am?: string | null
           email?: string | null
           fuehrerschein?: boolean
           id?: string
@@ -684,6 +690,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      generate_einmal_code: { Args: { _vorname: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
