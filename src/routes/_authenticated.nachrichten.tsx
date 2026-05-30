@@ -119,6 +119,25 @@ function KontaktPage() {
                     </span>
                   )}
                 </Button>
+
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  disabled={!tel}
+                  className="h-8 gap-1.5"
+                  title={tel ? `Anrufen: ${m.telefon}` : "Keine Telefonnummer hinterlegt"}
+                >
+                  {tel ? (
+                    <a href={`tel:${tel}`}>
+                      <PhoneCall className="h-3.5 w-3.5" /> Anrufen
+                    </a>
+                  ) : (
+                    <span className="opacity-50 cursor-not-allowed">
+                      <PhoneCall className="h-3.5 w-3.5" /> Anrufen
+                    </span>
+                  )}
+                </Button>
               </div>
             );
           })}
