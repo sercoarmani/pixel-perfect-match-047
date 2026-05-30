@@ -249,13 +249,26 @@ function ProtokollPage() {
 
       <DetailDialog
         eintrag={selected}
-        onClose={() => setSelected(null)}
+        onClose={() => { setSelected(null); retryMutation.reset(); }}
         onRetry={(rawId) => retryMutation.mutate(rawId)}
         retrying={retryMutation.isPending}
+        retryResult={retryMutation.data as RetryResult | undefined}
+        retryError={retryMutation.error as Error | null}
       />
     </div>
   );
 }
+
+type RetryResult = {
+  ok: boolean;
+  status: "sent" | "failed";
+  startedAt: string;
+  finishedAt: string;
+  provider_status: number | null;
+  provider_message_id: number | null;
+  provider_response: any;
+  fehler: string | null;
+};
 
 function DetailDialog({
   eintrag, onClose, onRetry, retrying,
