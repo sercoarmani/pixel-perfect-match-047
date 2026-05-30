@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Phone } from "lucide-react";
+import { MessageSquare, Send, Phone, PhoneCall } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/nachrichten")({
   component: KontaktPage,
@@ -41,7 +41,7 @@ function KontaktPage() {
       <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" /> Kontakt
+            <MessageSquare className="h-6 w-6 text-primary" /> Mitarbeiterkontakt
           </h1>
           <p className="text-sm text-muted-foreground">
             Mitarbeiter direkt per Telegram oder WhatsApp anschreiben.
@@ -116,6 +116,25 @@ function KontaktPage() {
                   ) : (
                     <span className="opacity-50 cursor-not-allowed">
                       <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
+                    </span>
+                  )}
+                </Button>
+
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  disabled={!tel}
+                  className="h-8 gap-1.5"
+                  title={tel ? `Anrufen: ${m.telefon}` : "Keine Telefonnummer hinterlegt"}
+                >
+                  {tel ? (
+                    <a href={`tel:${tel}`}>
+                      <PhoneCall className="h-3.5 w-3.5" /> Anrufen
+                    </a>
+                  ) : (
+                    <span className="opacity-50 cursor-not-allowed">
+                      <PhoneCall className="h-3.5 w-3.5" /> Anrufen
                     </span>
                   )}
                 </Button>
