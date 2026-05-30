@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { listProtokoll, retryVersand } from "@/lib/versand-log.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -106,7 +106,34 @@ function ProtokollPage() {
     onError: (e: any) => toast.error(`Retry fehlgeschlagen: ${e?.message ?? "Unbekannt"}`),
   });
 
+  // Auto-Polling während ein Retry läuft: Liste alle 2.5s neu laden und
+  // verstrichene Sekunden im Dialog anzeigen, bis Erfolg oder Fehler vorliegt.
+  const [pollElapsed, setPollElapsed] = useState(0);
+  const pollStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!retryMutation.isPending) {
+      pollStartRef.current = null;
+      setPollElapsed(0);
+      return;
+    }
+    pollStartRef.current = Date.now();
+    setPollElapsed(0);
+    const tick = setInterval(() => {
+      if (pollStartRef.current) {
+        setPollElapsed(Math.floor((Date.now() - pollStartRef.current) / 1000));
+      }
+    }, 500);
+    const poll = setInterval(() => {
+      refetch();
+    }, 2500);
+    return () => {
+      clearInterval(tick);
+      clearInterval(poll);
+    };
+  }, [retryMutation.isPending, refetch]);
+
   const stats = data?.stats;
+
 
   return (
     <div className="space-y-6">
@@ -254,6 +281,7 @@ function ProtokollPage() {
         retrying={retryMutation.isPending}
         retryResult={retryMutation.data as RetryResult | undefined}
         retryError={retryMutation.error as Error | null}
+        pollElapsed={pollElapsed}
       />
     </div>
   );
@@ -271,7 +299,7 @@ type RetryResult = {
 };
 
 function DetailDialog({
-  eintrag, onClose, onRetry, retrying, retryResult, retryError,
+  eintrag, onClose, onRetry, retrying, retryResult, retryError, pollElapsed = 0,
 }: {
   eintrag: Eintrag | null;
   onClose: () => void;
@@ -279,6 +307,7 @@ function DetailDialog({
   retrying: boolean;
   retryResult?: RetryResult;
   retryError?: Error | null;
+  pollElapsed?: number;
 }) {
   const open = !!eintrag;
   const meta = eintrag?.metadata ?? {};
@@ -387,8 +416,12 @@ function DetailDialog({
                 </div>
 
                 {retryState === "running" && (
-                  <div className="text-xs text-muted-foreground">
-                    Nachricht wird erneut an den Provider gesendet…
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    <span>Nachricht wird erneut an den Provider gesendet…</span>
+                    <span className="font-mono tabular-nums">{pollElapsed}s</span>
+                    <span className="text-[10px] uppercase opacity-70">
+                      Live-Polling alle 2.5 s
+                    </span>
                   </div>
                 )}
 
