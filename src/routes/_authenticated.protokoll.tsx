@@ -106,7 +106,34 @@ function ProtokollPage() {
     onError: (e: any) => toast.error(`Retry fehlgeschlagen: ${e?.message ?? "Unbekannt"}`),
   });
 
+  // Auto-Polling während ein Retry läuft: Liste alle 2.5s neu laden und
+  // verstrichene Sekunden im Dialog anzeigen, bis Erfolg oder Fehler vorliegt.
+  const [pollElapsed, setPollElapsed] = useState(0);
+  const pollStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!retryMutation.isPending) {
+      pollStartRef.current = null;
+      setPollElapsed(0);
+      return;
+    }
+    pollStartRef.current = Date.now();
+    setPollElapsed(0);
+    const tick = setInterval(() => {
+      if (pollStartRef.current) {
+        setPollElapsed(Math.floor((Date.now() - pollStartRef.current) / 1000));
+      }
+    }, 500);
+    const poll = setInterval(() => {
+      refetch();
+    }, 2500);
+    return () => {
+      clearInterval(tick);
+      clearInterval(poll);
+    };
+  }, [retryMutation.isPending, refetch]);
+
   const stats = data?.stats;
+
 
   return (
     <div className="space-y-6">
