@@ -52,18 +52,29 @@ export const sendPersonalLink = createServerFn({ method: "POST" })
     const link = `${publicOrigin()}/m/${m.zugangs_token}`;
     const text = `Hallo ${m.vorname}, dein persönlicher Verfügbarkeits-Link:\n${link}`;
     try {
-      await tgSendMessage(Number(m.telegram_chat_id), text);
+      const res = await tgSendMessage(Number(m.telegram_chat_id), text);
       await logVersand({
         kanal: "telegram", richtung: "out", status: "sent",
         empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
         inhalt: text, mitarbeiter_id: m.id,
         referenz_typ: "personal_link",
+        metadata: {
+          provider_message_id: res?.result?.message_id ?? null,
+          provider_status: 200,
+          provider_response: res,
+        },
       });
     } catch (e: any) {
       await logVersand({
         kanal: "telegram", richtung: "out", status: "failed",
         empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
         inhalt: text, mitarbeiter_id: m.id, fehler: e.message,
+        referenz_typ: "personal_link",
+        metadata: {
+          provider_status: e?.status ?? null,
+          provider_response: e?.providerBody ?? null,
+          retry: { kind: "telegram_send", chat_id: Number(m.telegram_chat_id), text },
+        },
       });
       throw e;
     }
