@@ -1,0 +1,2 @@
+UPDATE public.mitarbeiter SET telegram_chat_id = NULL, telegram_username = NULL WHERE id = '63d77c39-78db-49b3-8072-4043ed12dbc4' AND telegram_chat_id = 999000111;
+DELETE FROM public.telegram_updates WHERE update_id = 999999991;
