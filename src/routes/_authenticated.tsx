@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tansta
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -12,17 +12,18 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/statistik", label: "Statistiken", icon: BarChart3 },
-  { to: "/bedarf", label: "Bedarfsassistent", icon: Sparkles },
-  { to: "/dispo", label: "Disposition", icon: PhoneCall },
-  { to: "/plan", label: "Planungsmatrix", icon: CalendarDays },
-  { to: "/anfragen", label: "Anfragen", icon: Inbox },
-  { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
-  { to: "/einrichtungen", label: "Einrichtungen", icon: Building2 },
-  { to: "/import", label: "Datei-Import", icon: FileSpreadsheet },
-  { to: "/export", label: "Datei-Export", icon: Download },
-  { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, indent: false },
+  { to: "/statistik", label: "Statistiken", icon: BarChart3, indent: false },
+  { to: "/bedarf", label: "Bedarfsassistent", icon: Sparkles, indent: false },
+  { to: "/dispo", label: "Disposition", icon: PhoneCall, indent: false },
+  { to: "/anfragen/kunden", label: "Anfragen von Kunden", icon: Inbox, indent: true },
+  { to: "/anfragen/mitarbeiter", label: "Verfügbarkeiten Mitarbeiter", icon: UserCheck, indent: true },
+  { to: "/plan", label: "Planungsmatrix", icon: CalendarDays, indent: false },
+  { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users, indent: false },
+  { to: "/einrichtungen", label: "Einrichtungen", icon: Building2, indent: false },
+  { to: "/import", label: "Datei-Import", icon: FileSpreadsheet, indent: false },
+  { to: "/export", label: "Datei-Export", icon: Download, indent: false },
+  { to: "/nachrichten", label: "Nachrichten", icon: MessageSquare, indent: false },
 ] as const;
 
 
@@ -40,6 +41,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             className={cn(
               "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+              n.indent && "ml-4",
               active ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
             )}
           >
