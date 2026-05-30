@@ -488,9 +488,13 @@ function DetailDialog({
                       </div>
                     )}
                     {retryResult.provider_response ? (
-                      <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/60 p-2 text-xs">
-                        {JSON.stringify(retryResult.provider_response, null, 2)}
-                      </pre>
+                      <div className="mt-2">
+                        <JsonBlock
+                          data={retryResult.provider_response}
+                          label="Finale HTTP-Response"
+                          maxHeight="max-h-56"
+                        />
+                      </div>
                     ) : (
                       <div className="mt-2 text-xs text-muted-foreground italic">
                         Keine Provider-Antwort vorhanden.
