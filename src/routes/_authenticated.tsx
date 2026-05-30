@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tansta
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall, UserCheck, Settings2 } from "lucide-react";
+import { CalendarDays, Users, Building2, Inbox, LogOut, MessageSquare, FileSpreadsheet, Download, LayoutDashboard, Sparkles, BarChart3, Menu, PhoneCall, UserCheck, Settings2, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -15,6 +15,7 @@ const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, indent: false },
   { to: "/statistik", label: "Statistiken", icon: BarChart3, indent: false },
   { to: "/bedarf", label: "Bedarfsassistent", icon: Sparkles, indent: false },
+  { to: "/posteingang", label: "Posteingang", icon: Mail, indent: false },
   { to: "/dispo", label: "Disposition", icon: PhoneCall, indent: false },
   { to: "/anfragen/kunden", label: "Anfragen von Kunden", icon: Inbox, indent: true },
   { to: "/anfragen/mitarbeiter", label: "Verfügbarkeiten Mitarbeiter", icon: UserCheck, indent: true },

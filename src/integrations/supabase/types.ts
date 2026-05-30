@@ -338,6 +338,93 @@ export type Database = {
           },
         ]
       }
+      email_inbox: {
+        Row: {
+          ai_extrakt: Json | null
+          ai_kategorie: string | null
+          ai_zusammenfassung: string | null
+          an_email: string | null
+          anhaenge: Json
+          bearbeitet_am: string | null
+          bearbeitet_von: string | null
+          betreff: string | null
+          body_html: string | null
+          body_text: string | null
+          created_at: string
+          empfangen_am: string
+          id: string
+          in_reply_to: string | null
+          message_id: string | null
+          notiz: string | null
+          raw: Json | null
+          status: Database["public"]["Enums"]["email_inbox_status"]
+          tags: string[]
+          updated_at: string
+          von_email: string
+          von_name: string | null
+          zugeordnet_einrichtung_id: string | null
+          zugeordnet_mitarbeiter_id: string | null
+          zuordnung_confidence: number | null
+          zuordnung_quelle: string | null
+        }
+        Insert: {
+          ai_extrakt?: Json | null
+          ai_kategorie?: string | null
+          ai_zusammenfassung?: string | null
+          an_email?: string | null
+          anhaenge?: Json
+          bearbeitet_am?: string | null
+          bearbeitet_von?: string | null
+          betreff?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          empfangen_am?: string
+          id?: string
+          in_reply_to?: string | null
+          message_id?: string | null
+          notiz?: string | null
+          raw?: Json | null
+          status?: Database["public"]["Enums"]["email_inbox_status"]
+          tags?: string[]
+          updated_at?: string
+          von_email: string
+          von_name?: string | null
+          zugeordnet_einrichtung_id?: string | null
+          zugeordnet_mitarbeiter_id?: string | null
+          zuordnung_confidence?: number | null
+          zuordnung_quelle?: string | null
+        }
+        Update: {
+          ai_extrakt?: Json | null
+          ai_kategorie?: string | null
+          ai_zusammenfassung?: string | null
+          an_email?: string | null
+          anhaenge?: Json
+          bearbeitet_am?: string | null
+          bearbeitet_von?: string | null
+          betreff?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string
+          empfangen_am?: string
+          id?: string
+          in_reply_to?: string | null
+          message_id?: string | null
+          notiz?: string | null
+          raw?: Json | null
+          status?: Database["public"]["Enums"]["email_inbox_status"]
+          tags?: string[]
+          updated_at?: string
+          von_email?: string
+          von_name?: string | null
+          zugeordnet_einrichtung_id?: string | null
+          zugeordnet_mitarbeiter_id?: string | null
+          zuordnung_confidence?: number | null
+          zuordnung_quelle?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -801,6 +888,13 @@ export type Database = {
         | "BESTAETIGT"
         | "AUSGEPLANT"
         | "ABGESAGT"
+      email_inbox_status:
+        | "neu"
+        | "zugeordnet"
+        | "bedarf_angelegt"
+        | "beantwortet"
+        | "archiviert"
+        | "fehler"
       empfaenger_typ: "mitarbeiter" | "einrichtung"
       ma_status: "aktiv" | "austritt" | "schwanger" | "gesperrt" | "inaktiv"
       qualifikation:
@@ -962,6 +1056,14 @@ export const Constants = {
         "BESTAETIGT",
         "AUSGEPLANT",
         "ABGESAGT",
+      ],
+      email_inbox_status: [
+        "neu",
+        "zugeordnet",
+        "bedarf_angelegt",
+        "beantwortet",
+        "archiviert",
+        "fehler",
       ],
       empfaenger_typ: ["mitarbeiter", "einrichtung"],
       ma_status: ["aktiv", "austritt", "schwanger", "gesperrt", "inaktiv"],
