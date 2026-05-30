@@ -572,3 +572,79 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon?:
     </Card>
   );
 }
+
+function JsonBlock({
+  data,
+  label,
+  maxHeight = "max-h-64",
+}: {
+  data: unknown;
+  label?: string;
+  /** Tailwind max-h-* Klasse, default max-h-64 */
+  maxHeight?: string;
+}) {
+  const json = useMemo(() => {
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  }, [data]);
+  const lineCount = useMemo(() => json.split("\n").length, [json]);
+  const sizeKb = useMemo(
+    () => (new Blob([json]).size / 1024).toFixed(1),
+    [json],
+  );
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(json);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore – Clipboard kann in iframes blockiert sein
+    }
+  };
+
+  return (
+    <div className="rounded-md border bg-muted/40 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 border-b bg-muted/60">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+          {label ?? "JSON"}
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground tabular-nums">
+          <span>{lineCount} Zeilen</span>
+          <span>·</span>
+          <span>{sizeKb} KB</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[10px] gap-1"
+            onClick={onCopy}
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" /> Kopiert
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" /> Kopieren
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+      <pre
+        className={
+          "overflow-auto p-3 text-xs leading-relaxed font-mono " +
+          "whitespace-pre [tab-size:2] " +
+          maxHeight
+        }
+      >
+        <code>{json}</code>
+      </pre>
+    </div>
+  );
+}
