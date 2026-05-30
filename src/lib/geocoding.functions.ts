@@ -196,3 +196,142 @@ export const geocodeSingle = createServerFn({ method: 'POST' })
       .eq('id', data.id);
     return { ok: false as const, error: r.error };
   });
+
+// ============================================================
+// Batch-Trigger: alle pending Datensätze (Mitarbeiter + Einrichtungen)
+// Pro Aufruf wird ein Chunk (max ~60 Records) abgearbeitet, damit der
+// Worker im Timeout bleibt. Der Client ruft so lange auf, bis remaining=0.
+// ============================================================
+
+const RunAllInput = z.object({
+  chunk_size: z.number().int().min(1).max(80).default(50),
+});
+
+type RowResult = {
+  tabelle: 'mitarbeiter' | 'einrichtungen';
+  id: string;
+  status: 'ok' | 'fehler';
+  message?: string;
+};
+
+export const getGeocodePending = createServerFn({ method: 'GET' })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const filter = 'geocode_status.is.null,geocode_status.eq.pending,geocode_status.eq.fehler';
+
+    const [ma, ein] = await Promise.all([
+      supabase.from('mitarbeiter').select('id', { count: 'exact', head: true }).or(filter),
+      supabase.from('einrichtungen').select('id', { count: 'exact', head: true }).or(filter),
+    ]);
+
+    return {
+      mitarbeiter_pending: ma.count ?? 0,
+      einrichtungen_pending: ein.count ?? 0,
+      total_pending: (ma.count ?? 0) + (ein.count ?? 0),
+    };
+  });
+
+export const runGeocodingAllPending = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => RunAllInput.parse(input ?? {}))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const userAgent =
+      process.env.NOMINATIM_USER_AGENT ||
+      'DispoPlan/1.0 (contact: admin@dispoplan.one)';
+    const filter = 'geocode_status.is.null,geocode_status.eq.pending,geocode_status.eq.fehler';
+
+    // Einrichtungen zuerst, danach Mitarbeiter — bis Chunk voll ist.
+    const slots = data.chunk_size;
+    const tables: Array<'einrichtungen' | 'mitarbeiter'> = ['einrichtungen', 'mitarbeiter'];
+
+    const queue: Array<{ tabelle: 'einrichtungen' | 'mitarbeiter'; id: string; strasse: string | null; plz: string | null; ort: string | null }> = [];
+
+    for (const t of tables) {
+      if (queue.length >= slots) break;
+      const remaining = slots - queue.length;
+      const { data: rows, error } = await supabase
+        .from(t)
+        .select('id, strasse, plz, ort')
+        .or(filter)
+        .limit(remaining);
+      if (error) {
+        return {
+          ok: false as const,
+          error: `${t}: ${error.message}`,
+          processed: 0,
+          success: 0,
+          failed: 0,
+          remaining: -1,
+          results: [] as RowResult[],
+        };
+      }
+      for (const r of rows ?? []) queue.push({ tabelle: t, ...r });
+    }
+
+    let success = 0;
+    let failed = 0;
+    const results: RowResult[] = [];
+
+    for (let i = 0; i < queue.length; i++) {
+      const row = queue[i];
+      if (i > 0) await sleep(1100); // Nominatim usage policy: max 1 req/s
+
+      const r = await geocodeAddress({
+        strasse: row.strasse,
+        plz: row.plz,
+        ort: row.ort,
+        userAgent,
+      });
+
+      if (r.ok) {
+        const { error: upErr } = await supabase
+          .from(row.tabelle)
+          .update({
+            lat: r.lat,
+            lng: r.lng,
+            geocode_status: 'ok',
+            geocode_fehler: null,
+            geocodiert_am: new Date().toISOString(),
+          })
+          .eq('id', row.id);
+        if (upErr) {
+          failed++;
+          results.push({ tabelle: row.tabelle, id: row.id, status: 'fehler', message: upErr.message });
+        } else {
+          success++;
+          results.push({ tabelle: row.tabelle, id: row.id, status: 'ok' });
+        }
+      } else {
+        failed++;
+        await supabase
+          .from(row.tabelle)
+          .update({
+            geocode_status: 'fehler',
+            geocode_fehler: r.error,
+            geocodiert_am: new Date().toISOString(),
+          })
+          .eq('id', row.id);
+        results.push({ tabelle: row.tabelle, id: row.id, status: 'fehler', message: r.error });
+      }
+    }
+
+    // Verbleibende offene Datensätze nach diesem Chunk neu zählen
+    const [maCnt, einCnt] = await Promise.all([
+      supabase.from('mitarbeiter').select('id', { count: 'exact', head: true }).or(filter),
+      supabase.from('einrichtungen').select('id', { count: 'exact', head: true }).or(filter),
+    ]);
+    const remaining = (maCnt.count ?? 0) + (einCnt.count ?? 0);
+
+    return {
+      ok: true as const,
+      processed: queue.length,
+      success,
+      failed,
+      remaining,
+      mitarbeiter_pending: maCnt.count ?? 0,
+      einrichtungen_pending: einCnt.count ?? 0,
+      results,
+    };
+  });
