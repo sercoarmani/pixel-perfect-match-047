@@ -28,10 +28,16 @@ function verifyInitData(initData: string, maxAgeSec = 24 * 60 * 60): { userId: n
 
   const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest();
   const expected = createHmac("sha256", secretKey).update(dataCheck).digest("hex");
-  if (expected !== hash) return null;
+  if (expected !== hash) {
+    console.warn("[miniapp] hash mismatch", { keys: [...params.keys()] });
+    return null;
+  }
 
   const authDate = Number(params.get("auth_date") ?? 0);
-  if (!authDate || Date.now() / 1000 - authDate > maxAgeSec) return null;
+  if (!authDate || Date.now() / 1000 - authDate > maxAgeSec) {
+    console.warn("[miniapp] auth_date abgelaufen", authDate);
+    return null;
+  }
 
   try {
     const user = JSON.parse(params.get("user") ?? "{}");
