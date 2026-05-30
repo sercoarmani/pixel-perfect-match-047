@@ -51,7 +51,10 @@ function MitarbeiterPage() {
           <h1 className="text-2xl font-semibold">Mitarbeiter</h1>
           <p className="text-sm text-muted-foreground">{filtered.length} von {data?.length ?? 0} Mitarbeitern</p>
         </div>
-        <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
+        <div className="flex items-center gap-2">
+          <VerfuegbarkeitsBroadcastButton mitarbeiter={data ?? []} />
+          <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
+        </div>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="text-xs text-muted-foreground mr-1">Filter:</div>
