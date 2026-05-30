@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import * as XLSX from "xlsx";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -147,6 +147,7 @@ function ImportPanel({ spec }: { spec: Spec }) {
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [filename, setFilename] = useState<string>("");
   const [result, setResult] = useState<any>(null);
+  const qc = useQueryClient();
 
   const importFn = useServerFn(
     spec.key === "mitarbeiter" ? importMitarbeiter :
@@ -159,6 +160,8 @@ function ImportPanel({ spec }: { spec: Spec }) {
     mutationFn: async () => importFn({ data: { rows } as any }),
     onSuccess: (res: any) => {
       setResult(res);
+      if (spec.key === "einrichtungen") qc.invalidateQueries({ queryKey: ["einrichtungen"] });
+      if (spec.key === "mitarbeiter") qc.invalidateQueries({ queryKey: ["mitarbeiter"] });
       toast.success(`Import abgeschlossen: ${res.created ?? 0} neu, ${res.updated ?? 0} aktualisiert`);
     },
     onError: (e: any) => toast.error(e.message ?? "Import fehlgeschlagen"),
@@ -285,6 +288,7 @@ function PlanungslistePanel() {
   const [einrichtungenEdit, setEinrichtungenEdit] = useState<EinrichtungEdit[]>([]);
   const [running, setRunning] = useState(false);
   const [report, setReport] = useState<any>(null);
+  const qc = useQueryClient();
 
   const importMa = useServerFn(importMitarbeiter);
   const importEi = useServerFn(importEinrichtungen);
@@ -358,6 +362,8 @@ function PlanungslistePanel() {
       if (parsed.abwesenheiten.length)
         out.abwesenheiten = await importAb({ data: { rows: parsed.abwesenheiten as any } });
       setReport(out);
+      qc.invalidateQueries({ queryKey: ["einrichtungen"] });
+      qc.invalidateQueries({ queryKey: ["mitarbeiter"] });
       toast.success("Import abgeschlossen");
     } catch (e: any) {
       toast.error("Import fehlgeschlagen: " + e.message);
