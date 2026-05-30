@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -591,6 +591,13 @@ function PlanungslistePanel() {
                 )}
               </div>
             ))}
+            {report.einrichtungen && (
+              <div className="pt-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/_authenticated/einrichtungen">Einrichtungen öffnen</Link>
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>
