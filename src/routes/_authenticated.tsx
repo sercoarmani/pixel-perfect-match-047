@@ -46,14 +46,14 @@ const SECTIONS: NavSection[] = [
     label: "Stammdaten",
     items: [
       { to: "/mitarbeiter", label: "Mitarbeiter", icon: Users },
-      { to: "/einrichtungen", label: "Einrichtungen", icon: Building2 },
+      { to: "/einrichtungen", label: "Kunden", icon: Building2 },
     ],
   },
   {
-    label: "Kommunikation",
+    label: "Kontakt",
     items: [
-      { to: "/nachrichten", label: "Kontakt", icon: MessageSquare },
-      { to: "/bestaetigungen", label: "Kundenbestätigungen", icon: MailCheck },
+      { to: "/nachrichten", label: "Mitarbeiterkontakt", icon: MessageSquare },
+      { to: "/bestaetigungen", label: "Kundenkontakt", icon: MailCheck },
       { to: "/protokoll", label: "Versand-Protokoll", icon: ScrollText },
     ],
   },
