@@ -15,8 +15,10 @@ function verifyInitData(initData: string, maxAgeSec = 24 * 60 * 60): { userId: n
 
   const params = new URLSearchParams(initData);
   const hash = params.get("hash");
-  if (!hash) return null;
+  if (!hash) { console.warn("[miniapp] kein hash in initData"); return null; }
   params.delete("hash");
+  // signature ist NICHT Teil des data_check_string
+  params.delete("signature");
 
   // data_check_string = alphabetisch sortierte key=value, getrennt durch \n
   const dataCheck = [...params.entries()]
