@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import * as XLSX from "xlsx";
+import mammoth from "mammoth";
 
 const BUCKET = "mitarbeiter-dokumente";
 const DOKUMENT_TYPEN = ["zertifikat", "fuehrungszeugnis", "profil", "sonstiges"] as const;
