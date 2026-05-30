@@ -495,8 +495,8 @@ export const importEinsaetze = createServerFn({ method: "POST" })
     for (let i = 0; i < data.rows.length; i++) {
       const r = data.rows[i];
       try {
-        const mitarbeiter_id = mitMap.get(r.mitarbeiter_kuerzel.toLowerCase());
-        const einrichtung_id = einMap.get(r.einrichtung_name.toLowerCase());
+        const mitarbeiter_id = mitMap.get(normalizeName(r.mitarbeiter_kuerzel));
+        const einrichtung_id = einMap.get(normalizeName(r.einrichtung_name));
         if (!mitarbeiter_id) throw new Error(`Mitarbeiter '${r.mitarbeiter_kuerzel}' nicht gefunden`);
         if (!einrichtung_id) throw new Error(`Einrichtung '${r.einrichtung_name}' nicht gefunden`);
         const datum = normalizeDate(r.datum);
