@@ -156,6 +156,9 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
       max_einsaetze: z.number().int().min(0).max(62).optional(),
       umkreis_km: z.number().min(0).max(2000).optional().nullable(),
       status: z.enum(["aktiv", "austritt", "schwanger", "gesperrt", "inaktiv"]).optional(),
+      plz: z.string().max(10).optional().nullable(),
+      fuehrerschein: z.boolean().optional(),
+      profil_text: z.string().max(4000).optional().nullable(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {

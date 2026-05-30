@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VTokenRouteImport } from './routes/v.$token'
+import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
 import { Route as AuthenticatedStatistikRouteImport } from './routes/_authenticated.statistik'
@@ -47,6 +48,11 @@ const IndexRoute = IndexRouteImport.update({
 const VTokenRoute = VTokenRouteImport.update({
   id: '/v/$token',
   path: '/v/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MTokenRoute = MTokenRouteImport.update({
+  id: '/m/$token',
+  path: '/m/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KundeTokenRoute = KundeTokenRouteImport.update({
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/statistik': typeof AuthenticatedStatistikRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
+  '/m/$token': typeof MTokenRoute
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/statistik': typeof AuthenticatedStatistikRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
+  '/m/$token': typeof MTokenRoute
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/_authenticated/statistik': typeof AuthenticatedStatistikRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
+  '/m/$token': typeof MTokenRoute
   '/v/$token': typeof VTokenRoute
   '/_authenticated/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/statistik'
     | '/b/$token'
     | '/kunde/$token'
+    | '/m/$token'
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
@@ -240,6 +250,7 @@ export interface FileRouteTypes {
     | '/statistik'
     | '/b/$token'
     | '/kunde/$token'
+    | '/m/$token'
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/_authenticated/statistik'
     | '/b/$token'
     | '/kunde/$token'
+    | '/m/$token'
     | '/v/$token'
     | '/_authenticated/anfragen/kunden'
     | '/_authenticated/anfragen/mitarbeiter'
@@ -274,6 +286,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   BTokenRoute: typeof BTokenRoute
   KundeTokenRoute: typeof KundeTokenRoute
+  MTokenRoute: typeof MTokenRoute
   VTokenRoute: typeof VTokenRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -306,6 +319,13 @@ declare module '@tanstack/react-router' {
       path: '/v/$token'
       fullPath: '/v/$token'
       preLoaderRoute: typeof VTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/m/$token': {
+      id: '/m/$token'
+      path: '/m/$token'
+      fullPath: '/m/$token'
+      preLoaderRoute: typeof MTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kunde/$token': {
@@ -476,9 +496,20 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   BTokenRoute: BTokenRoute,
   KundeTokenRoute: KundeTokenRoute,
+  MTokenRoute: MTokenRoute,
   VTokenRoute: VTokenRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
