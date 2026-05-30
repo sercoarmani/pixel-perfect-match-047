@@ -7,7 +7,7 @@ import { einsatzBelegt } from "@/lib/matching";
 function publicOrigin(): string {
   const env = process.env.PUBLIC_APP_ORIGIN;
   if (env) return env.replace(/\/$/, "");
-  return "https://project--0ceef16a-44ab-4863-91ea-da069df2e318.lovable.app";
+  return "https://dispoplan.one";
 }
 
 function normCode(s: string): string {
