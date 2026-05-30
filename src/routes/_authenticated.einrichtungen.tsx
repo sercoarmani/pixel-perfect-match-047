@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Link2, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
 
 export const Route = createFileRoute("/_authenticated/einrichtungen")({
   component: EinrichtungenPage,
