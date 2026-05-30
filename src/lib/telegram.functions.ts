@@ -52,18 +52,29 @@ export const sendPersonalLink = createServerFn({ method: "POST" })
     const link = `${publicOrigin()}/m/${m.zugangs_token}`;
     const text = `Hallo ${m.vorname}, dein persönlicher Verfügbarkeits-Link:\n${link}`;
     try {
-      await tgSendMessage(Number(m.telegram_chat_id), text);
+      const res = await tgSendMessage(Number(m.telegram_chat_id), text);
       await logVersand({
         kanal: "telegram", richtung: "out", status: "sent",
         empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
         inhalt: text, mitarbeiter_id: m.id,
         referenz_typ: "personal_link",
+        metadata: {
+          provider_message_id: res?.result?.message_id ?? null,
+          provider_status: 200,
+          provider_response: res,
+        },
       });
     } catch (e: any) {
       await logVersand({
         kanal: "telegram", richtung: "out", status: "failed",
         empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
         inhalt: text, mitarbeiter_id: m.id, fehler: e.message,
+        referenz_typ: "personal_link",
+        metadata: {
+          provider_status: e?.status ?? null,
+          provider_response: e?.providerBody ?? null,
+          retry: { kind: "telegram_send", chat_id: Number(m.telegram_chat_id), text },
+        },
       });
       throw e;
     }
@@ -101,7 +112,7 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
       const link = `${publicOrigin()}/m/${ma.zugangs_token}?monat=${data.monat}`;
       const text = `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`;
       try {
-        await tgSendMessage(Number(ma.telegram_chat_id), text);
+        const res = await tgSendMessage(Number(ma.telegram_chat_id), text);
         gesendet++;
         await logVersand({
           kanal: "telegram", richtung: "out", status: "sent",
@@ -109,7 +120,12 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
           betreff: `Verfügbarkeit ${monatLabel}`,
           inhalt: text, mitarbeiter_id: ma.id,
           referenz_typ: "verfuegbarkeit_broadcast",
-          metadata: { monat: data.monat },
+          metadata: {
+            monat: data.monat,
+            provider_message_id: res?.result?.message_id ?? null,
+            provider_status: 200,
+            provider_response: res,
+          },
         });
       } catch (e: any) {
         fehler.push(`${ma.nachname}: ${e.message}`);
@@ -118,6 +134,13 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
           empfaenger: String(ma.telegram_chat_id),
           betreff: `Verfügbarkeit ${monatLabel}`,
           inhalt: text, mitarbeiter_id: ma.id, fehler: e.message,
+          referenz_typ: "verfuegbarkeit_broadcast",
+          metadata: {
+            monat: data.monat,
+            provider_status: e?.status ?? null,
+            provider_response: e?.providerBody ?? null,
+            retry: { kind: "telegram_send", chat_id: Number(ma.telegram_chat_id), text },
+          },
         });
       }
     }
@@ -193,7 +216,7 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
     for (const m of empfaenger) {
       const text = `Hallo ${m.vorname},\n\n📅 ${datumStr} – ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}\n🏥 ${ort}\n🎓 ${bedarf.qualifikation}\n\nKannst du den Dienst übernehmen?`;
       try {
-        await tgSendMessage(Number(m.telegram_chat_id), text, { reply_markup });
+        const res = await tgSendMessage(Number(m.telegram_chat_id), text, { reply_markup });
         gesendet++;
         await logVersand({
           kanal: "telegram", richtung: "out", status: "sent",
@@ -204,6 +227,11 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
           einrichtung_id: bedarf.einrichtung_id,
           bedarf_id: bedarf.id,
           referenz_typ: "bedarf_broadcast",
+          metadata: {
+            provider_message_id: res?.result?.message_id ?? null,
+            provider_status: 200,
+            provider_response: res,
+          },
         });
       } catch (e: any) {
         fehler.push(`${m.nachname}: ${e.message}`);
@@ -214,6 +242,12 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
           inhalt: text, mitarbeiter_id: m.id,
           einrichtung_id: bedarf.einrichtung_id, bedarf_id: bedarf.id,
           fehler: e.message,
+          referenz_typ: "bedarf_broadcast",
+          metadata: {
+            provider_status: e?.status ?? null,
+            provider_response: e?.providerBody ?? null,
+            retry: { kind: "telegram_send", chat_id: Number(m.telegram_chat_id), text, reply_markup },
+          },
         });
       }
     }

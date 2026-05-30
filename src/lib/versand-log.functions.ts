@@ -189,3 +189,74 @@ export const listProtokoll = createServerFn({ method: "POST" })
       },
     };
   });
+
+import { tgSendMessage } from "@/lib/telegram.server";
+import { logVersand } from "@/lib/versand-log.server";
+
+/** Versucht einen fehlgeschlagenen Eintrag erneut zu senden. */
+export const retryVersand = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: { id: string }) =>
+    z.object({ id: z.string().uuid() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row, error } = await supabase
+      .from("versand_log")
+      .select("*")
+      .eq("id", data.id)
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "Eintrag nicht gefunden");
+    if (row.richtung !== "out") throw new Error("Nur ausgehende Einträge sind wiederholbar.");
+
+    const retry = (row.metadata as any)?.retry;
+    if (!retry?.kind) throw new Error("Kein Retry-Plan in den Metadaten gespeichert.");
+
+    if (retry.kind === "telegram_send") {
+      try {
+        const res = await tgSendMessage(Number(retry.chat_id), String(retry.text), {
+          reply_markup: retry.reply_markup,
+        });
+        await logVersand({
+          kanal: "telegram", richtung: "out", status: "sent",
+          empfaenger: String(retry.chat_id),
+          betreff: row.betreff ?? "Retry",
+          inhalt: String(retry.text),
+          mitarbeiter_id: row.mitarbeiter_id,
+          einrichtung_id: row.einrichtung_id,
+          bedarf_id: row.bedarf_id,
+          referenz_typ: `retry:${row.referenz_typ ?? "unbekannt"}`,
+          referenz_id: row.id,
+          metadata: {
+            retry_of: row.id,
+            provider_message_id: res?.result?.message_id ?? null,
+            provider_status: 200,
+            provider_response: res,
+          },
+        });
+        return { ok: true };
+      } catch (e: any) {
+        await logVersand({
+          kanal: "telegram", richtung: "out", status: "failed",
+          empfaenger: String(retry.chat_id),
+          betreff: row.betreff ?? "Retry",
+          inhalt: String(retry.text),
+          mitarbeiter_id: row.mitarbeiter_id,
+          einrichtung_id: row.einrichtung_id,
+          bedarf_id: row.bedarf_id,
+          referenz_typ: `retry:${row.referenz_typ ?? "unbekannt"}`,
+          referenz_id: row.id,
+          fehler: e.message,
+          metadata: {
+            retry_of: row.id,
+            provider_status: e?.status ?? null,
+            provider_response: e?.providerBody ?? null,
+            retry: retry,
+          },
+        });
+        throw new Error(e.message);
+      }
+    }
+
+    throw new Error(`Retry-Typ "${retry.kind}" wird nicht unterstützt.`);
+  });
