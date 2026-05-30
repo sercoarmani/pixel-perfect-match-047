@@ -366,8 +366,10 @@ function PlanungslistePanel() {
       if (parsed.abwesenheiten.length)
         out.abwesenheiten = await importAb({ data: { rows: parsed.abwesenheiten as any } });
       setReport(out);
-      qc.invalidateQueries({ queryKey: ["einrichtungen"] });
-      qc.invalidateQueries({ queryKey: ["mitarbeiter"] });
+      const keys = ["einrichtungen", "mitarbeiter", "traeger", "einsaetze", "abwesenheiten"];
+      await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k] })));
+      await Promise.all(keys.map((k) => qc.refetchQueries({ queryKey: [k], type: "active" })));
+      await router.invalidate();
       toast.success("Import abgeschlossen");
     } catch (e: any) {
       toast.error("Import fehlgeschlagen: " + e.message);
