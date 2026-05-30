@@ -295,6 +295,7 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
             <TabsList>
               <TabsTrigger value="stamm">Stammdaten</TabsTrigger>
               <TabsTrigger value="verkn">Verfügbarkeiten & Dienste</TabsTrigger>
+              <TabsTrigger value="docs">Dokumente</TabsTrigger>
             </TabsList>
             <TabsContent value="stamm">
               <StammFields form={form} setForm={setForm} />
@@ -302,7 +303,11 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
             <TabsContent value="verkn">
               <MitarbeiterVerknuepft mitarbeiterId={row.id} />
             </TabsContent>
+            <TabsContent value="docs">
+              <MitarbeiterDokumente mitarbeiterId={row.id} />
+            </TabsContent>
           </Tabs>
+
         ) : (
           <StammFields form={form} setForm={setForm} />
         )}
