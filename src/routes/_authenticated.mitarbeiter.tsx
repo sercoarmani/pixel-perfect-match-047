@@ -58,6 +58,7 @@ function MitarbeiterPage() {
         <div className="flex items-center gap-2">
           <VerfuegbarkeitsBroadcastButton mitarbeiter={data ?? []} />
           <DokumenteSammelImport mitarbeiter={data ?? []} />
+          <GeocodeBulkButton tabelle="mitarbeiter" invalidateKey="mitarbeiter" />
           <Button onClick={() => setEdit({})}><Plus className="mr-1 h-4 w-4" /> Neu</Button>
         </div>
       </div>
