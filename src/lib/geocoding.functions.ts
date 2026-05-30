@@ -2,8 +2,19 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 
-const NOMINATIM_BASE =
-  process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
+function resolveNominatimBase(): string {
+  const raw = (process.env.NOMINATIM_BASE_URL || '').trim();
+  if (!raw) return 'https://nominatim.openstreetmap.org';
+  // Protokoll ergänzen falls vergessen (z.B. "nominatim.openstreetmap.org")
+  const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    // trailing slash entfernen, damit `${base}/search` nicht zu `//search` wird
+    return new URL(withProto).toString().replace(/\/+$/, '');
+  } catch {
+    return 'https://nominatim.openstreetmap.org';
+  }
+}
+const NOMINATIM_BASE = resolveNominatimBase();
 
 type GeocodeResult =
   | { ok: true; lat: number; lng: number }
