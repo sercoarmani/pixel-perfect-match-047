@@ -229,26 +229,21 @@ describe("Block 5/6 Auto-Trigger – Idempotenz", () => {
   });
 
   it("doppelte manuelle Dispo-Zuteilungen (mit bedarf_id) erzeugen nur EINEN Entwurf", async () => {
-    // Simuliert zwei Klicks auf „Zusage" im Anruflisten-Dialog kurz hintereinander.
-    const [r1, r2] = await Promise.all([
-      createKundenbestaetigungDraft({
-        mitarbeiter_id: MA_ID,
-        einrichtung_id: EIN_ID,
-        bedarf_id: BEDARF_ID,
-        einsatz_id: "einsatz-2",
-        datum: "2026-06-02",
-        dienst: "S",
-      }),
-      // Direkt danach noch einmal (sequentiell – Auto-Trigger feuert nach DB-Commit)
-    ]);
-    const r3 = await createKundenbestaetigungDraft({
+    // Simuliert zwei parallele Auto-Trigger (z.B. Telegram-Zusage + Dispo-Klick
+    // praktisch gleichzeitig) plus einen späteren sequentiellen Aufruf.
+    const draftInput = {
       mitarbeiter_id: MA_ID,
       einrichtung_id: EIN_ID,
       bedarf_id: BEDARF_ID,
       einsatz_id: "einsatz-2",
       datum: "2026-06-02",
       dienst: "S",
-    });
+    };
+    const [r1, r2] = await Promise.all([
+      createKundenbestaetigungDraft(draftInput),
+      createKundenbestaetigungDraft(draftInput),
+    ]);
+    const r3 = await createKundenbestaetigungDraft(draftInput);
 
     expect(r1).not.toBeNull();
     expect(r2).toBe(r1);
