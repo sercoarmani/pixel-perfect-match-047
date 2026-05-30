@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { tgGetMe, tgSendMessage, tgSetWebhook } from "@/lib/telegram.server";
 import { qualErfuellt } from "@/lib/matching";
+import { logVersand } from "@/lib/versand-log.server";
 
 const DIENST_LANG: Record<string, string> = { F: "Frühdienst", S: "Spätdienst", N: "Nachtdienst" };
 
@@ -49,10 +50,23 @@ export const sendPersonalLink = createServerFn({ method: "POST" })
     if (error || !m) throw new Error(error?.message ?? "Mitarbeiter nicht gefunden");
     if (!m.telegram_chat_id) throw new Error("Mitarbeiter hat den Bot noch nicht gestartet.");
     const link = `${publicOrigin()}/m/${m.zugangs_token}`;
-    await tgSendMessage(
-      Number(m.telegram_chat_id),
-      `Hallo ${m.vorname}, dein persönlicher Verfügbarkeits-Link:\n${link}`,
-    );
+    const text = `Hallo ${m.vorname}, dein persönlicher Verfügbarkeits-Link:\n${link}`;
+    try {
+      await tgSendMessage(Number(m.telegram_chat_id), text);
+      await logVersand({
+        kanal: "telegram", richtung: "out", status: "sent",
+        empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
+        inhalt: text, mitarbeiter_id: m.id,
+        referenz_typ: "personal_link",
+      });
+    } catch (e: any) {
+      await logVersand({
+        kanal: "telegram", richtung: "out", status: "failed",
+        empfaenger: String(m.telegram_chat_id), betreff: "Persönlicher Link",
+        inhalt: text, mitarbeiter_id: m.id, fehler: e.message,
+      });
+      throw e;
+    }
     return { ok: true };
   });
 
@@ -84,15 +98,27 @@ export const sendVerfuegbarkeitsBroadcast = createServerFn({ method: "POST" })
     let gesendet = 0;
     const fehler: string[] = [];
     for (const ma of empfaenger ?? []) {
+      const link = `${publicOrigin()}/m/${ma.zugangs_token}?monat=${data.monat}`;
+      const text = `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`;
       try {
-        const link = `${publicOrigin()}/m/${ma.zugangs_token}?monat=${data.monat}`;
-        await tgSendMessage(
-          Number(ma.telegram_chat_id),
-          `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`,
-        );
+        await tgSendMessage(Number(ma.telegram_chat_id), text);
         gesendet++;
+        await logVersand({
+          kanal: "telegram", richtung: "out", status: "sent",
+          empfaenger: String(ma.telegram_chat_id),
+          betreff: `Verfügbarkeit ${monatLabel}`,
+          inhalt: text, mitarbeiter_id: ma.id,
+          referenz_typ: "verfuegbarkeit_broadcast",
+          metadata: { monat: data.monat },
+        });
       } catch (e: any) {
         fehler.push(`${ma.nachname}: ${e.message}`);
+        await logVersand({
+          kanal: "telegram", richtung: "out", status: "failed",
+          empfaenger: String(ma.telegram_chat_id),
+          betreff: `Verfügbarkeit ${monatLabel}`,
+          inhalt: text, mitarbeiter_id: ma.id, fehler: e.message,
+        });
       }
     }
     return { ok: true, gesendet, gesamt: (empfaenger ?? []).length, fehler };
@@ -165,15 +191,30 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
     let gesendet = 0;
     const fehler: string[] = [];
     for (const m of empfaenger) {
+      const text = `Hallo ${m.vorname},\n\n📅 ${datumStr} – ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}\n🏥 ${ort}\n🎓 ${bedarf.qualifikation}\n\nKannst du den Dienst übernehmen?`;
       try {
-        await tgSendMessage(
-          Number(m.telegram_chat_id),
-          `Hallo ${m.vorname},\n\n📅 ${datumStr} – ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}\n🏥 ${ort}\n🎓 ${bedarf.qualifikation}\n\nKannst du den Dienst übernehmen?`,
-          { reply_markup },
-        );
+        await tgSendMessage(Number(m.telegram_chat_id), text, { reply_markup });
         gesendet++;
+        await logVersand({
+          kanal: "telegram", richtung: "out", status: "sent",
+          empfaenger: String(m.telegram_chat_id),
+          betreff: `Bedarf ${datumStr} ${bedarf.dienst}`,
+          inhalt: text,
+          mitarbeiter_id: m.id,
+          einrichtung_id: bedarf.einrichtung_id,
+          bedarf_id: bedarf.id,
+          referenz_typ: "bedarf_broadcast",
+        });
       } catch (e: any) {
         fehler.push(`${m.nachname}: ${e.message}`);
+        await logVersand({
+          kanal: "telegram", richtung: "out", status: "failed",
+          empfaenger: String(m.telegram_chat_id),
+          betreff: `Bedarf ${datumStr} ${bedarf.dienst}`,
+          inhalt: text, mitarbeiter_id: m.id,
+          einrichtung_id: bedarf.einrichtung_id, bedarf_id: bedarf.id,
+          fehler: e.message,
+        });
       }
     }
     return { ok: true, gesendet, gesamt: empfaenger.length, fehler };

@@ -827,6 +827,69 @@ export type Database = {
           },
         ]
       }
+      versand_log: {
+        Row: {
+          absender: string | null
+          anfrage_id: string | null
+          ausgeloest_von: string | null
+          bedarf_id: string | null
+          betreff: string | null
+          created_at: string
+          einrichtung_id: string | null
+          empfaenger: string | null
+          fehler: string | null
+          id: string
+          inhalt: string | null
+          kanal: Database["public"]["Enums"]["versand_kanal"]
+          metadata: Json
+          mitarbeiter_id: string | null
+          referenz_id: string | null
+          referenz_typ: string | null
+          richtung: Database["public"]["Enums"]["versand_richtung"]
+          status: Database["public"]["Enums"]["versand_status"]
+        }
+        Insert: {
+          absender?: string | null
+          anfrage_id?: string | null
+          ausgeloest_von?: string | null
+          bedarf_id?: string | null
+          betreff?: string | null
+          created_at?: string
+          einrichtung_id?: string | null
+          empfaenger?: string | null
+          fehler?: string | null
+          id?: string
+          inhalt?: string | null
+          kanal: Database["public"]["Enums"]["versand_kanal"]
+          metadata?: Json
+          mitarbeiter_id?: string | null
+          referenz_id?: string | null
+          referenz_typ?: string | null
+          richtung?: Database["public"]["Enums"]["versand_richtung"]
+          status?: Database["public"]["Enums"]["versand_status"]
+        }
+        Update: {
+          absender?: string | null
+          anfrage_id?: string | null
+          ausgeloest_von?: string | null
+          bedarf_id?: string | null
+          betreff?: string | null
+          created_at?: string
+          einrichtung_id?: string | null
+          empfaenger?: string | null
+          fehler?: string | null
+          id?: string
+          inhalt?: string | null
+          kanal?: Database["public"]["Enums"]["versand_kanal"]
+          metadata?: Json
+          mitarbeiter_id?: string | null
+          referenz_id?: string | null
+          referenz_typ?: string | null
+          richtung?: Database["public"]["Enums"]["versand_richtung"]
+          status?: Database["public"]["Enums"]["versand_status"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -908,6 +971,9 @@ export type Database = {
         | "Berufserfahrung"
         | "LG1_LG2"
         | "Krankenschwester"
+      versand_kanal: "telegram" | "email" | "whatsapp" | "intern" | "sonstiges"
+      versand_richtung: "out" | "in"
+      versand_status: "queued" | "sent" | "delivered" | "failed" | "received"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1079,6 +1145,9 @@ export const Constants = {
         "LG1_LG2",
         "Krankenschwester",
       ],
+      versand_kanal: ["telegram", "email", "whatsapp", "intern", "sonstiges"],
+      versand_richtung: ["out", "in"],
+      versand_status: ["queued", "sent", "delivered", "failed", "received"],
     },
   },
 } as const

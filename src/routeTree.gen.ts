@@ -19,6 +19,7 @@ import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
 import { Route as AuthenticatedVerwaltungRouteImport } from './routes/_authenticated.verwaltung'
 import { Route as AuthenticatedStatistikRouteImport } from './routes/_authenticated.statistik'
+import { Route as AuthenticatedProtokollRouteImport } from './routes/_authenticated.protokoll'
 import { Route as AuthenticatedPosteingangRouteImport } from './routes/_authenticated.posteingang'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
@@ -83,6 +84,11 @@ const AuthenticatedVerwaltungRoute = AuthenticatedVerwaltungRouteImport.update({
 const AuthenticatedStatistikRoute = AuthenticatedStatistikRouteImport.update({
   id: '/statistik',
   path: '/statistik',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProtokollRoute = AuthenticatedProtokollRouteImport.update({
+  id: '/protokoll',
+  path: '/protokoll',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPosteingangRoute =
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/posteingang': typeof AuthenticatedPosteingangRoute
+  '/protokoll': typeof AuthenticatedProtokollRoute
   '/statistik': typeof AuthenticatedStatistikRoute
   '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/posteingang': typeof AuthenticatedPosteingangRoute
+  '/protokoll': typeof AuthenticatedProtokollRoute
   '/statistik': typeof AuthenticatedStatistikRoute
   '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/posteingang': typeof AuthenticatedPosteingangRoute
+  '/_authenticated/protokoll': typeof AuthenticatedProtokollRoute
   '/_authenticated/statistik': typeof AuthenticatedStatistikRoute
   '/_authenticated/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
@@ -273,6 +282,7 @@ export interface FileRouteTypes {
     | '/nachrichten'
     | '/plan'
     | '/posteingang'
+    | '/protokoll'
     | '/statistik'
     | '/verwaltung'
     | '/b/$token'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/nachrichten'
     | '/plan'
     | '/posteingang'
+    | '/protokoll'
     | '/statistik'
     | '/verwaltung'
     | '/b/$token'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/_authenticated/nachrichten'
     | '/_authenticated/plan'
     | '/_authenticated/posteingang'
+    | '/_authenticated/protokoll'
     | '/_authenticated/statistik'
     | '/_authenticated/verwaltung'
     | '/b/$token'
@@ -426,6 +438,13 @@ declare module '@tanstack/react-router' {
       path: '/statistik'
       fullPath: '/statistik'
       preLoaderRoute: typeof AuthenticatedStatistikRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/protokoll': {
+      id: '/_authenticated/protokoll'
+      path: '/protokoll'
+      fullPath: '/protokoll'
+      preLoaderRoute: typeof AuthenticatedProtokollRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/posteingang': {
@@ -570,6 +589,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedPosteingangRoute: typeof AuthenticatedPosteingangRoute
+  AuthenticatedProtokollRoute: typeof AuthenticatedProtokollRoute
   AuthenticatedStatistikRoute: typeof AuthenticatedStatistikRoute
   AuthenticatedVerwaltungRoute: typeof AuthenticatedVerwaltungRoute
 }
@@ -586,6 +606,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedPosteingangRoute: AuthenticatedPosteingangRoute,
+  AuthenticatedProtokollRoute: AuthenticatedProtokollRoute,
   AuthenticatedStatistikRoute: AuthenticatedStatistikRoute,
   AuthenticatedVerwaltungRoute: AuthenticatedVerwaltungRoute,
 }
@@ -610,13 +631,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
