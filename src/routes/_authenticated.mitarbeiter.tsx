@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { generateDienstplanExcel } from "@/lib/excel-dienstplan";
 import { format, addDays } from "date-fns";
+import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
+
 
 
 export const Route = createFileRoute("/_authenticated/mitarbeiter")({
