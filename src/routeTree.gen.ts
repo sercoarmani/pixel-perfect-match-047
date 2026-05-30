@@ -19,6 +19,7 @@ import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
 import { Route as AuthenticatedVerwaltungRouteImport } from './routes/_authenticated.verwaltung'
 import { Route as AuthenticatedStatistikRouteImport } from './routes/_authenticated.statistik'
+import { Route as AuthenticatedPosteingangRouteImport } from './routes/_authenticated.posteingang'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
 import { Route as AuthenticatedMitarbeiterRouteImport } from './routes/_authenticated.mitarbeiter'
@@ -33,6 +34,7 @@ import { Route as AuthenticatedAnfragenMitarbeiterRouteImport } from './routes/_
 import { Route as AuthenticatedAnfragenKundenRouteImport } from './routes/_authenticated.anfragen.kunden'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -83,6 +85,12 @@ const AuthenticatedStatistikRoute = AuthenticatedStatistikRouteImport.update({
   path: '/statistik',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPosteingangRoute =
+  AuthenticatedPosteingangRouteImport.update({
+    id: '/posteingang',
+    path: '/posteingang',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
   id: '/plan',
   path: '/plan',
@@ -160,6 +168,11 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
+  id: '/api/public/email/inbound',
+  path: '/api/public/email/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -174,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
+  '/posteingang': typeof AuthenticatedPosteingangRoute
   '/statistik': typeof AuthenticatedStatistikRoute
   '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
@@ -183,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -199,6 +214,7 @@ export interface FileRoutesByTo {
   '/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
+  '/posteingang': typeof AuthenticatedPosteingangRoute
   '/statistik': typeof AuthenticatedStatistikRoute
   '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
@@ -208,6 +224,7 @@ export interface FileRoutesByTo {
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -226,6 +243,7 @@ export interface FileRoutesById {
   '/_authenticated/mitarbeiter': typeof AuthenticatedMitarbeiterRoute
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
+  '/_authenticated/posteingang': typeof AuthenticatedPosteingangRoute
   '/_authenticated/statistik': typeof AuthenticatedStatistikRoute
   '/_authenticated/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
@@ -235,6 +253,7 @@ export interface FileRoutesById {
   '/v/$token': typeof VTokenRoute
   '/_authenticated/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
@@ -253,6 +272,7 @@ export interface FileRouteTypes {
     | '/mitarbeiter'
     | '/nachrichten'
     | '/plan'
+    | '/posteingang'
     | '/statistik'
     | '/verwaltung'
     | '/b/$token'
@@ -262,6 +282,7 @@ export interface FileRouteTypes {
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
+    | '/api/public/email/inbound'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
@@ -278,6 +299,7 @@ export interface FileRouteTypes {
     | '/mitarbeiter'
     | '/nachrichten'
     | '/plan'
+    | '/posteingang'
     | '/statistik'
     | '/verwaltung'
     | '/b/$token'
@@ -287,6 +309,7 @@ export interface FileRouteTypes {
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
+    | '/api/public/email/inbound'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
   id:
@@ -304,6 +327,7 @@ export interface FileRouteTypes {
     | '/_authenticated/mitarbeiter'
     | '/_authenticated/nachrichten'
     | '/_authenticated/plan'
+    | '/_authenticated/posteingang'
     | '/_authenticated/statistik'
     | '/_authenticated/verwaltung'
     | '/b/$token'
@@ -313,6 +337,7 @@ export interface FileRouteTypes {
     | '/v/$token'
     | '/_authenticated/anfragen/kunden'
     | '/_authenticated/anfragen/mitarbeiter'
+    | '/api/public/email/inbound'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
@@ -326,6 +351,7 @@ export interface RootRouteChildren {
   MTokenRoute: typeof MTokenRoute
   TgVerfuegbarkeitRoute: typeof TgVerfuegbarkeitRoute
   VTokenRoute: typeof VTokenRoute
+  ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
@@ -400,6 +426,13 @@ declare module '@tanstack/react-router' {
       path: '/statistik'
       fullPath: '/statistik'
       preLoaderRoute: typeof AuthenticatedStatistikRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/posteingang': {
+      id: '/_authenticated/posteingang'
+      path: '/posteingang'
+      fullPath: '/posteingang'
+      preLoaderRoute: typeof AuthenticatedPosteingangRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/plan': {
@@ -500,6 +533,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/inbound': {
+      id: '/api/public/email/inbound'
+      path: '/api/public/email/inbound'
+      fullPath: '/api/public/email/inbound'
+      preLoaderRoute: typeof ApiPublicEmailInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -529,6 +569,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMitarbeiterRoute: typeof AuthenticatedMitarbeiterRoute
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
+  AuthenticatedPosteingangRoute: typeof AuthenticatedPosteingangRoute
   AuthenticatedStatistikRoute: typeof AuthenticatedStatistikRoute
   AuthenticatedVerwaltungRoute: typeof AuthenticatedVerwaltungRoute
 }
@@ -544,6 +585,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMitarbeiterRoute: AuthenticatedMitarbeiterRoute,
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
+  AuthenticatedPosteingangRoute: AuthenticatedPosteingangRoute,
   AuthenticatedStatistikRoute: AuthenticatedStatistikRoute,
   AuthenticatedVerwaltungRoute: AuthenticatedVerwaltungRoute,
 }
@@ -561,6 +603,7 @@ const rootRouteChildren: RootRouteChildren = {
   MTokenRoute: MTokenRoute,
   TgVerfuegbarkeitRoute: TgVerfuegbarkeitRoute,
   VTokenRoute: VTokenRoute,
+  ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
