@@ -282,6 +282,9 @@ function EditDialog({ row, onClose }: { row: any; onClose: () => void }) {
     umkreis_km: row.umkreis_km ?? null,
     status: row.status ?? "aktiv",
     plz: row.plz ?? "",
+    strasse: row.strasse ?? "",
+    ort: row.ort ?? "",
+    max_radius_km: row.max_radius_km ?? null,
     fuehrerschein: row.fuehrerschein ?? false,
     profil_text: row.profil_text ?? "",
   });
