@@ -37,13 +37,18 @@ async function greetLinked(chatId: number, vorname: string, zugangsToken?: strin
   const origin = publicOrigin();
   const miniAppUrl = `${origin}/tg/verfuegbarkeit?monat=${monat}`;
   const portalUrl = token ? `${origin}/m/${token}?monat=${monat}` : origin;
+  const botUsername = (process.env.TELEGRAM_BOT_USERNAME ?? "").replace(/^@/, "").trim();
+  const startParam = `monat_${monat.replace("-", "")}`;
+  const openButton = botUsername
+    ? { text: "📅 In Telegram öffnen", url: `https://t.me/${botUsername}?startapp=${startParam}` }
+    : { text: "📅 In Telegram öffnen", web_app: { url: miniAppUrl } };
   await tgSendMessage(
     chatId,
     `Hallo ${vorname} 👋\nTrage hier deine Verfügbarkeit für ${monat} ein:`,
     {
       reply_markup: {
         inline_keyboard: [
-          [{ text: "📅 In Telegram öffnen", web_app: { url: miniAppUrl } }],
+          [openButton],
           [{ text: "🌐 Im Browser öffnen", url: portalUrl }],
         ],
       },
