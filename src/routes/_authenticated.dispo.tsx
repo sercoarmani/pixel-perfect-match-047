@@ -87,8 +87,11 @@ function BedarfCard({ bedarf }: { bedarf: any }) {
         </div>
         {bedarf.anzahl > 1 && <Badge variant="outline">×{bedarf.anzahl}</Badge>}
         {bedarf.notiz && <div className="text-xs text-muted-foreground max-w-md truncate">{bedarf.notiz}</div>}
-        <Button size="sm" variant="outline" className="ml-auto" onClick={() => setShowBc((v) => !v)}>
-          <Megaphone className="mr-1 h-3.5 w-3.5" /> Niemand erreicht – Broadcast
+        <Button size="sm" className="ml-auto" onClick={() => mBroadcast.mutate()} disabled={mBroadcast.isPending}>
+          <Send className="mr-1 h-3.5 w-3.5" /> Telegram-Broadcast
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setShowBc((v) => !v)}>
+          <Megaphone className="mr-1 h-3.5 w-3.5" /> Niemand erreicht
         </Button>
       </div>
 
