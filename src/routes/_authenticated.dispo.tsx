@@ -208,8 +208,20 @@ function AnruflisteRow({ bedarf, mitarbeiter }: { bedarf: any; mitarbeiter: any 
       </TableCell>
       <TableCell><Badge variant="secondary">{mitarbeiter.qualifikation}</Badge></TableCell>
       <TableCell className="tabular-nums">
-        {mitarbeiter.umkreis_km != null ? `${mitarbeiter.umkreis_km} km` : <span className="text-muted-foreground">—</span>}
+        {mitarbeiter.distanz_km != null ? (
+          <span>
+            {mitarbeiter.distanz_km.toFixed(1)} km
+            {mitarbeiter.limit_km != null && (
+              <span className="text-xs text-muted-foreground"> / {mitarbeiter.limit_km.toFixed(0)} km</span>
+            )}
+          </span>
+        ) : mitarbeiter.umkreis_km != null ? (
+          `${mitarbeiter.umkreis_km} km`
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
+
       <TableCell>
         {phone ? (
           <a href={`tel:${phone}`} className="inline-flex items-center gap-1 text-primary hover:underline">
