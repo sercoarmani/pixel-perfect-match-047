@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listMitarbeiter, upsertMitarbeiter, deleteMitarbeiter, getMitarbeiterDienstplan, getMitarbeiterDetail } from "@/lib/dispo.functions";
 import { regenerateZugangsToken } from "@/lib/mitarbeiter-portal.functions";
+import { getTelegramBotInfo, sendPersonalLink } from "@/lib/telegram.functions";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
