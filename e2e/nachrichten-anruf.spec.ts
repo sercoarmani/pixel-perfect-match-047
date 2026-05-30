@@ -132,6 +132,34 @@ test.describe("/nachrichten Anrufen-Button", () => {
     // Capture-Handler muss das tel:-Ziel registriert haben
     const captured = await page.evaluate(() => (window as any).__lastTelHref as string | null);
     expect(captured).toBe(targetHref);
-    expect(captured).toMatch(/^tel:\+?\d+/);
+
+    // --- Strikte Format-Assertions (spiegelt normalizePhone in src/routes/_authenticated.nachrichten.tsx) ---
+    // normalizePhone: p.replace(/[^\d+]/g, "") → erlaubt sind ausschließlich Ziffern und '+'.
+    const number = captured!.replace(/^tel:/, "");
+
+    // 1) Präfix korrekt
+    expect(captured!.startsWith("tel:")).toBe(true);
+
+    // 2) Komplettes href: nur 'tel:' + erlaubte Zeichen, nichts dazwischen
+    expect(captured!).toMatch(/^tel:[\d+]+$/);
+
+    // 3) Keine Leerzeichen, Bindestriche, Klammern, Punkte, Schrägstriche o.ä.
+    expect(number).not.toMatch(/\s/);
+    expect(number).not.toMatch(/[-()./]/);
+    expect(number).not.toMatch(/[a-zA-Z]/);
+
+    // 4) '+' darf nur ganz am Anfang stehen (E.164-konform), höchstens einmal
+    const plusCount = (number.match(/\+/g) ?? []).length;
+    expect(plusCount).toBeLessThanOrEqual(1);
+    if (plusCount === 1) {
+      expect(number.indexOf("+")).toBe(0);
+    }
+
+    // 5) Mindestens eine Ziffer
+    expect(number).toMatch(/\d/);
+
+    // 6) Idempotenz: normalizePhone auf die Nummer angewendet muss dasselbe ergeben
+    const renormalized = number.replace(/[^\d+]/g, "");
+    expect(renormalized).toBe(number);
   });
 });
