@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VTokenRouteImport } from './routes/v.$token'
+import { Route as TgVerfuegbarkeitRouteImport } from './routes/tg.verfuegbarkeit'
 import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
@@ -49,6 +50,11 @@ const IndexRoute = IndexRouteImport.update({
 const VTokenRoute = VTokenRouteImport.update({
   id: '/v/$token',
   path: '/v/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TgVerfuegbarkeitRoute = TgVerfuegbarkeitRouteImport.update({
+  id: '/tg/verfuegbarkeit',
+  path: '/tg/verfuegbarkeit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MTokenRoute = MTokenRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
+  '/tg/verfuegbarkeit': typeof TgVerfuegbarkeitRoute
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
+  '/tg/verfuegbarkeit': typeof TgVerfuegbarkeitRoute
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
+  '/tg/verfuegbarkeit': typeof TgVerfuegbarkeitRoute
   '/v/$token': typeof VTokenRoute
   '/_authenticated/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/b/$token'
     | '/kunde/$token'
     | '/m/$token'
+    | '/tg/verfuegbarkeit'
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/b/$token'
     | '/kunde/$token'
     | '/m/$token'
+    | '/tg/verfuegbarkeit'
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/b/$token'
     | '/kunde/$token'
     | '/m/$token'
+    | '/tg/verfuegbarkeit'
     | '/v/$token'
     | '/_authenticated/anfragen/kunden'
     | '/_authenticated/anfragen/mitarbeiter'
@@ -300,6 +312,7 @@ export interface RootRouteChildren {
   BTokenRoute: typeof BTokenRoute
   KundeTokenRoute: typeof KundeTokenRoute
   MTokenRoute: typeof MTokenRoute
+  TgVerfuegbarkeitRoute: typeof TgVerfuegbarkeitRoute
   VTokenRoute: typeof VTokenRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/v/$token'
       fullPath: '/v/$token'
       preLoaderRoute: typeof VTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tg/verfuegbarkeit': {
+      id: '/tg/verfuegbarkeit'
+      path: '/tg/verfuegbarkeit'
+      fullPath: '/tg/verfuegbarkeit'
+      preLoaderRoute: typeof TgVerfuegbarkeitRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/m/$token': {
@@ -518,6 +538,7 @@ const rootRouteChildren: RootRouteChildren = {
   BTokenRoute: BTokenRoute,
   KundeTokenRoute: KundeTokenRoute,
   MTokenRoute: MTokenRoute,
+  TgVerfuegbarkeitRoute: TgVerfuegbarkeitRoute,
   VTokenRoute: VTokenRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,

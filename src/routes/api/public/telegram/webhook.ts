@@ -19,6 +19,10 @@ function isEinmalCodeShape(s: string): boolean {
   return /^[A-ZÄÖÜ]{2,4}-[A-Z0-9]{4,8}$/.test(s);
 }
 
+function currentMonthStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 async function greetLinked(chatId: number, vorname: string, zugangsToken?: string) {
   let token = zugangsToken;
   if (!token) {
@@ -29,15 +33,19 @@ async function greetLinked(chatId: number, vorname: string, zugangsToken?: strin
       .maybeSingle();
     token = data?.zugangs_token ?? undefined;
   }
-  const portalUrl = token ? `${publicOrigin()}/m/${token}` : publicOrigin();
+  const monat = currentMonthStr();
+  const origin = publicOrigin();
+  const miniAppUrl = `${origin}/tg/verfuegbarkeit?monat=${monat}`;
+  const portalUrl = token ? `${origin}/m/${token}?monat=${monat}` : origin;
   await tgSendMessage(
     chatId,
-    `Hallo ${vorname} 👋\nDu bist mit diesem Bot verknüpft. Trage hier deine Verfügbarkeit ein:`,
+    `Hallo ${vorname} 👋\nTrage hier deine Verfügbarkeit für ${monat} ein:`,
     {
       reply_markup: {
-        inline_keyboard: [[
-          { text: "📅 Verfügbarkeit eintragen", url: portalUrl },
-        ]],
+        inline_keyboard: [
+          [{ text: "📅 In Telegram öffnen", web_app: { url: miniAppUrl } }],
+          [{ text: "🌐 Im Browser öffnen", url: portalUrl }],
+        ],
       },
     },
   );
