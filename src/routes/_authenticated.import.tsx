@@ -148,6 +148,7 @@ function ImportPanel({ spec }: { spec: Spec }) {
   const [filename, setFilename] = useState<string>("");
   const [result, setResult] = useState<any>(null);
   const qc = useQueryClient();
+  const router = useRouter();
 
   const importFn = useServerFn(
     spec.key === "mitarbeiter" ? importMitarbeiter :
@@ -158,10 +159,12 @@ function ImportPanel({ spec }: { spec: Spec }) {
 
   const mut = useMutation({
     mutationFn: async () => importFn({ data: { rows } as any }),
-    onSuccess: (res: any) => {
+    onSuccess: async (res: any) => {
       setResult(res);
-      if (spec.key === "einrichtungen") qc.invalidateQueries({ queryKey: ["einrichtungen"] });
-      if (spec.key === "mitarbeiter") qc.invalidateQueries({ queryKey: ["mitarbeiter"] });
+      const keys = ["einrichtungen", "mitarbeiter", "traeger", "einsaetze", "abwesenheiten"];
+      await Promise.all(keys.map((k) => qc.invalidateQueries({ queryKey: [k] })));
+      await Promise.all(keys.map((k) => qc.refetchQueries({ queryKey: [k], type: "active" })));
+      await router.invalidate();
       toast.success(`Import abgeschlossen: ${res.created ?? 0} neu, ${res.updated ?? 0} aktualisiert`);
     },
     onError: (e: any) => toast.error(e.message ?? "Import fehlgeschlagen"),
