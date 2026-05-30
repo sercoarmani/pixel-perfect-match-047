@@ -162,23 +162,13 @@ export const listExpiringDokumente = createServerFn({ method: "GET" })
     const bis = limit.toISOString().slice(0, 10);
     const { data: rows, error } = await context.supabase
       .from("mitarbeiter_dokumente")
-      .select("id, mitarbeiter_id, typ, dateiname, ablaufdatum")
+      .select("id, mitarbeiter_id, typ, dateiname, ablaufdatum, mitarbeiter:mitarbeiter_id(vorname,nachname,kuerzel)")
       .not("ablaufdatum", "is", null)
       .lte("ablaufdatum", bis)
       .gte("ablaufdatum", heute)
       .order("ablaufdatum");
     if (error) throw new Error(error.message);
-    const ids = Array.from(new Set((rows ?? []).map((r) => r.mitarbeiter_id).filter(Boolean)));
-    let maMap = new Map<string, { vorname: string | null; nachname: string | null; kuerzel: string | null }>();
-    if (ids.length > 0) {
-      const { data: mas, error: maErr } = await context.supabase
-        .from("mitarbeiter")
-        .select("id, vorname, nachname, kuerzel")
-        .in("id", ids);
-      if (maErr) throw new Error(maErr.message);
-      maMap = new Map((mas ?? []).map((m) => [m.id, { vorname: m.vorname, nachname: m.nachname, kuerzel: m.kuerzel }]));
-    }
-    return (rows ?? []).map((r) => ({ ...r, mitarbeiter: maMap.get(r.mitarbeiter_id) ?? null }));
+    return rows ?? [];
   });
 
 // ---------- KI-Extraktion ----------

@@ -758,7 +758,15 @@ export type Database = {
           updated_at?: string
           weitergabe_erlaubt?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mitarbeiter_dokumente_mitarbeiter_id_fkey"
+            columns: ["mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nachrichten_templates: {
         Row: {
