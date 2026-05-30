@@ -25,29 +25,44 @@ function DispoPage() {
   // `faktor` = sofortiger Anzeigewert (Slider), `debouncedFaktor` = effektiver Wert für die Query.
   const [faktor, setFaktor] = useState(0.8);
   const [debouncedFaktor, setDebouncedFaktor] = useState(0.8);
+  // `scopeKey` = stabile Signatur des aktuellen Anfragen-Sets.
+  // Wechselt das Set (z. B. nach Zusage / neuer Anfrage), fallen alle Faktor-Caches der alten Disposition weg.
+  const [scopeKey, setScopeKey] = useState<string>("init");
 
   useEffect(() => {
     if (faktor === debouncedFaktor) return;
-    // Cache-Hit? Sofort übernehmen – keine Wartezeit, kein API-Call.
-    const cached = qc.getQueryData(["dispo-offene", faktor]);
+    // Cache-Hit innerhalb derselben Anfragen-Disposition? Sofort übernehmen.
+    const cached = qc.getQueryData(["dispo-offene", scopeKey, faktor]);
     if (cached) {
       setDebouncedFaktor(faktor);
       return;
     }
     const t = setTimeout(() => setDebouncedFaktor(faktor), 200);
     return () => clearTimeout(t);
-  }, [faktor, debouncedFaktor, qc]);
+  }, [faktor, debouncedFaktor, qc, scopeKey]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["dispo-offene", debouncedFaktor],
+    queryKey: ["dispo-offene", scopeKey, debouncedFaktor],
     queryFn: () => fetchOffene({ data: { radius_faktor: debouncedFaktor } }),
     placeholderData: (prev) => prev,
-    // Kurzes Client-Caching pro Faktorwert: 2 min frisch, 10 min im Speicher.
+    // Kurzes Client-Caching pro (Anfragen-Set, Faktorwert): 2 min frisch, 10 min im Speicher.
     staleTime: 2 * 60_000,
     gcTime: 10 * 60_000,
   });
 
-  const bedarfe = data?.bedarfe ?? [];
+  // Sobald Daten da sind: tatsächlichen Scope (sortierte IDs) berechnen und ggf. übernehmen.
+  // Erstes Ergebnis wird in den richtigen Cache-Slot kopiert, damit es wiederverwendbar bleibt.
+  useEffect(() => {
+    if (!data) return;
+    const ids = ((data as any).bedarfe ?? []).map((b: any) => b.id).sort().join("|");
+    const newScope = ids || "leer";
+    if (newScope !== scopeKey) {
+      qc.setQueryData(["dispo-offene", newScope, debouncedFaktor], data);
+      setScopeKey(newScope);
+    }
+  }, [data, scopeKey, debouncedFaktor, qc]);
+
+  const bedarfe = (data as any)?.bedarfe ?? [];
   const trefferGesamt = bedarfe.reduce((s: number, b: any) => s + (b.anrufliste?.length ?? 0), 0);
 
   return (
