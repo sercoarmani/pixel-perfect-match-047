@@ -17,6 +17,7 @@ import { Route as TgVerfuegbarkeitRouteImport } from './routes/tg.verfuegbarkeit
 import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
 import { Route as BTokenRouteImport } from './routes/b.$token'
+import { Route as AuthenticatedVerwaltungRouteImport } from './routes/_authenticated.verwaltung'
 import { Route as AuthenticatedStatistikRouteImport } from './routes/_authenticated.statistik'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated.plan'
 import { Route as AuthenticatedNachrichtenRouteImport } from './routes/_authenticated.nachrichten'
@@ -71,6 +72,11 @@ const BTokenRoute = BTokenRouteImport.update({
   id: '/b/$token',
   path: '/b/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedVerwaltungRoute = AuthenticatedVerwaltungRouteImport.update({
+  id: '/verwaltung',
+  path: '/verwaltung',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedStatistikRoute = AuthenticatedStatistikRouteImport.update({
   id: '/statistik',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/statistik': typeof AuthenticatedStatistikRoute
+  '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/statistik': typeof AuthenticatedStatistikRoute
+  '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
@@ -219,6 +227,7 @@ export interface FileRoutesById {
   '/_authenticated/nachrichten': typeof AuthenticatedNachrichtenRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/statistik': typeof AuthenticatedStatistikRoute
+  '/_authenticated/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
@@ -245,6 +254,7 @@ export interface FileRouteTypes {
     | '/nachrichten'
     | '/plan'
     | '/statistik'
+    | '/verwaltung'
     | '/b/$token'
     | '/kunde/$token'
     | '/m/$token'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/nachrichten'
     | '/plan'
     | '/statistik'
+    | '/verwaltung'
     | '/b/$token'
     | '/kunde/$token'
     | '/m/$token'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/_authenticated/nachrichten'
     | '/_authenticated/plan'
     | '/_authenticated/statistik'
+    | '/_authenticated/verwaltung'
     | '/b/$token'
     | '/kunde/$token'
     | '/m/$token'
@@ -375,6 +387,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/b/$token'
       preLoaderRoute: typeof BTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/verwaltung': {
+      id: '/_authenticated/verwaltung'
+      path: '/verwaltung'
+      fullPath: '/verwaltung'
+      preLoaderRoute: typeof AuthenticatedVerwaltungRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/statistik': {
       id: '/_authenticated/statistik'
@@ -511,6 +530,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNachrichtenRoute: typeof AuthenticatedNachrichtenRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedStatistikRoute: typeof AuthenticatedStatistikRoute
+  AuthenticatedVerwaltungRoute: typeof AuthenticatedVerwaltungRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -525,6 +545,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNachrichtenRoute: AuthenticatedNachrichtenRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedStatistikRoute: AuthenticatedStatistikRoute,
+  AuthenticatedVerwaltungRoute: AuthenticatedVerwaltungRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
