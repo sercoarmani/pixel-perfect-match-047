@@ -30,6 +30,7 @@ import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAnfragenMitarbeiterRouteImport } from './routes/_authenticated.anfragen.mitarbeiter'
 import { Route as AuthenticatedAnfragenKundenRouteImport } from './routes/_authenticated.anfragen.kunden'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -141,6 +142,12 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTelegramWebhookRoute =
+  ApiPublicTelegramWebhookRouteImport.update({
+    id: '/api/public/telegram/webhook',
+    path: '/api/public/telegram/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -184,6 +192,7 @@ export interface FileRoutesByTo {
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -208,6 +217,7 @@ export interface FileRoutesById {
   '/v/$token': typeof VTokenRoute
   '/_authenticated/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
+    | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
+    | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
     | '/v/$token'
     | '/_authenticated/anfragen/kunden'
     | '/_authenticated/anfragen/mitarbeiter'
+    | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -288,6 +301,7 @@ export interface RootRouteChildren {
   KundeTokenRoute: typeof KundeTokenRoute
   MTokenRoute: typeof MTokenRoute
   VTokenRoute: typeof VTokenRoute
+  ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -440,6 +454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/telegram/webhook': {
+      id: '/api/public/telegram/webhook'
+      path: '/api/public/telegram/webhook'
+      fullPath: '/api/public/telegram/webhook'
+      preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -498,6 +519,7 @@ const rootRouteChildren: RootRouteChildren = {
   KundeTokenRoute: KundeTokenRoute,
   MTokenRoute: MTokenRoute,
   VTokenRoute: VTokenRoute,
+  ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport

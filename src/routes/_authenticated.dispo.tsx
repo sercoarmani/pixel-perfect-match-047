@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Phone, PhoneCall, Check, X, Megaphone, Copy } from "lucide-react";
+import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send } from "lucide-react";
 import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
+import { sendBedarfBroadcast } from "@/lib/telegram.functions";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
@@ -57,6 +58,15 @@ function BedarfCard({ bedarf }: { bedarf: any }) {
   const [showBc, setShowBc] = useState(false);
   const ort = bedarf.einrichtung?.ort || bedarf.einrichtung?.name || "—";
   const datumStr = format(new Date(bedarf.datum), "dd.MM.yyyy");
+  const sendBroadcast = useServerFn(sendBedarfBroadcast);
+  const mBroadcast = useMutation({
+    mutationFn: () => sendBroadcast({ data: { bedarf_id: bedarf.id } }),
+    onSuccess: (r: any) => {
+      if (r.gesamt === 0) toast.message("Kein passender Mitarbeiter mit verknüpftem Telegram-Bot gefunden.");
+      else toast.success(`Telegram-Broadcast an ${r.gesendet}/${r.gesamt} Mitarbeiter gesendet`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const broadcastText = `Pflegekraft gesucht in ${ort} — ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}dienst am ${datumStr}. Wer kann? Bitte melden.`;
   const copyBroadcast = async () => {
     try { await navigator.clipboard.writeText(broadcastText); toast.success("Broadcast-Text kopiert"); }
@@ -77,8 +87,11 @@ function BedarfCard({ bedarf }: { bedarf: any }) {
         </div>
         {bedarf.anzahl > 1 && <Badge variant="outline">×{bedarf.anzahl}</Badge>}
         {bedarf.notiz && <div className="text-xs text-muted-foreground max-w-md truncate">{bedarf.notiz}</div>}
-        <Button size="sm" variant="outline" className="ml-auto" onClick={() => setShowBc((v) => !v)}>
-          <Megaphone className="mr-1 h-3.5 w-3.5" /> Niemand erreicht – Broadcast
+        <Button size="sm" className="ml-auto" onClick={() => mBroadcast.mutate()} disabled={mBroadcast.isPending}>
+          <Send className="mr-1 h-3.5 w-3.5" /> Telegram-Broadcast
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setShowBc((v) => !v)}>
+          <Megaphone className="mr-1 h-3.5 w-3.5" /> Niemand erreicht
         </Button>
       </div>
 
