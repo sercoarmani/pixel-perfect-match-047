@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
@@ -21,11 +21,20 @@ export const Route = createFileRoute("/_authenticated/dispo")({
 
 function DispoPage() {
   const fetchOffene = useServerFn(getDispoOffeneBedarfe);
+  // `faktor` = sofortiger Anzeigewert (Slider), `debouncedFaktor` = effektiver Wert für die Query.
   const [faktor, setFaktor] = useState(0.8);
+  const [debouncedFaktor, setDebouncedFaktor] = useState(0.8);
+  useEffect(() => {
+    if (faktor === debouncedFaktor) return;
+    const t = setTimeout(() => setDebouncedFaktor(faktor), 200);
+    return () => clearTimeout(t);
+  }, [faktor, debouncedFaktor]);
+
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["dispo-offene", faktor],
-    queryFn: () => fetchOffene({ data: { radius_faktor: faktor } }),
+    queryKey: ["dispo-offene", debouncedFaktor],
+    queryFn: () => fetchOffene({ data: { radius_faktor: debouncedFaktor } }),
     placeholderData: (prev) => prev,
+    staleTime: 30_000,
   });
 
   const bedarfe = data?.bedarfe ?? [];
