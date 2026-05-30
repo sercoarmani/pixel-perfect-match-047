@@ -303,6 +303,7 @@ function PlanungslistePanel() {
   const importEi = useServerFn(importEinrichtungen);
   const importEs = useServerFn(importEinsaetze);
   const importAb = useServerFn(importAbwesenheiten);
+  const fetchEinrichtungen = useServerFn(listEinrichtungen);
 
   async function onFile(f: File) {
     setReport(null);
