@@ -144,7 +144,7 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
   const [nurAktive, setNurAktive] = useState(true);
   const send = useServerFn(sendVerfuegbarkeitsBroadcast);
 
-  const monatsOptionen = useMemo(() => {
+  const monatsOptionen = useMemo<{ value: string; label: string }[]>(() => {
     const base = new Date();
     base.setDate(1);
     return Array.from({ length: 6 }, (_, i) => {
