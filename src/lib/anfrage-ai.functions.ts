@@ -260,5 +260,31 @@ export const createBedarfeBulk = createServerFn({ method: "POST" })
     }));
     const { error } = await context.supabase.from("bedarfe").insert(rows);
     if (error) throw new Error(error.message);
-    return { count: rows.length };
+
+    // Automatisch eine "Anfrage Kunde" anlegen (typ=bedarf, empfaenger=einrichtung)
+    const daten = data.bedarfe.map((b) => b.datum).sort();
+    const zeitraum_von = daten[0];
+    const zeitraum_bis = daten[daten.length - 1];
+    let anfrage_id: string | null = null;
+    try {
+      const { data: anf, error: anfErr } = await context.supabase
+        .from("anfragen")
+        .insert({
+          typ: "bedarf",
+          empfaenger_typ: "einrichtung",
+          empfaenger_id: data.einrichtung_id,
+          zeitraum_von,
+          zeitraum_bis,
+          status: "offen",
+          token: randomTokenStr(24),
+          erstellt_von: context.userId,
+        })
+        .select("id")
+        .single();
+      if (anfErr) console.error("[createBedarfeBulk] anfrage insert failed:", anfErr);
+      else anfrage_id = anf?.id ?? null;
+    } catch (e) {
+      console.error("[createBedarfeBulk] anfrage exception:", e);
+    }
+    return { count: rows.length, anfrage_id };
   });
