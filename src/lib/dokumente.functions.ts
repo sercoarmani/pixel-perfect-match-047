@@ -184,14 +184,24 @@ type Erkannt = {
 
 async function extractWithAi(args: {
   apiKey: string;
-  mime: string;
-  dataUrl: string;
   dateiname: string;
+  // Entweder Bild/PDF als dataUrl ODER Klartext (xlsx/docx)
+  dataUrl?: string;
+  textContent?: string;
 }): Promise<Erkannt> {
-  const system = `Du analysierst hochgeladene Dokumente (Pflege-/Personalkontext: Zertifikate, Führungszeugnisse, Profile, Kursnachweise).
+  const system = `Du analysierst hochgeladene Dokumente (Pflege-/Personalkontext: Zertifikate, Führungszeugnisse, Profile, Kursnachweise, Excel-Listen, Word-Dokumente).
 Gib NUR über das Tool 'doc_extract' strukturierte Felder zurück.
 Datumsangaben strikt im Format YYYY-MM-DD. Wenn ein Feld nicht eindeutig erkennbar ist: null.
 Vorgeschlagener Typ: zertifikat | fuehrungszeugnis | profil | sonstiges.`;
+
+  const userContent: any[] = [
+    { type: "text", text: `Dateiname: ${args.dateiname}\nExtrahiere die wichtigsten Felder.` },
+  ];
+  if (args.dataUrl) {
+    userContent.push({ type: "image_url", image_url: { url: args.dataUrl } });
+  } else if (args.textContent) {
+    userContent.push({ type: "text", text: `Dokumentinhalt:\n${args.textContent.slice(0, 30000)}` });
+  }
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -200,13 +210,7 @@ Vorgeschlagener Typ: zertifikat | fuehrungszeugnis | profil | sonstiges.`;
       model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: system },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `Dateiname: ${args.dateiname}\nExtrahiere die wichtigsten Felder.` },
-            { type: "image_url", image_url: { url: args.dataUrl } },
-          ],
-        },
+        { role: "user", content: userContent },
       ],
       tools: [
         {
@@ -247,6 +251,22 @@ Vorgeschlagener Typ: zertifikat | fuehrungszeugnis | profil | sonstiges.`;
   return JSON.parse(call.function.arguments);
 }
 
+function extractXlsxText(buf: Uint8Array): string {
+  const wb = XLSX.read(buf, { type: "array" });
+  const parts: string[] = [];
+  for (const name of wb.SheetNames) {
+    const ws = wb.Sheets[name];
+    const csv = XLSX.utils.sheet_to_csv(ws, { blankrows: false });
+    if (csv.trim()) parts.push(`# Blatt: ${name}\n${csv}`);
+  }
+  return parts.join("\n\n");
+}
+
+async function extractDocxText(buf: Uint8Array): Promise<string> {
+  const result = await mammoth.extractRawText({ buffer: Buffer.from(buf) });
+  return result.value ?? "";
+}
+
 export const extractDokument = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
@@ -265,9 +285,13 @@ export const extractDokument = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const mime = (doc.mime_type ?? "").toLowerCase();
-    const isPdf = mime.includes("pdf");
+    const name = (doc.dateiname ?? "").toLowerCase();
+    const isPdf = mime.includes("pdf") || name.endsWith(".pdf");
     const isImage = mime.startsWith("image/");
-    if (!isPdf && !isImage) {
+    const isXlsx = mime.includes("spreadsheetml") || mime.includes("excel") || name.endsWith(".xlsx") || name.endsWith(".xls");
+    const isDocx = mime.includes("wordprocessingml") || name.endsWith(".docx");
+
+    if (!isPdf && !isImage && !isXlsx && !isDocx) {
       const note = "Automatische Texterkennung für diesen Dateityp noch nicht unterstützt – bitte Felder manuell prüfen.";
       await supabase.from("mitarbeiter_dokumente").update({
         erkannt_status: "fehler",
@@ -280,26 +304,31 @@ export const extractDokument = createServerFn({ method: "POST" })
       const { data: blob, error: de } = await supabase.storage.from(BUCKET).download(doc.datei_path);
       if (de || !blob) throw new Error(de?.message ?? "Datei konnte nicht geladen werden.");
       const buf = new Uint8Array(await blob.arrayBuffer());
-      // Base64 encode
-      let bin = "";
-      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-      const b64 = btoa(bin);
-      const dataUrl = `data:${mime};base64,${b64}`;
 
-      const erkannt = await extractWithAi({
-        apiKey,
-        mime,
-        dataUrl,
-        dateiname: doc.dateiname,
-      });
+      let erkannt: Erkannt;
+      if (isXlsx) {
+        const text = extractXlsxText(buf);
+        if (!text.trim()) throw new Error("Excel-Datei enthält keinen lesbaren Text.");
+        erkannt = await extractWithAi({ apiKey, dateiname: doc.dateiname, textContent: text });
+      } else if (isDocx) {
+        const text = await extractDocxText(buf);
+        if (!text.trim()) throw new Error("Word-Datei enthält keinen lesbaren Text.");
+        erkannt = await extractWithAi({ apiKey, dateiname: doc.dateiname, textContent: text });
+      } else {
+        // PDF oder Bild → multimodal
+        let bin = "";
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        const b64 = btoa(bin);
+        const dataUrl = `data:${mime || "application/pdf"};base64,${b64}`;
+        erkannt = await extractWithAi({ apiKey, dateiname: doc.dateiname, dataUrl });
+      }
 
       const patch: Record<string, unknown> = {
         erkannt_json: erkannt,
         erkannt_status: "ok",
         erkannt_fehler: null,
-        erkannt_geprueft: false, // muss bestätigt werden
+        erkannt_geprueft: false,
       };
-      // Felder NUR vorbelegen, wenn noch leer (nie ungeprüft überschreiben)
       if (!doc.ausstellungsdatum && erkannt.ausstellungsdatum) patch.ausstellungsdatum = erkannt.ausstellungsdatum;
       if (!doc.ablaufdatum && erkannt.ablaufdatum) patch.ablaufdatum = erkannt.ablaufdatum;
       if (doc.typ === "sonstiges" && erkannt.vorgeschlagener_typ) patch.typ = erkannt.vorgeschlagener_typ;
