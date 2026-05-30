@@ -85,7 +85,13 @@ export const updateKundenbestaetigung = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      empfaenger_email?: string | null;
+      empfaenger_name?: string | null;
+      betreff?: string;
+      body_text?: string;
+      dokument_ids?: string[];
+    } = {};
     if (data.empfaenger_email !== undefined) patch.empfaenger_email = data.empfaenger_email;
     if (data.empfaenger_name !== undefined) patch.empfaenger_name = data.empfaenger_name;
     if (data.betreff !== undefined) patch.betreff = data.betreff;
@@ -96,6 +102,7 @@ export const updateKundenbestaetigung = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
 
 export const versendeKundenbestaetigung = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
