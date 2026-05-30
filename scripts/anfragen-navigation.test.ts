@@ -18,6 +18,7 @@ const window = new Window({ url: "http://localhost/anfragen/kunden" });
 (globalThis as any).Element = window.Element;
 (globalThis as any).Node = window.Node;
 (globalThis as any).getComputedStyle = window.getComputedStyle.bind(window);
+(window as any).SyntaxError = SyntaxError;
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
