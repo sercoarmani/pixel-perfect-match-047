@@ -1012,6 +1012,16 @@ export const bedarfZusage = createServerFn({ method: "POST" })
       .eq("id", data.bedarf_id);
     if (updBedarfErr) throw updBedarfErr;
 
+    // 4) Block 5 + 6: Kundenbestätigung als Entwurf anlegen (Auto-Trigger bei Dispo-Zuteilung)
+    await autoTriggerKundenbestaetigung({
+      mitarbeiter_id: data.mitarbeiter_id,
+      einrichtung_id: bedarf.einrichtung_id,
+      bedarf_id: data.bedarf_id,
+      einsatz_id: insertedEinsatz?.id ?? null,
+      datum: bedarf.datum,
+      dienst: bedarf.dienst,
+    });
+
     return { ok: true, besetzt: besetztAnzahl, benoetigt: bedarf.anzahl ?? 1, vollständig };
   });
 
