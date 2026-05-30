@@ -1,12 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { listVerbindungen, type VerbindungInfo } from "@/lib/verwaltung.functions";
+import { listTemplates, updateTemplate } from "@/lib/dispo.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash, FileText, Save } from "lucide-react";
 import { GeocodeRunAllCard } from "@/components/geocode-run-all-card";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/verwaltung")({
   component: VerwaltungPage,
