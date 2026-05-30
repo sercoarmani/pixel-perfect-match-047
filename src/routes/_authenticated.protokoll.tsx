@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import {
   ScrollText, RefreshCw, ArrowDownLeft, ArrowUpRight, Mail, MessageSquare,
-  Phone, AlertCircle, CheckCircle2, RotateCw,
+  Phone, AlertCircle, CheckCircle2, RotateCw, Copy, Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/protokoll")({
