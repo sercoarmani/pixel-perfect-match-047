@@ -433,17 +433,21 @@ export type Database = {
           created_at: string
           dienste_moeglich: Database["public"]["Enums"]["dienst"][]
           email: string | null
+          fuehrerschein: boolean
           id: string
           kuerzel: string
           max_einsaetze: number
           nachname: string
           notiz: string | null
+          plz: string | null
+          profil_text: string | null
           qualifikation: Database["public"]["Enums"]["qualifikation"]
           status: Database["public"]["Enums"]["ma_status"]
           telefon: string | null
           umkreis_km: number | null
           vorname: string
           wohnort: string | null
+          zugangs_token: string
         }
         Insert: {
           aktiv?: boolean
@@ -452,17 +456,21 @@ export type Database = {
           created_at?: string
           dienste_moeglich?: Database["public"]["Enums"]["dienst"][]
           email?: string | null
+          fuehrerschein?: boolean
           id?: string
           kuerzel: string
           max_einsaetze?: number
           nachname: string
           notiz?: string | null
+          plz?: string | null
+          profil_text?: string | null
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
           telefon?: string | null
           umkreis_km?: number | null
           vorname: string
           wohnort?: string | null
+          zugangs_token?: string
         }
         Update: {
           aktiv?: boolean
@@ -471,17 +479,21 @@ export type Database = {
           created_at?: string
           dienste_moeglich?: Database["public"]["Enums"]["dienst"][]
           email?: string | null
+          fuehrerschein?: boolean
           id?: string
           kuerzel?: string
           max_einsaetze?: number
           nachname?: string
           notiz?: string | null
+          plz?: string | null
+          profil_text?: string | null
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
           telefon?: string | null
           umkreis_km?: number | null
           vorname?: string
           wohnort?: string | null
+          zugangs_token?: string
         }
         Relationships: []
       }
