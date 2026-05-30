@@ -216,7 +216,7 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
     for (const m of empfaenger) {
       const text = `Hallo ${m.vorname},\n\n📅 ${datumStr} – ${DIENST_LANG[bedarf.dienst] ?? bedarf.dienst}\n🏥 ${ort}\n🎓 ${bedarf.qualifikation}\n\nKannst du den Dienst übernehmen?`;
       try {
-        await tgSendMessage(Number(m.telegram_chat_id), text, { reply_markup });
+        const res = await tgSendMessage(Number(m.telegram_chat_id), text, { reply_markup });
         gesendet++;
         await logVersand({
           kanal: "telegram", richtung: "out", status: "sent",
@@ -227,6 +227,11 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
           einrichtung_id: bedarf.einrichtung_id,
           bedarf_id: bedarf.id,
           referenz_typ: "bedarf_broadcast",
+          metadata: {
+            provider_message_id: res?.result?.message_id ?? null,
+            provider_status: 200,
+            provider_response: res,
+          },
         });
       } catch (e: any) {
         fehler.push(`${m.nachname}: ${e.message}`);
@@ -237,6 +242,12 @@ export const sendBedarfBroadcast = createServerFn({ method: "POST" })
           inhalt: text, mitarbeiter_id: m.id,
           einrichtung_id: bedarf.einrichtung_id, bedarf_id: bedarf.id,
           fehler: e.message,
+          referenz_typ: "bedarf_broadcast",
+          metadata: {
+            provider_status: e?.status ?? null,
+            provider_response: e?.providerBody ?? null,
+            retry: { kind: "telegram_send", chat_id: Number(m.telegram_chat_id), text, reply_markup },
+          },
         });
       }
     }
