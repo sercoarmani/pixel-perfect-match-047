@@ -437,7 +437,22 @@ export type Database = {
           zuordnung_confidence?: number | null
           zuordnung_quelle?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_inbox_zugeordnet_einrichtung_id_fkey"
+            columns: ["zugeordnet_einrichtung_id"]
+            isOneToOne: false
+            referencedRelation: "einrichtungen"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_zugeordnet_mitarbeiter_id_fkey"
+            columns: ["zugeordnet_mitarbeiter_id"]
+            isOneToOne: false
+            referencedRelation: "mitarbeiter"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_send_log: {
         Row: {
