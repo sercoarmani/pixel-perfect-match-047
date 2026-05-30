@@ -444,6 +444,8 @@ export type Database = {
           qualifikation: Database["public"]["Enums"]["qualifikation"]
           status: Database["public"]["Enums"]["ma_status"]
           telefon: string | null
+          telegram_chat_id: number | null
+          telegram_username: string | null
           umkreis_km: number | null
           vorname: string
           wohnort: string | null
@@ -467,6 +469,8 @@ export type Database = {
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
           telefon?: string | null
+          telegram_chat_id?: number | null
+          telegram_username?: string | null
           umkreis_km?: number | null
           vorname: string
           wohnort?: string | null
@@ -490,6 +494,8 @@ export type Database = {
           qualifikation?: Database["public"]["Enums"]["qualifikation"]
           status?: Database["public"]["Enums"]["ma_status"]
           telefon?: string | null
+          telegram_chat_id?: number | null
+          telegram_username?: string | null
           umkreis_km?: number | null
           vorname?: string
           wohnort?: string | null
@@ -542,6 +548,33 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      telegram_updates: {
+        Row: {
+          chat_id: number | null
+          created_at: string
+          mitarbeiter_id: string | null
+          raw: Json
+          text: string | null
+          update_id: number
+        }
+        Insert: {
+          chat_id?: number | null
+          created_at?: string
+          mitarbeiter_id?: string | null
+          raw: Json
+          text?: string | null
+          update_id: number
+        }
+        Update: {
+          chat_id?: number | null
+          created_at?: string
+          mitarbeiter_id?: string | null
+          raw?: Json
+          text?: string | null
+          update_id?: number
         }
         Relationships: []
       }
