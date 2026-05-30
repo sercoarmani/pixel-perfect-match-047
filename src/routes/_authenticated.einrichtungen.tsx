@@ -100,12 +100,12 @@ function EinrichtungenPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Träger</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Ort</TableHead>
+              <SortableHead sortKey="traeger" current={sortKey} dir={sortDir} onClick={toggleSort}>Träger</SortableHead>
+              <SortableHead sortKey="name" current={sortKey} dir={sortDir} onClick={toggleSort}>Name</SortableHead>
+              <SortableHead sortKey="ort" current={sortKey} dir={sortDir} onClick={toggleSort}>Ort</SortableHead>
               <TableHead>Kontakt</TableHead>
-              <TableHead>VS PFK</TableHead>
-              <TableHead>VS PHK</TableHead>
+              <SortableHead sortKey="vs_pfk" current={sortKey} dir={sortDir} onClick={toggleSort}>VS PFK</SortableHead>
+              <SortableHead sortKey="vs_phk" current={sortKey} dir={sortDir} onClick={toggleSort}>VS PHK</SortableHead>
               <TableHead>Geo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aktion</TableHead>
@@ -113,7 +113,7 @@ function EinrichtungenPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={9} className="text-muted-foreground">Lade…</TableCell></TableRow>}
-            {filtered.map((e: any) => (
+            {sorted.map((e: any) => (
               <TableRow key={e.id}>
                 <TableCell className="text-sm text-muted-foreground">{e.traeger?.name ?? "—"}</TableCell>
                 <TableCell className="font-medium cursor-pointer" onClick={() => setEdit(e)}>{e.name}</TableCell>
