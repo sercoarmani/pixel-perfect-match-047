@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash, FileText, Save } from "lucide-react";
 import { GeocodeRunAllCard } from "@/components/geocode-run-all-card";
+import { WhatsAppSetupCard, WhatsAppTemplatesCard } from "@/components/whatsapp-admin";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/verwaltung")({
@@ -94,6 +95,16 @@ function VerwaltungPage() {
       </section>
 
 
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          WhatsApp-Versand
+        </h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <WhatsAppSetupCard />
+          <WhatsAppTemplatesCard />
+        </div>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
