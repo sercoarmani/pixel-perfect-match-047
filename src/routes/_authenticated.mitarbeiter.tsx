@@ -24,6 +24,7 @@ import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
 import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
 import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
+import { WhatsAppSequentialDialog } from "@/components/whatsapp-sequential-dialog";
 
 
 
@@ -191,6 +192,9 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [seqOpen, setSeqOpen] = useState(false);
+  const [waRecipients, setWaRecipients] = useState<{ id: any; name: string; telefon?: string | null; text: string }[]>([]);
+
   function sendenViaWhatsApp() {
     if (empfaengerWhatsApp.length === 0) {
       toast.error("Keine Mitarbeiter mit Telefonnummer.");
@@ -200,12 +204,16 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
     const recipients = empfaengerWhatsApp.map((ma: any) => {
       const link = `${origin}/m/${ma.zugangs_token}?monat=${monat}`;
       const text = `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`;
-      return { telefon: ma.telefon, text };
+      return {
+        id: ma.id,
+        name: `${ma.vorname ?? ""} ${ma.nachname ?? ""}`.trim() || "Mitarbeiter",
+        telefon: ma.telefon,
+        text,
+      };
     });
-    openWhatsAppChats(recipients, (n) =>
-      toast.success(`${n} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`),
-    );
+    setWaRecipients(recipients);
     setOpen(false);
+    setSeqOpen(true);
   }
 
   return (
