@@ -45,6 +45,59 @@ function maStatusLabel(s: string) {
   return { text: "Telegram-Versand ausstehend", tone: "text-muted-foreground", Icon: Clock };
 }
 
+function normalizePhone(p?: string | null) {
+  if (!p) return "";
+  return p.replace(/[^\d+]/g, "");
+}
+
+function TelegramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.24 3.64 11.95c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" />
+    </svg>
+  );
+}
+
+function KontaktButtons({ phone, email }: { phone?: string | null; email?: string | null }) {
+  const tel = normalizePhone(phone);
+  const waNumber = tel.replace(/^\+/, "");
+  return (
+    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <Button asChild size="sm" variant="outline" disabled className="h-7 w-7 p-0" title="Kein Telegram für Einrichtungen verknüpft">
+        <span className="opacity-50 cursor-not-allowed"><TelegramIcon className="h-3.5 w-3.5" /></span>
+      </Button>
+      {tel ? (
+        <Button asChild size="sm" variant="outline" className="h-7 w-7 p-0" title={`WhatsApp: ${phone}`}>
+          <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener">
+            <MessageCircle className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      ) : (
+        <Button size="sm" variant="outline" disabled className="h-7 w-7 p-0" title="Keine Telefonnummer hinterlegt">
+          <MessageCircle className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {tel ? (
+        <Button asChild size="sm" variant="outline" className="h-7 w-7 p-0" title={`Anrufen: ${phone}`}>
+          <a href={`tel:${tel}`}><PhoneCall className="h-3.5 w-3.5" /></a>
+        </Button>
+      ) : (
+        <Button size="sm" variant="outline" disabled className="h-7 w-7 p-0" title="Keine Telefonnummer hinterlegt">
+          <PhoneCall className="h-3.5 w-3.5" />
+        </Button>
+      )}
+      {email ? (
+        <Button asChild size="sm" variant="outline" className="h-7 w-7 p-0" title={`E-Mail: ${email}`}>
+          <a href={`mailto:${email}`}><Mail className="h-3.5 w-3.5" /></a>
+        </Button>
+      ) : (
+        <Button size="sm" variant="outline" disabled className="h-7 w-7 p-0" title="Keine E-Mail hinterlegt">
+          <Mail className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  );
+
 function BestaetigungenPage() {
   const [filter, setFilter] = useState<StatusFilter>("entwurf");
   const [openId, setOpenId] = useState<string | null>(null);
