@@ -167,8 +167,11 @@ function BestaetigungenPage() {
                   )}
                   {b.fehler && <div className="text-xs text-destructive">{b.fehler}</div>}
                 </div>
-                <div className="text-xs text-muted-foreground whitespace-nowrap">
-                  {new Date(b.created_at).toLocaleString("de-DE")}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <KontaktButtons phone={b.einrichtung?.kontakt_telefon} email={b.einrichtung?.kontakt_email ?? b.empfaenger_email} />
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(b.created_at).toLocaleString("de-DE")}
+                  </div>
                 </div>
               </Card>
             );
