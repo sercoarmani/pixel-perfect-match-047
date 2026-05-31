@@ -1014,6 +1014,84 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_settings: {
+        Row: {
+          aktiv: boolean
+          default_language: string
+          id: number
+          meta_business_account_id: string | null
+          meta_phone_number_id: string | null
+          provider: string
+          twilio_account_sid: string | null
+          twilio_from: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          aktiv?: boolean
+          default_language?: string
+          id?: number
+          meta_business_account_id?: string | null
+          meta_phone_number_id?: string | null
+          provider?: string
+          twilio_account_sid?: string | null
+          twilio_from?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          aktiv?: boolean
+          default_language?: string
+          id?: number
+          meta_business_account_id?: string | null
+          meta_phone_number_id?: string | null
+          provider?: string
+          twilio_account_sid?: string | null
+          twilio_from?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_templates: {
+        Row: {
+          aktiv: boolean
+          body_preview: string
+          created_at: string
+          id: string
+          language_code: string
+          name: string
+          provider: string
+          template_name: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          aktiv?: boolean
+          body_preview?: string
+          created_at?: string
+          id?: string
+          language_code?: string
+          name: string
+          provider: string
+          template_name: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          aktiv?: boolean
+          body_preview?: string
+          created_at?: string
+          id?: string
+          language_code?: string
+          name?: string
+          provider?: string
+          template_name?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
