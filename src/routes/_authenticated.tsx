@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState, Navigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
@@ -74,17 +74,37 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
+function NowClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const tz = "Europe/Berlin";
+  const time = now.toLocaleTimeString("de-DE", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+  const date = now.toLocaleDateString("de-DE", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit" });
+  return (
+    <div className="leading-tight text-right tabular-nums">
+      <div className="text-[13px] font-semibold">{time}</div>
+      <div className="text-[10px] text-muted-foreground">{date}</div>
+    </div>
+  );
+}
+
 function BrandMark() {
   return (
-    <Link to="/dashboard" className="flex items-center gap-2.5 px-1">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20">
-        <CalendarDays className="h-[18px] w-[18px]" />
-      </div>
-      <div className="leading-tight">
-        <div className="font-display text-[15px] font-semibold tracking-tight">DispoPlan</div>
-        <div className="text-[11px] text-muted-foreground">Pflege-Disposition</div>
-      </div>
-    </Link>
+    <div className="flex items-center justify-between gap-2">
+      <Link to="/dashboard" className="flex items-center gap-2.5 px-1">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20">
+          <CalendarDays className="h-[18px] w-[18px]" />
+        </div>
+        <div className="leading-tight">
+          <div className="font-display text-[15px] font-semibold tracking-tight">DispoPlan</div>
+          <div className="text-[11px] text-muted-foreground">Pflege-Disposition</div>
+        </div>
+      </Link>
+      <NowClock />
+    </div>
   );
 }
 
