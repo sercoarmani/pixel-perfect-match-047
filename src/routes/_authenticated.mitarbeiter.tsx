@@ -334,7 +334,7 @@ function StammFields({ form, setForm, row }: { form: any; setForm: (f: any) => v
     <div className="grid grid-cols-2 gap-3 text-sm pt-2">
       <Field label="Vorname"><Input value={form.vorname} onChange={(e) => setForm({...form, vorname: e.target.value})} /></Field>
       <Field label="Nachname"><Input value={form.nachname} onChange={(e) => setForm({...form, nachname: e.target.value})} /></Field>
-      <Field label="Kürzel"><Input value={form.kuerzel} onChange={(e) => setForm({...form, kuerzel: e.target.value})} /></Field>
+      <Field label="Kürzel (optional, wird sonst automatisch erzeugt)"><Input value={form.kuerzel} onChange={(e) => setForm({...form, kuerzel: e.target.value})} /></Field>
       <Field label="Qualifikation">
         <Select value={form.qualifikation} onValueChange={(v) => setForm({...form, qualifikation: v})}>
           <SelectTrigger><SelectValue /></SelectTrigger>
