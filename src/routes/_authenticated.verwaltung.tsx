@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Settings2, RefreshCw, Plug, AlertTriangle, CheckCircle2, CircleSlash, FileText, Save } from "lucide-react";
 import { GeocodeRunAllCard } from "@/components/geocode-run-all-card";
+import { WhatsAppSetupCard, WhatsAppTemplatesCard } from "@/components/whatsapp-admin";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/verwaltung")({
