@@ -23,6 +23,7 @@ import { format, addDays } from "date-fns";
 import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
 import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
+import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
 
 
 
