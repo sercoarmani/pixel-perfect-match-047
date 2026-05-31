@@ -314,7 +314,9 @@ function buildBedarfsVorlage(bedarfe: any[]): string {
 
 function FlexTeamWhatsAppButton({ bedarfe }: { bedarfe: any[] }) {
   const [open, setOpen] = useState(false);
+  const [seqOpen, setSeqOpen] = useState(false);
   const [text, setText] = useState("");
+  const [recipients, setRecipients] = useState<{ id: any; name: string; telefon?: string | null; text: string }[]>([]);
   const fetchMit = useServerFn(listMitarbeiter);
   const { data: mitData } = useQuery({
     queryKey: ["mitarbeiter"],
@@ -344,11 +346,16 @@ function FlexTeamWhatsAppButton({ bedarfe }: { bedarfe: any[] }) {
       toast.error("Keine aktiven Mitarbeiter mit Telefonnummer.");
       return;
     }
-    openWhatsAppChats(
-      empfaenger.map((m: any) => ({ telefon: m.telefon, text: msg })),
-      (n) => toast.success(`${n} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`),
+    setRecipients(
+      empfaenger.map((m: any) => ({
+        id: m.id,
+        name: `${m.vorname ?? ""} ${m.nachname ?? ""}`.trim() || "Mitarbeiter",
+        telefon: m.telefon,
+        text: msg,
+      })),
     );
     setOpen(false);
+    setSeqOpen(true);
   }
 
   return (
@@ -374,9 +381,8 @@ function FlexTeamWhatsAppButton({ bedarfe }: { bedarfe: any[] }) {
               placeholder="Nachricht…"
             />
             <p className="text-xs text-muted-foreground">
-              Wird an <strong>{empfaenger.length}</strong> aktive Mitarbeiter mit Telefonnummer geöffnet.
-              Pro Empfänger öffnet sich ein WhatsApp-Tab mit vorbereitetem Text – du musst dort jeweils
-              auf „Senden" tippen. Bitte Popups für diese Seite erlauben.
+              Wird an <strong>{empfaenger.length}</strong> aktive Mitarbeiter mit Telefonnummer gesendet.
+              Im nächsten Schritt öffnest du die Chats nacheinander und tippst pro Empfänger einmal auf „Senden".
             </p>
           </div>
           <DialogFooter>
@@ -386,11 +392,17 @@ function FlexTeamWhatsAppButton({ bedarfe }: { bedarfe: any[] }) {
               disabled={empfaenger.length === 0 || !text.trim()}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              <Send className="h-3.5 w-3.5 mr-1" /> Tabs öffnen
+              <Send className="h-3.5 w-3.5 mr-1" /> Weiter
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <WhatsAppSequentialDialog
+        open={seqOpen}
+        onOpenChange={setSeqOpen}
+        recipients={recipients}
+        title="WhatsApp an FlexTeam"
+      />
     </>
   );
 }
