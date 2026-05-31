@@ -276,7 +276,7 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
         {(data?.vorschlaege ?? []).map((m: any) => {
           const tel = normalizePhone(m.telefon);
           const wa = tel.replace(/^\+/, "");
-          const radius = m.max_radius_km ?? m.umkreis_km;
+          // Entfernung zur Einrichtung (aus Geodaten) statt Wunschradius des MA anzeigen
           return (
             <div key={m.id} className="flex items-center gap-2 p-2 border rounded hover:bg-accent/40">
               <div className="flex-1 min-w-0">
@@ -291,7 +291,7 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
                 <div className="text-xs text-muted-foreground">
                   <Badge variant="secondary" className="mr-1">{m.qualifikation}</Badge>
                   <Badge variant="outline" className="mr-1">{m.anstellung}</Badge>
-                  {radius != null && <span className="mr-1">Radius {radius} km · </span>}
+                  {m.distanz_km != null && <span className="mr-1">Entfernung {m.distanz_km} km · </span>}
                   {m.eingeplant}/{m.max_einsaetze ?? 20} Einsätze · noch {m.frei} frei
                 </div>
               </div>
