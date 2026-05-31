@@ -206,6 +206,7 @@ function StatusBadge({ status, besetzt }: { status: string; besetzt?: boolean })
     cls = "bg-destructive text-destructive-foreground";
   } else if (status === "offen") {
     label = "offen";
+    cls = "bg-destructive text-destructive-foreground";
   } else {
     cls = "bg-status-ausgeplant text-status-ausgeplant-fg";
   }
