@@ -264,4 +264,95 @@ test.describe("/anfragen/kunden", () => {
       expect(new Set(tokens).size).toBe(tokens.length);
     }
   });
+
+  test("Dispo-Zeilen: pro (Datum × Dienst) genau eine virtuelle Zeile, Werte konsistent", async ({
+    page,
+  }) => {
+    await login(page);
+    await page.goto("/anfragen/kunden");
+    await page.waitForLoadState("networkidle");
+
+    const table = page.getByRole("table");
+    const rows = table.locator("tbody tr");
+    const dispoRows = rows.filter({ hasText: "Dispo" });
+    const total = await dispoRows.count();
+    if (total === 0) test.skip(true, "Keine Dispo-Zeilen vorhanden.");
+
+    const zIdx = EXPECTED_COLUMNS.indexOf("Zeitraum");
+    const dIdx = EXPECTED_COLUMNS.indexOf("Dienste");
+
+    // Sammle (datum, dienst) je Dispo-Zeile
+    const seen = new Map<string, number>(); // key = "yyyy-mm-dd|Dienst"
+    const perDatum = new Map<string, Set<string>>();
+
+    for (let i = 0; i < total; i++) {
+      const row = dispoRows.nth(i);
+      const cells = row.locator("td");
+
+      const zText = (await cells.nth(zIdx).innerText()).trim();
+      const dText = (await cells.nth(dIdx).innerText()).trim();
+
+      // Bedarf-Zeile = exakt 1 Datum (kein Range) und exakt 1 Dienst-Badge
+      const z = parseZeitraum(zText);
+      expect(z, `Zeitraum unlesbar: "${zText}"`).not.toBeNull();
+      expect(
+        z!.from.toDateString(),
+        `Dispo-Zeile darf kein Datums-Range haben: "${zText}"`,
+      ).toBe(z!.to.toDateString());
+
+      const tokens = dText.split(/\s+/).filter(Boolean);
+      expect(tokens.length, `Dispo-Zeile muss genau 1 Dienst zeigen: "${dText}"`).toBe(1);
+      const dienst = tokens[0];
+      expect(DIENST_LABELS as readonly string[]).toContain(dienst);
+
+      const dayKey = z!.from.toISOString().slice(0, 10);
+      const key = `${dayKey}|${dienst}`;
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+
+      if (!perDatum.has(dayKey)) perDatum.set(dayKey, new Set());
+      perDatum.get(dayKey)!.add(dienst);
+    }
+
+    // Eindeutigkeit: pro (Datum × Dienst) genau eine Zeile
+    for (const [key, n] of seen) {
+      expect(n, `Doppelte Dispo-Zeile für ${key}`).toBe(1);
+    }
+
+    // Konsistenz mit API: für jedes Datum müssen die UI-Dienste die offenen Bedarfe widerspiegeln
+    const bedarfeRes = await page.request.post("/_serverFn/listOffeneBedarfe", {
+      data: {},
+      failOnStatusCode: false,
+    });
+    if (!bedarfeRes.ok()) return;
+    let bedarfe: any[] = [];
+    try {
+      const j = await bedarfeRes.json();
+      bedarfe = Array.isArray(j) ? j : j?.result ?? j?.data ?? [];
+    } catch {
+      return;
+    }
+    if (!bedarfe.length) return;
+
+    // Erwartete Menge {Dienst} je Datum aus offenen Bedarfen
+    const expected = new Map<string, Set<string>>();
+    for (const b of bedarfe) {
+      if ((b.status ?? "offen") !== "offen") continue;
+      const day = new Date(b.datum).toISOString().slice(0, 10);
+      const label = DIENST_CODE_TO_LABEL[b.dienst];
+      if (!label) continue;
+      if (!expected.has(day)) expected.set(day, new Set());
+      expected.get(day)!.add(label);
+    }
+
+    // Für jedes Datum, das in der UI als Dispo-Zeile auftaucht, muss die Dienst-Menge
+    // exakt der Menge aus offenen Bedarfen für dieses Datum entsprechen.
+    for (const [day, uiSet] of perDatum) {
+      const exp = expected.get(day);
+      if (!exp) continue; // API liefert evtl. anderen Scope/Filter – dann nicht erzwingen
+      expect(
+        [...uiSet].sort(),
+        `Dienst-Menge für ${day} weicht von offenen Bedarfen ab`,
+      ).toEqual([...exp].sort());
+    }
+  });
 });
