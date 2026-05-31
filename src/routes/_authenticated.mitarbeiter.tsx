@@ -23,7 +23,8 @@ import { format, addDays } from "date-fns";
 import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
 import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
-import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
+import { WhatsAppIcon, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
+import { WhatsAppSequentialDialog } from "@/components/whatsapp-sequential-dialog";
 
 
 
@@ -191,6 +192,9 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const [seqOpen, setSeqOpen] = useState(false);
+  const [waRecipients, setWaRecipients] = useState<{ id: any; name: string; telefon?: string | null; text: string }[]>([]);
+
   function sendenViaWhatsApp() {
     if (empfaengerWhatsApp.length === 0) {
       toast.error("Keine Mitarbeiter mit Telefonnummer.");
@@ -200,12 +204,16 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
     const recipients = empfaengerWhatsApp.map((ma: any) => {
       const link = `${origin}/m/${ma.zugangs_token}?monat=${monat}`;
       const text = `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`;
-      return { telefon: ma.telefon, text };
+      return {
+        id: ma.id,
+        name: `${ma.vorname ?? ""} ${ma.nachname ?? ""}`.trim() || "Mitarbeiter",
+        telefon: ma.telefon,
+        text,
+      };
     });
-    openWhatsAppChats(recipients, (n) =>
-      toast.success(`${n} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`),
-    );
+    setWaRecipients(recipients);
     setOpen(false);
+    setSeqOpen(true);
   }
 
   return (
@@ -254,7 +262,7 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
               {kanal === "telegram" ? (
                 <>Es wird an <strong>{empfaengerAnzahl}</strong> verknüpfte Mitarbeiter gesendet. Jeder erhält seinen persönlichen Link für den gewählten Monat.</>
               ) : (
-                <>Pro <strong>{empfaengerAnzahl}</strong> Mitarbeiter mit Telefonnummer öffnet sich ein WhatsApp-Tab mit dem persönlichen Link. Du tippst dort jeweils nur noch auf „Senden". Bitte Popups erlauben.</>
+                <>Für <strong>{empfaengerAnzahl}</strong> Mitarbeiter mit Telefonnummer wird im nächsten Schritt nacheinander je ein WhatsApp-Chat geöffnet. Du tippst dort jeweils nur noch auf „Senden".</>
               )}
             </p>
           </div>
@@ -270,12 +278,18 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
                 disabled={empfaengerAnzahl === 0}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                <WhatsAppIcon className="h-3.5 w-3.5 mr-1" /> Tabs öffnen
+                <WhatsAppIcon className="h-3.5 w-3.5 mr-1" /> Weiter
               </Button>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <WhatsAppSequentialDialog
+        open={seqOpen}
+        onOpenChange={setSeqOpen}
+        recipients={waRecipients}
+        title="Verfügbarkeitslink via WhatsApp"
+      />
     </>
   );
 }
