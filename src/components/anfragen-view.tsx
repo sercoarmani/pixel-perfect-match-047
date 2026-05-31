@@ -110,11 +110,11 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
 
     if (scope !== "kunden") return anfRows;
 
-    // Dedupe: pro (Datum × Dienst) nur eine virtuelle Bedarf-Zeile
+    // Dedupe: pro (Einrichtung × Datum × Dienst) nur eine virtuelle Bedarf-Zeile
     const bedSeen = new Set<string>();
     const bedRows: Row[] = [];
     for (const b of (bedQ.data ?? []) as any[]) {
-      const key = `${b.datum}|${b.dienst}`;
+      const key = `${b.einrichtung_id}|${b.datum}|${b.dienst}`;
       if (bedSeen.has(key)) continue;
       bedSeen.add(key);
       bedRows.push({ kind: "bedarf" as const, id: `bedarf:${b.id}`, sortDate: b.datum, data: b });
