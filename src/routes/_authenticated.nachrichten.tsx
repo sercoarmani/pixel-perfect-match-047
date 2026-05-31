@@ -25,6 +25,8 @@ function KontaktPage() {
   const fetchMit = useServerFn(listMitarbeiter);
   const { data, isLoading } = useQuery({ queryKey: ["mitarbeiter"], queryFn: () => fetchMit() });
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [bulkMessage, setBulkMessage] = useState("");
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -38,6 +40,40 @@ function KontaktPage() {
       })
       .sort((a: any, b: any) => a.nachname.localeCompare(b.nachname));
   }, [data, search]);
+
+  const selectableList = useMemo(() => list.filter((m: any) => normalizePhone(m.telefon)), [list]);
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
+  const selectedCount = selectedIds.length;
+  const allSelected = selectableList.length > 0 && selectableList.every((m: any) => selected[m.id]);
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected({});
+    } else {
+      const next: Record<string, boolean> = {};
+      selectableList.forEach((m: any) => { next[m.id] = true; });
+      setSelected(next);
+    }
+  }
+
+  function sendBulkWhatsApp() {
+    const text = bulkMessage.trim();
+    if (!text) { toast.error("Bitte eine Nachricht eingeben."); return; }
+    const recipients = selectableList.filter((m: any) => selected[m.id]);
+    if (recipients.length === 0) { toast.error("Keine Empfänger ausgewählt."); return; }
+    const encoded = encodeURIComponent(text);
+    let opened = 0;
+    recipients.forEach((m: any, i: number) => {
+      const num = normalizePhone(m.telefon).replace(/^\+/, "");
+      if (!num) return;
+      setTimeout(() => {
+        window.open(`https://wa.me/${num}?text=${encoded}`, "_blank", "noopener,noreferrer");
+      }, i * 350);
+      opened++;
+    });
+    toast.success(`${opened} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`);
+  }
+
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
