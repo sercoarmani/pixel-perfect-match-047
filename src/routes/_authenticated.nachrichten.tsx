@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { MessageSquare, Send, Phone, PhoneCall, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/nachrichten")({
@@ -22,6 +25,8 @@ function KontaktPage() {
   const fetchMit = useServerFn(listMitarbeiter);
   const { data, isLoading } = useQuery({ queryKey: ["mitarbeiter"], queryFn: () => fetchMit() });
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [bulkMessage, setBulkMessage] = useState("");
 
   const list = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -35,6 +40,40 @@ function KontaktPage() {
       })
       .sort((a: any, b: any) => a.nachname.localeCompare(b.nachname));
   }, [data, search]);
+
+  const selectableList = useMemo(() => list.filter((m: any) => normalizePhone(m.telefon)), [list]);
+  const selectedIds = useMemo(() => Object.keys(selected).filter((id) => selected[id]), [selected]);
+  const selectedCount = selectedIds.length;
+  const allSelected = selectableList.length > 0 && selectableList.every((m: any) => selected[m.id]);
+
+  function toggleAll() {
+    if (allSelected) {
+      setSelected({});
+    } else {
+      const next: Record<string, boolean> = {};
+      selectableList.forEach((m: any) => { next[m.id] = true; });
+      setSelected(next);
+    }
+  }
+
+  function sendBulkWhatsApp() {
+    const text = bulkMessage.trim();
+    if (!text) { toast.error("Bitte eine Nachricht eingeben."); return; }
+    const recipients = selectableList.filter((m: any) => selected[m.id]);
+    if (recipients.length === 0) { toast.error("Keine Empfänger ausgewählt."); return; }
+    const encoded = encodeURIComponent(text);
+    let opened = 0;
+    recipients.forEach((m: any, i: number) => {
+      const num = normalizePhone(m.telefon).replace(/^\+/, "");
+      if (!num) return;
+      setTimeout(() => {
+        window.open(`https://wa.me/${num}?text=${encoded}`, "_blank", "noopener,noreferrer");
+      }, i * 350);
+      opened++;
+    });
+    toast.success(`${opened} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`);
+  }
+
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -55,9 +94,44 @@ function KontaktPage() {
         />
       </div>
 
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <WhatsAppIcon className="h-4 w-4 text-green-600" /> WhatsApp-Sammelnachricht
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            value={bulkMessage}
+            onChange={(e) => setBulkMessage(e.target.value)}
+            placeholder="Nachricht eingeben, die an alle ausgewählten Mitarbeiter gesendet werden soll…"
+            className="min-h-20"
+          />
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs text-muted-foreground">
+              {selectedCount} ausgewählt · Pro Empfänger öffnet sich ein WhatsApp-Tab mit vorbereitetem Text. Du musst dort jeweils auf „Senden" tippen.
+            </div>
+            <Button
+              size="sm"
+              onClick={sendBulkWhatsApp}
+              disabled={selectedCount === 0 || !bulkMessage.trim()}
+              className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Send className="h-3.5 w-3.5" /> An {selectedCount || ""} Empfänger senden
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-base">Mitarbeiter ({list.length})</CardTitle>
+          {selectableList.length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+              Alle mit Telefonnummer auswählen
+            </label>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {isLoading && <div className="text-sm text-muted-foreground">Lade…</div>}
@@ -70,9 +144,16 @@ function KontaktPage() {
             const tgUser = m.telegram_username?.replace(/^@/, "");
             return (
               <div key={m.id} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2 hover:bg-accent/40 transition-colors">
+                <Checkbox
+                  checked={!!selected[m.id]}
+                  disabled={!waNumber}
+                  onCheckedChange={(v) => setSelected((s) => ({ ...s, [m.id]: !!v }))}
+                  aria-label={`${m.vorname} ${m.nachname} auswählen`}
+                />
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                   {m.kuerzel?.slice(0, 2).toUpperCase() ?? "MA"}
                 </div>
+
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{m.nachname}, {m.vorname}</div>
                   <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
