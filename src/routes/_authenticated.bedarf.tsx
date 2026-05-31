@@ -276,7 +276,7 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
         {(data?.vorschlaege ?? []).map((m: any) => {
           const tel = normalizePhone(m.telefon);
           const wa = tel.replace(/^\+/, "");
-          const radius = m.max_radius_km ?? m.umkreis_km;
+          // Entfernung zur Einrichtung (aus Geodaten) statt Wunschradius des MA anzeigen
           return (
             <div key={m.id} className="flex items-center gap-2 p-2 border rounded hover:bg-accent/40">
               <div className="flex-1 min-w-0">
