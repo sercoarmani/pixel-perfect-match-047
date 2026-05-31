@@ -97,6 +97,16 @@ function VerwaltungPage() {
 
 
       <section className="space-y-3">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+          WhatsApp-Versand
+        </h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <WhatsAppSetupCard />
+          <WhatsAppTemplatesCard />
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <FileText className="h-4 w-4" /> Nachrichtenvorlagen
         </h2>
