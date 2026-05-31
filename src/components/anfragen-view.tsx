@@ -110,12 +110,15 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
 
     if (scope !== "kunden") return anfRows;
 
-    const bedRows: Row[] = (bedQ.data ?? []).map((b: any) => ({
-      kind: "bedarf" as const,
-      id: `bedarf:${b.id}`,
-      sortDate: b.datum,
-      data: b,
-    }));
+    // Dedupe: pro (Datum × Dienst) nur eine virtuelle Bedarf-Zeile
+    const bedSeen = new Set<string>();
+    const bedRows: Row[] = [];
+    for (const b of (bedQ.data ?? []) as any[]) {
+      const key = `${b.datum}|${b.dienst}`;
+      if (bedSeen.has(key)) continue;
+      bedSeen.add(key);
+      bedRows.push({ kind: "bedarf" as const, id: `bedarf:${b.id}`, sortDate: b.datum, data: b });
+    }
 
     return [...anfRows, ...bedRows].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
   }, [anfQ.data, bedQ.data, cfg.empfaengerTyp, scope]);
