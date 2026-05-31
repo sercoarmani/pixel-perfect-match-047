@@ -12,6 +12,7 @@ import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send, Compass } from "luci
 import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
 import { sendBedarfBroadcast } from "@/lib/telegram.functions";
+import { formatKm } from "@/lib/format-distance";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
