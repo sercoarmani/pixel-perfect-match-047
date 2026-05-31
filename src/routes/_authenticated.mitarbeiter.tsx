@@ -146,6 +146,26 @@ function MitarbeiterPage() {
   );
 }
 
+function MailButton({ mitarbeiter }: { mitarbeiter: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="ghost" size="icon" title={`E-Mail an ${mitarbeiter.email}`} onClick={() => setOpen(true)}>
+        <Mail className="h-4 w-4" />
+      </Button>
+      <ComposeEmailDialog
+        open={open}
+        onOpenChange={setOpen}
+        defaultTo={mitarbeiter.email ?? ""}
+        defaultSubject=""
+        defaultBody={`Hallo ${mitarbeiter.vorname ?? ""},\n\n`}
+        refs={{ mitarbeiter_id: mitarbeiter.id, referenz_typ: "mitarbeiter_kontakt" }}
+        title={`E-Mail an ${mitarbeiter.vorname} ${mitarbeiter.nachname}`}
+      />
+    </>
+  );
+}
+
 function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] }) {
   const [open, setOpen] = useState(false);
   const [kanal, setKanal] = useState<"telegram" | "whatsapp">("telegram");
