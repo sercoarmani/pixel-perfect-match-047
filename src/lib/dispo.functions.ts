@@ -184,7 +184,7 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
       id: z.string().uuid().optional(),
       vorname: z.string().min(1).max(100),
       nachname: z.string().min(1).max(100),
-      kuerzel: z.string().min(1).max(20),
+      kuerzel: z.string().max(20).optional().or(z.literal("")),
       qualifikation: z.enum(["PFK", "PHK", "GuK", "PFA", "PFM", "PFF", "Azubi", "Berufserfahrung", "LG1_LG2", "Krankenschwester"]),
       anstellung: z.enum(["Vollzeit", "Teilzeit", "Minijob"]),
       telefon: z.string().max(50).optional().nullable(),
