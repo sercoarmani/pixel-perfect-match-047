@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage, listMitarbeiter } from "@/lib/dispo.functions";
 import { sendBedarfBroadcast } from "@/lib/telegram.functions";
 import { formatKm } from "@/lib/format-distance";
-import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
+import { WhatsAppIcon, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
 import { WhatsAppSequentialDialog } from "@/components/whatsapp-sequential-dialog";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
