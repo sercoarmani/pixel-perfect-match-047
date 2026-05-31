@@ -138,6 +138,25 @@ function KontaktPage() {
                     </span>
                   )}
                 </Button>
+
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  disabled={!m.email}
+                  className="h-8 gap-1.5"
+                  title={m.email ? `E-Mail: ${m.email}` : "Keine E-Mail hinterlegt"}
+                >
+                  {m.email ? (
+                    <a href={`mailto:${m.email}`}>
+                      <Mail className="h-3.5 w-3.5" /> E-Mail
+                    </a>
+                  ) : (
+                    <span className="opacity-50 cursor-not-allowed">
+                      <Mail className="h-3.5 w-3.5" /> E-Mail
+                    </span>
+                  )}
+                </Button>
               </div>
             );
           })}
