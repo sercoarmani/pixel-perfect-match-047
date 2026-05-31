@@ -291,9 +291,15 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
                 <div className="text-xs text-muted-foreground">
                   <Badge variant="secondary" className="mr-1">{m.qualifikation}</Badge>
                   <Badge variant="outline" className="mr-1">{m.anstellung}</Badge>
-                  {m.distanz_km != null && <span className="mr-1">Entfernung {m.distanz_km} km · </span>}
                   {m.eingeplant}/{m.max_einsaetze ?? 20} Einsätze · noch {m.frei} frei
+                  {m.distanz_km != null && (
+                    <span className="ml-1">
+                      · Entfernung <span className="font-medium text-foreground">{m.distanz_km} km</span>
+                      {m.im_radius === false ? " (außerh. Wunschradius)" : ""}
+                    </span>
+                  )}
                 </div>
+
               </div>
               {tel && (
                 <>
