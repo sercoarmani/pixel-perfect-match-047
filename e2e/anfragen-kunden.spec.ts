@@ -18,7 +18,35 @@ async function login(page: Page) {
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 15_000 });
 }
 
-const EXPECTED_COLUMNS = ["Empfänger", "Zeitraum", "Status", "Erstellt", "Link / Nachricht"];
+const EXPECTED_COLUMNS = ["Kunde", "Zeitraum", "Dienste", "Status", "Erstellt", "Link / Nachricht"];
+const DIENST_LABELS = ["Früh", "Spät", "Nacht"] as const;
+const DIENST_CODE_TO_LABEL: Record<string, (typeof DIENST_LABELS)[number]> = {
+  F: "Früh",
+  S: "Spät",
+  N: "Nacht",
+};
+
+function parseGermanDate(s: string): Date {
+  // "dd.MM.yyyy"
+  const [d, m, y] = s.split(".").map((x) => parseInt(x, 10));
+  return new Date(y, m - 1, d);
+}
+
+function parseZeitraum(text: string): { from: Date; to: Date } | null {
+  // Formate: "dd.MM.–dd.MM.yyyy" (Anfrage) oder "dd.MM.yyyy" (Bedarf, Punkt)
+  const range = text.match(/(\d{2}\.\d{2}\.)(?:(\d{4}))?\s*[–-]\s*(\d{2}\.\d{2}\.\d{4})/);
+  if (range) {
+    const yearTo = range[3].split(".")[2];
+    const fromStr = `${range[1]}${range[2] ?? yearTo}`;
+    return { from: parseGermanDate(fromStr), to: parseGermanDate(range[3]) };
+  }
+  const single = text.match(/(\d{2}\.\d{2}\.\d{4})/);
+  if (single) {
+    const d = parseGermanDate(single[1]);
+    return { from: d, to: d };
+  }
+  return null;
+}
 
 test.describe("/anfragen/kunden", () => {
   test("Header, Untertitel und CTA werden gerendert", async ({ page }) => {
