@@ -184,7 +184,7 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
       id: z.string().uuid().optional(),
       vorname: z.string().min(1).max(100),
       nachname: z.string().min(1).max(100),
-      kuerzel: z.string().min(1).max(20),
+      kuerzel: z.string().max(20).optional().or(z.literal("")),
       qualifikation: z.enum(["PFK", "PHK", "GuK", "PFA", "PFM", "PFF", "Azubi", "Berufserfahrung", "LG1_LG2", "Krankenschwester"]),
       anstellung: z.enum(["Vollzeit", "Teilzeit", "Minijob"]),
       telefon: z.string().max(50).optional().nullable(),
@@ -206,13 +206,41 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const payload = { ...data, email: data.email || null };
+    const normalize = (s: string) =>
+      (s ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/ß/gi, "ss")
+        .replace(/[^A-Za-z]/g, "")
+        .toUpperCase();
+    async function generateKuerzel(): Promise<string> {
+      const nn = normalize(data.nachname).slice(0, 3);
+      const vn = normalize(data.vorname).slice(0, 1);
+      let base = (nn + vn) || "MA";
+      base = base.slice(0, 18);
+      const { data: existing } = await context.supabase
+        .from("mitarbeiter").select("kuerzel").ilike("kuerzel", `${base}%`);
+      const taken = new Set((existing ?? []).map((r: { kuerzel: string }) => r.kuerzel.toUpperCase()));
+      if (!taken.has(base)) return base;
+      for (let i = 2; i < 1000; i++) {
+        const cand = `${base}${i}`.slice(0, 20);
+        if (!taken.has(cand)) return cand;
+      }
+      return `${base}${Math.random().toString(36).slice(2, 6).toUpperCase()}`.slice(0, 20);
+    }
+
+    const { kuerzel: rawKuerzel, ...rest } = data;
+    const cleanedKuerzel = (rawKuerzel ?? "").trim();
     if (data.id) {
-      const { error } = await context.supabase.from("mitarbeiter").update(payload).eq("id", data.id);
+      const basePayload = { ...rest, email: data.email || null };
+      const updatePayload = cleanedKuerzel ? { ...basePayload, kuerzel: cleanedKuerzel } : basePayload;
+      const { error } = await context.supabase.from("mitarbeiter").update(updatePayload).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: row, error } = await context.supabase.from("mitarbeiter").insert(payload).select("id").single();
+    const finalKuerzel = cleanedKuerzel || (await generateKuerzel());
+    const insertPayload = { ...rest, kuerzel: finalKuerzel, email: data.email || null };
+    const { data: row, error } = await context.supabase.from("mitarbeiter").insert(insertPayload).select("id").single();
     if (error) throw new Error(error.message);
     return { id: row.id };
   });

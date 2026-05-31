@@ -1,23 +1,25 @@
-## Ziel
+# Problem
 
-1. Der rote Badge „Anfrage Kunden" in der Sidebar soll exakt die Anzahl der roten „offen"-Zeilen in `/anfragen/kunden` widerspiegeln (aktuell zählt er nur die `anfragen`-Tabelle und zeigt deshalb 2 statt ~69).
-2. Zeilen in `/anfragen/kunden` werden so sortiert, dass heutige und zukünftige Zeiträume zuerst (aufsteigend) erscheinen, vergangene danach (ebenfalls aufsteigend).
+Beim Anlegen eines Mitarbeiters ohne ausgefülltes Feld „Kürzel" schlägt die Validierung mit `kuerzel: String must contain at least 1 character(s)` fehl. Der Server-Validator (`src/lib/dispo.functions.ts:187`) verlangt `z.string().min(1).max(20)`, das UI-Formular markiert das Feld aber nicht als Pflichtfeld und gibt keinen Hinweis.
+
+# Lösung
+
+Kürzel wird optional gemacht und beim Anlegen automatisch generiert (eindeutig, max. 20 Zeichen). Beim Bearbeiten bleibt es weiterhin Pflicht (kein leeres Überschreiben eines existierenden Kürzels).
 
 ## Änderungen
 
-### 1. `src/lib/sidebar-counts.functions.ts`
-- Zusätzlich zur Anfragen-Zählung alle offenen Bedarfe abfragen (`bedarfe.status='offen'`, nur `einrichtung_id, datum, dienst`).
-- Serverseitig nach `(einrichtung_id, datum, dienst)` deduplizieren (gleiche Logik wie in der UI).
-- `anfragenKunden = (anfragen.offen & empfaenger_typ='einrichtung' & typ='bedarf') + distinct(bedarfe.offen)`.
+1. **`src/lib/dispo.functions.ts`** – `upsertMitarbeiter`:
+   - `kuerzel` im Validator zu `z.string().max(20).optional()` ändern.
+   - Im Handler:
+     - Bei vorhandener `id` (Update): wenn `kuerzel` leer/undefined → Feld nicht überschreiben.
+     - Bei neuem Datensatz: wenn leer, Kürzel aus `Nachname` (erste 3 Buchstaben, Großbuchstaben, Umlaute ersetzt) + `Vorname` (erster Buchstabe) generieren, Umlaute/Sonderzeichen entfernen. Bei Kollision (`select kuerzel where kuerzel like 'BASIS%'`) numerischen Suffix `2`, `3`, … anhängen, bis frei. Auf max. 20 Zeichen begrenzen.
+     - Fallback wenn Vor-/Nachname leer: `MA` + zufälliger 4-Zeichen-Suffix.
 
-### 2. `src/components/anfragen-view.tsx`
-- Sortier-Vergleicher anpassen:
-  - Sortierdatum jeder Anfrage-Zeile = `zeitraum_von`, jeder Bedarf-Zeile = `datum` (unverändert).
-  - Heute (`yyyy-MM-dd`) als Schwelle: Einträge mit `sortDate >= today` zuerst, aufsteigend; danach Einträge mit `sortDate < today`, aufsteigend.
+2. **`src/routes/_authenticated.mitarbeiter.tsx`** (Zeile 337):
+   - Label „Kürzel" um Hinweis ergänzen: `<Field label="Kürzel (optional, wird sonst automatisch erzeugt)">`.
+   - Keine Logikänderung im Client.
 
-Keine Änderungen an Spalten, Styling oder Server-Funktion `listOffeneBedarfe`/`listAnfragen`.
+## Nicht Teil dieses Plans
 
-## Verifikation
-
-- DB-Abgleich per `psql`: erwarteter Sidebar-Count = `count(anfragen offen, einrichtung, bedarf)` + `count(DISTINCT (einrichtung_id, datum, dienst)) FROM bedarfe WHERE status='offen'`.
-- Visuelle Prüfung in `/anfragen/kunden`: Sidebar-Zahl = Anzahl roter Badges in der Tabelle; oberste Zeile hat `Zeitraum >= heute`.
+- Keine DB-Migration; `kuerzel` bleibt `NOT NULL` in der Tabelle.
+- Keine Änderungen an Import-Validatoren (Zeile 347, 370, 379) — dort ist Kürzel zwingend.
