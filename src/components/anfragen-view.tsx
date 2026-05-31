@@ -120,7 +120,13 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
       bedRows.push({ kind: "bedarf" as const, id: `bedarf:${b.id}`, sortDate: b.datum, data: b });
     }
 
-    return [...anfRows, ...bedRows].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+    const today = format(new Date(), "yyyy-MM-dd");
+    return [...anfRows, ...bedRows].sort((a, b) => {
+      const aFuture = a.sortDate >= today;
+      const bFuture = b.sortDate >= today;
+      if (aFuture !== bFuture) return aFuture ? -1 : 1;
+      return a.sortDate.localeCompare(b.sortDate);
+    });
   }, [anfQ.data, bedQ.data, cfg.empfaengerTyp, scope]);
 
   return (
