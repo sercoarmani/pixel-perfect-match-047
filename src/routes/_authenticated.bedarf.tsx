@@ -9,6 +9,7 @@ import {
   createBedarfeBulk,
 } from "@/lib/anfrage-ai.functions";
 import { upsertEinsatz } from "@/lib/dispo.functions";
+import { formatKm } from "@/lib/format-distance";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -284,7 +285,7 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
                   {m.nachname}, {m.vorname}
                   {m.distanz_km != null && (
                     <Badge variant={m.im_radius === false ? "outline" : "default"} className="text-[10px]">
-                      {m.distanz_km} km{m.im_radius === false ? " · außerh. Radius" : ""}
+                      {formatKm(m.distanz_km)}{m.im_radius === false ? " · außerh. Radius" : ""}
                     </Badge>
                   )}
                 </div>
@@ -294,11 +295,12 @@ function VorschlagsPanel({ bedarf, einrichtungId }: { bedarf: Bedarf | null; ein
                   {m.eingeplant}/{m.max_einsaetze ?? 20} Einsätze · noch {m.frei} frei
                   {m.distanz_km != null && (
                     <span className="ml-1">
-                      · Entfernung <span className="font-medium text-foreground">{m.distanz_km} km</span>
+                      · Entfernung <span className="font-medium text-foreground">{formatKm(m.distanz_km)}</span>
                       {m.im_radius === false ? " (außerh. Wunschradius)" : ""}
                     </span>
                   )}
                 </div>
+
 
               </div>
               {tel && (

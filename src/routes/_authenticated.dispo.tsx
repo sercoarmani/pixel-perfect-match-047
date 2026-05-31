@@ -12,6 +12,7 @@ import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send, Compass } from "luci
 import { toast } from "sonner";
 import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
 import { sendBedarfBroadcast } from "@/lib/telegram.functions";
+import { formatKm } from "@/lib/format-distance";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
@@ -249,9 +250,9 @@ function AnruflisteRow({ bedarf, mitarbeiter }: { bedarf: any; mitarbeiter: any 
             const knapp = limit != null && d >= limit * 0.9;
             return (
               <div className="flex items-center gap-2">
-                <span>≈ {d < 10 ? d.toFixed(1) : Math.round(d)} km Luftlinie</span>
+                <span>≈ {formatKm(d)} Luftlinie</span>
                 {limit != null && (
-                  <span className="text-xs text-muted-foreground">/ {Math.round(limit)} km</span>
+                  <span className="text-xs text-muted-foreground">/ {formatKm(limit)}</span>
                 )}
                 {knapp && (
                   <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0">
@@ -262,7 +263,7 @@ function AnruflisteRow({ bedarf, mitarbeiter }: { bedarf: any; mitarbeiter: any 
             );
           })()
         ) : mitarbeiter.umkreis_km != null ? (
-          `${mitarbeiter.umkreis_km} km`
+          formatKm(mitarbeiter.umkreis_km)
         ) : (
           <span className="text-muted-foreground" title="Keine Geo-Daten">—</span>
         )}
