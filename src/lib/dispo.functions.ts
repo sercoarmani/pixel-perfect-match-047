@@ -281,6 +281,19 @@ export const listAnfragen = createServerFn({ method: "GET" })
     return data;
   });
 
+export const listOffeneBedarfe = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("bedarfe")
+      .select("id, einrichtung_id, datum, dienst, qualifikation, anzahl, status, ergebnis, notiz, eingegangen_am")
+      .eq("status", "offen")
+      .order("datum", { ascending: true })
+      .limit(500);
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
 export const createAnfrage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
