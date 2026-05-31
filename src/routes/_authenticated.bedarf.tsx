@@ -9,6 +9,7 @@ import {
   createBedarfeBulk,
 } from "@/lib/anfrage-ai.functions";
 import { upsertEinsatz } from "@/lib/dispo.functions";
+import { formatKm } from "@/lib/format-distance";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
