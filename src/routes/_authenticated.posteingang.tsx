@@ -20,8 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Inbox, RefreshCw, Sparkles, Trash2, CheckCircle2, Archive, Mail, Paperclip } from "lucide-react";
+import { Inbox, RefreshCw, Sparkles, Trash2, CheckCircle2, Archive, Mail, Paperclip, Reply } from "lucide-react";
 import { toast } from "sonner";
+import { ComposeEmailDialog } from "@/components/compose-email-dialog";
 
 export const Route = createFileRoute("/_authenticated/posteingang")({
   component: PosteingangPage,
@@ -182,6 +183,8 @@ function DetailDialog({ id, onClose }: { id: string | null; onClose: () => void 
     | { bedarf?: { datum?: string | null; schicht?: "F" | "S" | "N" | null; qualifikation?: string | null; anzahl?: number | null } | null }
     | undefined;
 
+  const [replyOpen, setReplyOpen] = useState(false);
+
   const [bedarfDatum, setBedarfDatum] = useState<string>("");
   const [bedarfDienst, setBedarfDienst] = useState<"F" | "S" | "N">("F");
   const [bedarfQual, setBedarfQual] = useState<"PFK" | "PHK">("PFK");
@@ -332,6 +335,9 @@ function DetailDialog({ id, onClose }: { id: string | null; onClose: () => void 
           </div>
         )}
         <DialogFooter className="flex-wrap gap-2">
+          <Button variant="default" size="sm" onClick={() => setReplyOpen(true)} disabled={!mail}>
+            <Reply className="h-4 w-4 mr-1" />Antworten
+          </Button>
           <Button variant="outline" size="sm" onClick={() => reklassify.mutate()} disabled={reklassify.isPending}>
             <Sparkles className="h-4 w-4 mr-1" />KI erneut
           </Button>
@@ -346,6 +352,21 @@ function DetailDialog({ id, onClose }: { id: string | null; onClose: () => void 
           </Button>
         </DialogFooter>
       </DialogContent>
+      <ComposeEmailDialog
+        open={replyOpen}
+        onOpenChange={setReplyOpen}
+        defaultTo={(mail as any)?.von_email ?? ""}
+        defaultSubject={(mail as any)?.betreff ? `Re: ${(mail as any).betreff}` : "Re: "}
+        defaultBody={`\n\n\n---\nUrsprüngliche Nachricht von ${(mail as any)?.von_name ?? (mail as any)?.von_email ?? ""}:\n${((mail as any)?.body_text ?? "").split("\n").map((l: string) => `> ${l}`).join("\n")}`}
+        refs={{
+          einrichtung_id: (mail as any)?.zugeordnet_einrichtung_id ?? null,
+          mitarbeiter_id: (mail as any)?.zugeordnet_mitarbeiter_id ?? null,
+          referenz_typ: "email_inbox_reply",
+        }}
+        inboxId={id}
+        title="Antwort senden"
+        onSent={invalidate}
+      />
     </Dialog>
   );
 }
