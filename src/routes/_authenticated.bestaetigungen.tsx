@@ -19,7 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Trash2, FileText, AlertCircle, CheckCircle2, Clock, Building2, User, Loader2, MessageCircle } from "lucide-react";
+import { Send, Trash2, FileText, AlertCircle, CheckCircle2, Clock, Building2, User, Loader2, MessageCircle, PhoneCall, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/bestaetigungen")({
