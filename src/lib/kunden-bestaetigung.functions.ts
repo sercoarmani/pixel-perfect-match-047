@@ -28,7 +28,7 @@ export const listKundenbestaetigungen = createServerFn({ method: "GET" })
         ? context.supabase.from("mitarbeiter").select("id, vorname, nachname, qualifikation, telegram_chat_id").in("id", maIds)
         : Promise.resolve({ data: [] as any[] }),
       einIds.length
-        ? context.supabase.from("einrichtungen").select("id, name, ort").in("id", einIds)
+        ? context.supabase.from("einrichtungen").select("id, name, ort, kontakt_name, kontakt_email, kontakt_telefon").in("id", einIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
     const maMap = new Map((mas ?? []).map((m: any) => [m.id, m]));

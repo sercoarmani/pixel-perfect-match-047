@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { addDays, format } from "date-fns";
+import { addDays, format, parseISO, isWithinInterval } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Copy, MessageCircle, Mail, Phone } from "lucide-react";
+import { Plus, Copy, MessageCircle, Mail, PhoneCall } from "lucide-react";
 import { toast } from "sonner";
-import { listAnfragen, createAnfrage, listMitarbeiter, listEinrichtungen, listTemplates } from "@/lib/dispo.functions";
+import {
+  listAnfragen, createAnfrage, listMitarbeiter, listEinrichtungen, listTemplates, listOffeneBedarfe,
+} from "@/lib/dispo.functions";
 
 export type AnfragenScope = "kunden" | "mitarbeiter";
 
@@ -20,20 +22,30 @@ const SCOPE_CONFIG: Record<AnfragenScope, {
   subtitle: string;
   typ: "bedarf" | "verfuegbarkeit";
   empfaengerTyp: "einrichtung" | "mitarbeiter";
+  empfLabel: string;
 }> = {
   kunden: {
     title: "Anfragen von Kunden",
-    subtitle: "Bedarfsabfragen an Einrichtungen per Token-Link",
+    subtitle: "Bedarfsabfragen an Einrichtungen per Token-Link – inkl. offener Dispo-Bedarfe",
     typ: "bedarf",
     empfaengerTyp: "einrichtung",
+    empfLabel: "Kunde",
   },
   mitarbeiter: {
     title: "Verfügbarkeiten der Mitarbeiter",
     subtitle: "Verfügbarkeitsabfragen an Mitarbeiter per Token-Link",
     typ: "verfuegbarkeit",
     empfaengerTyp: "mitarbeiter",
+    empfLabel: "Empfänger",
   },
 };
+
+const DIENST_LABEL: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
+
+function normalizePhone(p?: string | null) {
+  if (!p) return "";
+  return p.replace(/[^\d+]/g, "");
+}
 
 export function AnfragenView({ scope }: { scope: AnfragenScope }) {
   const cfg = SCOPE_CONFIG[scope];
@@ -41,11 +53,17 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
   const fetchMit = useServerFn(listMitarbeiter);
   const fetchEin = useServerFn(listEinrichtungen);
   const fetchTpl = useServerFn(listTemplates);
+  const fetchBed = useServerFn(listOffeneBedarfe);
 
   const anfQ = useQuery({ queryKey: ["anfragen"], queryFn: () => fetchAnf() });
   const mitQ = useQuery({ queryKey: ["mitarbeiter"], queryFn: () => fetchMit() });
   const einQ = useQuery({ queryKey: ["einrichtungen"], queryFn: () => fetchEin() });
   const tplQ = useQuery({ queryKey: ["templates"], queryFn: () => fetchTpl() });
+  const bedQ = useQuery({
+    queryKey: ["bedarfe-offen"],
+    queryFn: () => fetchBed(),
+    enabled: scope === "kunden",
+  });
 
   const [open, setOpen] = useState(false);
 
@@ -56,10 +74,51 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
     return m;
   }, [mitQ.data, einQ.data]);
 
-  const filtered = useMemo(
-    () => (anfQ.data ?? []).filter((a: any) => a.empfaenger_typ === cfg.empfaengerTyp),
-    [anfQ.data, cfg.empfaengerTyp],
-  );
+  const einById = useMemo(() => {
+    const m = new Map<string, any>();
+    einQ.data?.forEach((e: any) => m.set(e.id, e));
+    return m;
+  }, [einQ.data]);
+
+  /** Dienste je Anfrage aus offenen Bedarfen ableiten (nur kunden-scope). */
+  const diensteByAnfrage = useMemo(() => {
+    const m = new Map<string, string[]>();
+    if (scope !== "kunden" || !bedQ.data || !anfQ.data) return m;
+    for (const a of anfQ.data) {
+      if (a.empfaenger_typ !== "einrichtung") continue;
+      const von = parseISO(a.zeitraum_von);
+      const bis = parseISO(a.zeitraum_bis);
+      const set = new Set<string>();
+      for (const b of bedQ.data) {
+        if (b.einrichtung_id !== a.empfaenger_id) continue;
+        const d = parseISO(b.datum);
+        if (isWithinInterval(d, { start: von, end: bis })) set.add(b.dienst);
+      }
+      if (set.size) m.set(a.id, Array.from(set));
+    }
+    return m;
+  }, [scope, bedQ.data, anfQ.data]);
+
+  type Row =
+    | { kind: "anfrage"; id: string; sortDate: string; data: any }
+    | { kind: "bedarf"; id: string; sortDate: string; data: any };
+
+  const rows: Row[] = useMemo(() => {
+    const anfRows: Row[] = (anfQ.data ?? [])
+      .filter((a: any) => a.empfaenger_typ === cfg.empfaengerTyp)
+      .map((a: any) => ({ kind: "anfrage" as const, id: a.id, sortDate: a.zeitraum_von, data: a }));
+
+    if (scope !== "kunden") return anfRows;
+
+    const bedRows: Row[] = (bedQ.data ?? []).map((b: any) => ({
+      kind: "bedarf" as const,
+      id: `bedarf:${b.id}`,
+      sortDate: b.datum,
+      data: b,
+    }));
+
+    return [...anfRows, ...bedRows].sort((a, b) => a.sortDate.localeCompare(b.sortDate));
+  }, [anfQ.data, bedQ.data, cfg.empfaengerTyp, scope]);
 
   return (
     <div className="p-6">
@@ -74,19 +133,36 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Empfänger</TableHead>
+              <TableHead>{cfg.empfLabel}</TableHead>
               <TableHead>Zeitraum</TableHead>
+              {scope === "kunden" && <TableHead>Dienste</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Erstellt</TableHead>
               <TableHead>Link / Nachricht</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((a: any) => (
-              <AnfrageRow key={a.id} a={a} name={nameById.get(a.empfaenger_id) ?? ""}
+            {rows.map((r) => r.kind === "anfrage" ? (
+              <AnfrageRow
+                key={r.id}
+                scope={scope}
+                a={r.data}
+                name={nameById.get(r.data.empfaenger_id) ?? ""}
+                dienste={diensteByAnfrage.get(r.data.id) ?? []}
                 templates={tplQ.data ?? []}
-                mitarbeiter={mitQ.data ?? []} einrichtungen={einQ.data ?? []} />
+                mitarbeiter={mitQ.data ?? []}
+                einrichtungen={einQ.data ?? []}
+              />
+            ) : (
+              <BedarfRow key={r.id} b={r.data} ein={einById.get(r.data.einrichtung_id)} />
             ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={scope === "kunden" ? 6 : 5} className="py-6 text-center text-sm text-muted-foreground">
+                  Keine Einträge.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
@@ -102,7 +178,62 @@ export function AnfragenView({ scope }: { scope: AnfragenScope }) {
   );
 }
 
-function AnfrageRow({ a, name, templates, mitarbeiter, einrichtungen }: any) {
+function DiensteBadges({ dienste }: { dienste: string[] }) {
+  if (!dienste.length) return <span className="text-xs text-muted-foreground">–</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {dienste.map((d) => (
+        <Badge key={d} variant="outline" className="text-[10px] px-1.5 py-0">
+          {DIENST_LABEL[d] ?? d}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function StatusBadge({ status, besetzt }: { status: string; besetzt?: boolean }) {
+  // Visuelle Differenzierung offen / besetzt / abgelehnt
+  let label = status;
+  let cls = "";
+  if (besetzt || status === "beantwortet" || status === "besetzt") {
+    label = "besetzt";
+    cls = "bg-status-bestaetigt text-status-bestaetigt-fg";
+  } else if (status === "geschlossen" || status === "abgelehnt" || status === "abgelaufen") {
+    label = "abgelehnt";
+    cls = "bg-destructive text-destructive-foreground";
+  } else if (status === "offen") {
+    label = "offen";
+  } else {
+    cls = "bg-status-ausgeplant text-status-ausgeplant-fg";
+  }
+  return <Badge className={cls}>{label}</Badge>;
+}
+
+function ContactButtons({ msg, phone, email }: { msg: string; phone: string; email: string }) {
+  const tel = normalizePhone(phone);
+  const waNumber = tel.replace(/^\+/, "");
+  return (
+    <>
+      {tel && (
+        <a href={`https://wa.me/${waNumber}${msg ? `?text=${encodeURIComponent(msg)}` : ""}`} target="_blank" rel="noopener" title={`WhatsApp: ${phone}`}>
+          <Button size="sm" variant="outline"><MessageCircle className="h-3 w-3" /></Button>
+        </a>
+      )}
+      {tel && (
+        <a href={`tel:${tel}`} title={`Anrufen: ${phone}`}>
+          <Button size="sm" variant="outline"><PhoneCall className="h-3 w-3" /></Button>
+        </a>
+      )}
+      {email && (
+        <a href={`mailto:${email}${msg ? `?subject=${encodeURIComponent("Disposition")}&body=${encodeURIComponent(msg)}` : ""}`} title={`E-Mail: ${email}`}>
+          <Button size="sm" variant="outline"><Mail className="h-3 w-3" /></Button>
+        </a>
+      )}
+    </>
+  );
+}
+
+function AnfrageRow({ scope, a, name, dienste, templates, mitarbeiter, einrichtungen }: any) {
   const url = typeof window !== "undefined"
     ? `${window.location.origin}/${a.typ === "verfuegbarkeit" ? "v" : "b"}/${a.token}`
     : "";
@@ -118,7 +249,7 @@ function AnfrageRow({ a, name, templates, mitarbeiter, einrichtungen }: any) {
     .replaceAll("{zeitraum}", `${format(new Date(a.zeitraum_von), "dd.MM.")}–${format(new Date(a.zeitraum_bis), "dd.MM.yyyy")}`)
     .replaceAll("{link}", url);
 
-  const phone = (empf?.telefon ?? empf?.kontakt_telefon ?? "").replace(/[^0-9+]/g, "");
+  const phone = empf?.telefon ?? empf?.kontakt_telefon ?? "";
   const email = empf?.email ?? empf?.kontakt_email ?? "";
 
   return (
@@ -127,37 +258,46 @@ function AnfrageRow({ a, name, templates, mitarbeiter, einrichtungen }: any) {
       <TableCell className="text-xs tabular-nums">
         {format(new Date(a.zeitraum_von), "dd.MM.")}–{format(new Date(a.zeitraum_bis), "dd.MM.yyyy")}
       </TableCell>
-      <TableCell><StatusBadge status={a.status} /></TableCell>
+      {scope === "kunden" && <TableCell><DiensteBadges dienste={dienste} /></TableCell>}
+      <TableCell><StatusBadge status={a.status} besetzt={Boolean(a.besetzt_durch)} /></TableCell>
       <TableCell className="text-xs">{format(new Date(a.erstellt_am), "dd.MM.yy HH:mm")}</TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1">
-          <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success("Link kopiert"); }}>
+          <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(url); toast.success("Link kopiert"); }} title="Link kopieren">
             <Copy className="h-3 w-3" />
           </Button>
-          {phone && (
-            <a href={`https://wa.me/${phone.replace("+","")}?text=${encodeURIComponent(msg)}`} target="_blank" rel="noopener">
-              <Button size="sm" variant="outline"><MessageCircle className="h-3 w-3" /></Button>
-            </a>
-          )}
-          {phone && (
-            <a href={`sms:${phone}?&body=${encodeURIComponent(msg)}`}>
-              <Button size="sm" variant="outline"><Phone className="h-3 w-3" /></Button>
-            </a>
-          )}
-          {email && (
-            <a href={`mailto:${email}?subject=${encodeURIComponent("Disposition")}&body=${encodeURIComponent(msg)}`}>
-              <Button size="sm" variant="outline"><Mail className="h-3 w-3" /></Button>
-            </a>
-          )}
+          <ContactButtons msg={msg} phone={phone} email={email} />
         </div>
       </TableCell>
     </TableRow>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const cls = status === "offen" ? "" : status === "beantwortet" ? "bg-status-bestaetigt text-status-bestaetigt-fg" : "bg-status-ausgeplant text-status-ausgeplant-fg";
-  return <Badge className={cls}>{status}</Badge>;
+function BedarfRow({ b, ein }: { b: any; ein: any }) {
+  const phone = ein?.kontakt_telefon ?? "";
+  const email = ein?.kontakt_email ?? "";
+  const msg = `Bedarf am ${format(new Date(b.datum), "dd.MM.yyyy")} (${DIENST_LABEL[b.dienst] ?? b.dienst}) – ${b.qualifikation}`;
+  const status = (b.ergebnis ?? b.status ?? "offen") as string;
+
+  return (
+    <TableRow className="bg-muted/30">
+      <TableCell className="text-sm">
+        <div className="flex items-center gap-2">
+          <span>{ein?.name ?? "—"}</span>
+          <Badge variant="outline" className="text-[10px]">Dispo</Badge>
+        </div>
+      </TableCell>
+      <TableCell className="text-xs tabular-nums">{format(new Date(b.datum), "dd.MM.yyyy")}</TableCell>
+      <TableCell><DiensteBadges dienste={[b.dienst]} /></TableCell>
+      <TableCell><StatusBadge status={status} /></TableCell>
+      <TableCell className="text-xs">{format(new Date(b.eingegangen_am), "dd.MM.yy HH:mm")}</TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          <ContactButtons msg={msg} phone={phone} email={email} />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 function NewAnfrageDialog({ scope, onClose, mitarbeiter, einrichtungen }: { scope: AnfragenScope; onClose: () => void; mitarbeiter: any[]; einrichtungen: any[] }) {
@@ -188,7 +328,7 @@ function NewAnfrageDialog({ scope, onClose, mitarbeiter, einrichtungen }: { scop
         <DialogHeader><DialogTitle>{cfg.title} – neue Anfrage</DialogTitle></DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="space-y-1.5">
-            <Label>Empfänger</Label>
+            <Label>{cfg.empfLabel}</Label>
             <Select value={empfId} onValueChange={setEmpfId}>
               <SelectTrigger><SelectValue placeholder="Auswählen…" /></SelectTrigger>
               <SelectContent>

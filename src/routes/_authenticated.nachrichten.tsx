@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Send, Phone, PhoneCall } from "lucide-react";
+import { MessageSquare, Send, Phone, PhoneCall, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/nachrichten")({
   component: KontaktPage,
@@ -135,6 +135,25 @@ function KontaktPage() {
                   ) : (
                     <span className="opacity-50 cursor-not-allowed">
                       <PhoneCall className="h-3.5 w-3.5" /> Anrufen
+                    </span>
+                  )}
+                </Button>
+
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  disabled={!m.email}
+                  className="h-8 gap-1.5"
+                  title={m.email ? `E-Mail: ${m.email}` : "Keine E-Mail hinterlegt"}
+                >
+                  {m.email ? (
+                    <a href={`mailto:${m.email}`}>
+                      <Mail className="h-3.5 w-3.5" /> E-Mail
+                    </a>
+                  ) : (
+                    <span className="opacity-50 cursor-not-allowed">
+                      <Mail className="h-3.5 w-3.5" /> E-Mail
                     </span>
                   )}
                 </Button>
