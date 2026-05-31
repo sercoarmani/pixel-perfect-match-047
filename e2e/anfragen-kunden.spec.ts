@@ -355,4 +355,99 @@ test.describe("/anfragen/kunden", () => {
       ).toEqual([...exp].sort());
     }
   });
+
+  test("Dispo-Dedupe: API-Duplikate pro (Datum × Dienst) ergeben nur eine UI-Zeile", async ({
+    page,
+  }) => {
+    await login(page);
+
+    // Response der offenen-Bedarfe-API abfangen und Einträge 3× duplizieren.
+    // Matcher ist tolerant (TanStack serverFn-Pfad / Query-Key-URL).
+    const matcher = /listOffeneBedarfe|bedarfe[-_/]offen/i;
+
+    let injectedDupes = 0;
+    let originalCount = 0;
+
+    await page.route(matcher, async (route) => {
+      const res = await route.fetch();
+      const ctype = res.headers()["content-type"] ?? "";
+      if (!ctype.includes("application/json")) {
+        return route.fulfill({ response: res });
+      }
+      let body: any;
+      try {
+        body = await res.json();
+      } catch {
+        return route.fulfill({ response: res });
+      }
+      const arr: any[] = Array.isArray(body)
+        ? body
+        : (body?.result ?? body?.data ?? []);
+      originalCount = arr.length;
+      if (!arr.length) return route.fulfill({ response: res, json: body });
+
+      const dup = [
+        ...arr,
+        ...arr.map((b, i) => ({ ...b, id: `${b.id}-dup1-${i}` })),
+        ...arr.map((b, i) => ({ ...b, id: `${b.id}-dup2-${i}` })),
+      ];
+      injectedDupes = dup.length - arr.length;
+
+      const out = Array.isArray(body)
+        ? dup
+        : body?.result !== undefined
+          ? { ...body, result: dup }
+          : body?.data !== undefined
+            ? { ...body, data: dup }
+            : dup;
+
+      await route.fulfill({ response: res, json: out });
+    });
+
+    await page.goto("/anfragen/kunden");
+    await page.waitForLoadState("networkidle");
+
+    if (originalCount === 0) {
+      test.skip(true, "Keine offenen Bedarfe vorhanden – Dedupe nicht prüfbar.");
+    }
+    expect(injectedDupes).toBeGreaterThan(0);
+
+    const table = page.getByRole("table");
+    const dispoRows = table.locator("tbody tr").filter({ hasText: "Dispo" });
+    const total = await dispoRows.count();
+    expect(total).toBeGreaterThan(0);
+
+    // Anzahl Dispo-Zeilen darf höchstens so groß sein wie die Originalmenge
+    // (also keine Duplikatzeilen durch die injizierten Kopien)
+    expect(
+      total,
+      `Dispo-Zeilen (${total}) > Originalmenge (${originalCount}) – Dedupe fehlt`,
+    ).toBeLessThanOrEqual(originalCount);
+
+    const zIdx = EXPECTED_COLUMNS.indexOf("Zeitraum");
+    const dIdx = EXPECTED_COLUMNS.indexOf("Dienste");
+
+    const seen = new Map<string, number>();
+    for (let i = 0; i < total; i++) {
+      const cells = dispoRows.nth(i).locator("td");
+      const zText = (await cells.nth(zIdx).innerText()).trim();
+      const dText = (await cells.nth(dIdx).innerText()).trim();
+
+      const z = parseZeitraum(zText);
+      expect(z, `Zeitraum unlesbar: "${zText}"`).not.toBeNull();
+      expect(z!.from.toDateString()).toBe(z!.to.toDateString());
+
+      const tokens = dText.split(/\s+/).filter(Boolean);
+      expect(tokens.length).toBe(1);
+      const dienst = tokens[0];
+      expect(DIENST_LABELS as readonly string[]).toContain(dienst);
+
+      const key = `${z!.from.toISOString().slice(0, 10)}|${dienst}`;
+      seen.set(key, (seen.get(key) ?? 0) + 1);
+    }
+
+    for (const [key, n] of seen) {
+      expect(n, `Dedupe verletzt – (${key}) ${n}× vorhanden`).toBe(1);
+    }
+  });
 });
