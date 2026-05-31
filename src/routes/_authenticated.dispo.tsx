@@ -1,18 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send, Compass } from "lucide-react";
 import { toast } from "sonner";
-import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
+import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage, listMitarbeiter } from "@/lib/dispo.functions";
 import { sendBedarfBroadcast } from "@/lib/telegram.functions";
 import { formatKm } from "@/lib/format-distance";
+import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
