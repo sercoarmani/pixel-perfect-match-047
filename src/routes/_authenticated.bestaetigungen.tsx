@@ -97,6 +97,9 @@ function KontaktButtons({ phone, email }: { phone?: string | null; email?: strin
       )}
     </div>
   );
+}
+
+
 
 function BestaetigungenPage() {
   const [filter, setFilter] = useState<StatusFilter>("entwurf");
