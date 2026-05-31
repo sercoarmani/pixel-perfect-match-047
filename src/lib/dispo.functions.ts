@@ -232,8 +232,8 @@ export const upsertMitarbeiter = createServerFn({ method: "POST" })
     const { kuerzel: rawKuerzel, ...rest } = data;
     const cleanedKuerzel = (rawKuerzel ?? "").trim();
     if (data.id) {
-      const updatePayload: Record<string, unknown> = { ...rest, email: data.email || null };
-      if (cleanedKuerzel) updatePayload.kuerzel = cleanedKuerzel;
+      const basePayload = { ...rest, email: data.email || null };
+      const updatePayload = cleanedKuerzel ? { ...basePayload, kuerzel: cleanedKuerzel } : basePayload;
       const { error } = await context.supabase.from("mitarbeiter").update(updatePayload).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
