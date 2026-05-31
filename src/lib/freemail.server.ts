@@ -78,7 +78,7 @@ export async function sendFreemail(
   let fehler: string | undefined;
   let ok = false;
   try {
-    const payload: Record<string, unknown> = {
+    const payload: any = {
       to: input.to,
       from: { email: FROM_ADDRESS, name: FROM_NAME },
       sender_domain: SENDER_DOMAIN,

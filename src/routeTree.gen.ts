@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -43,6 +44,11 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -222,6 +228,7 @@ const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
   '/_authenticated/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/unsubscribe'
     | '/anfragen'
     | '/bedarf'
     | '/bestaetigungen'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/unsubscribe'
     | '/anfragen'
     | '/bedarf'
     | '/bestaetigungen'
@@ -397,6 +408,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/unsubscribe'
     | '/_authenticated/anfragen'
     | '/_authenticated/bedarf'
     | '/_authenticated/bestaetigungen'
@@ -433,6 +445,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  UnsubscribeRoute: typeof UnsubscribeRoute
   BTokenRoute: typeof BTokenRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   KundeTokenRoute: typeof KundeTokenRoute
@@ -449,6 +462,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -744,6 +764,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  UnsubscribeRoute: UnsubscribeRoute,
   BTokenRoute: BTokenRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   KundeTokenRoute: KundeTokenRoute,
@@ -760,13 +781,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
