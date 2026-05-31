@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Phone, FileText, FileSpreadsheet, Trash2, Link2, Copy, RefreshCw, Send, CheckCircle2 } from "lucide-react";
+import { Plus, Phone, FileText, FileSpreadsheet, Trash2, Link2, Copy, RefreshCw, Send, CheckCircle2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { generateDienstplanPdf } from "@/lib/pdf-dienstplan";
 import { generateDienstplanExcel } from "@/lib/excel-dienstplan";
@@ -25,6 +25,7 @@ import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
 import { WhatsAppIcon, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
 import { WhatsAppSequentialDialog } from "@/components/whatsapp-sequential-dialog";
+import { ComposeEmailDialog } from "@/components/compose-email-dialog";
 
 
 
@@ -130,6 +131,7 @@ function MitarbeiterPage() {
                 <TableCell>{m.aktiv ? <Badge>aktiv</Badge> : <Badge variant="outline">inaktiv</Badge>}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
+                    {m.email && <MailButton mitarbeiter={m} />}
                     <PdfButton mitarbeiter={m} />
                     <DeleteButton mitarbeiter={m} />
                   </div>
@@ -141,6 +143,26 @@ function MitarbeiterPage() {
       </div>
       {edit && <EditDialog row={edit} onClose={() => setEdit(null)} />}
     </div>
+  );
+}
+
+function MailButton({ mitarbeiter }: { mitarbeiter: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="ghost" size="icon" title={`E-Mail an ${mitarbeiter.email}`} onClick={() => setOpen(true)}>
+        <Mail className="h-4 w-4" />
+      </Button>
+      <ComposeEmailDialog
+        open={open}
+        onOpenChange={setOpen}
+        defaultTo={mitarbeiter.email ?? ""}
+        defaultSubject=""
+        defaultBody={`Hallo ${mitarbeiter.vorname ?? ""},\n\n`}
+        refs={{ mitarbeiter_id: mitarbeiter.id, referenz_typ: "mitarbeiter_kontakt" }}
+        title={`E-Mail an ${mitarbeiter.vorname} ${mitarbeiter.nachname}`}
+      />
+    </>
   );
 }
 

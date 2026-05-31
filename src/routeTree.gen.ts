@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,6 +17,7 @@ import { Route as VTokenRouteImport } from './routes/v.$token'
 import { Route as TgVerfuegbarkeitRouteImport } from './routes/tg.verfuegbarkeit'
 import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as KundeTokenRouteImport } from './routes/kunde.$token'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as BTokenRouteImport } from './routes/b.$token'
 import { Route as AuthenticatedVerwaltungRouteImport } from './routes/_authenticated.verwaltung'
 import { Route as AuthenticatedStatistikRouteImport } from './routes/_authenticated.statistik'
@@ -33,12 +35,20 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBestaetigungenRouteImport } from './routes/_authenticated.bestaetigungen'
 import { Route as AuthenticatedBedarfRouteImport } from './routes/_authenticated.bedarf'
 import { Route as AuthenticatedAnfragenRouteImport } from './routes/_authenticated.anfragen'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AuthenticatedAnfragenMitarbeiterRouteImport } from './routes/_authenticated.anfragen.mitarbeiter'
 import { Route as AuthenticatedAnfragenKundenRouteImport } from './routes/_authenticated.anfragen.kunden'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -71,6 +81,11 @@ const MTokenRoute = MTokenRouteImport.update({
 const KundeTokenRoute = KundeTokenRouteImport.update({
   id: '/kunde/$token',
   path: '/kunde/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BTokenRoute = BTokenRouteImport.update({
@@ -163,6 +178,11 @@ const AuthenticatedAnfragenRoute = AuthenticatedAnfragenRouteImport.update({
   path: '/anfragen',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAnfragenMitarbeiterRoute =
   AuthenticatedAnfragenMitarbeiterRouteImport.update({
     id: '/mitarbeiter',
@@ -174,6 +194,18 @@ const AuthenticatedAnfragenKundenRoute =
     id: '/kunden',
     path: '/kunden',
     getParentRoute: () => AuthenticatedAnfragenRoute,
+  } as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
@@ -196,6 +228,7 @@ const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
@@ -213,19 +246,24 @@ export interface FileRoutesByFullPath {
   '/statistik': typeof AuthenticatedStatistikRoute
   '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
   '/tg/verfuegbarkeit': typeof TgVerfuegbarkeitRoute
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/bedarf': typeof AuthenticatedBedarfRoute
   '/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
@@ -243,21 +281,26 @@ export interface FileRoutesByTo {
   '/statistik': typeof AuthenticatedStatistikRoute
   '/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
   '/tg/verfuegbarkeit': typeof TgVerfuegbarkeitRoute
   '/v/$token': typeof VTokenRoute
   '/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/_authenticated/anfragen': typeof AuthenticatedAnfragenRouteWithChildren
   '/_authenticated/bedarf': typeof AuthenticatedBedarfRoute
   '/_authenticated/bestaetigungen': typeof AuthenticatedBestaetigungenRoute
@@ -275,21 +318,26 @@ export interface FileRoutesById {
   '/_authenticated/statistik': typeof AuthenticatedStatistikRoute
   '/_authenticated/verwaltung': typeof AuthenticatedVerwaltungRoute
   '/b/$token': typeof BTokenRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/kunde/$token': typeof KundeTokenRoute
   '/m/$token': typeof MTokenRoute
   '/tg/verfuegbarkeit': typeof TgVerfuegbarkeitRoute
   '/v/$token': typeof VTokenRoute
   '/_authenticated/anfragen/kunden': typeof AuthenticatedAnfragenKundenRoute
   '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
+    | '/unsubscribe'
     | '/anfragen'
     | '/bedarf'
     | '/bestaetigungen'
@@ -307,19 +355,24 @@ export interface FileRouteTypes {
     | '/statistik'
     | '/verwaltung'
     | '/b/$token'
+    | '/email/unsubscribe'
     | '/kunde/$token'
     | '/m/$token'
     | '/tg/verfuegbarkeit'
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
+    | '/lovable/email/suppression'
     | '/api/public/email/inbound'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/unsubscribe'
     | '/anfragen'
     | '/bedarf'
     | '/bestaetigungen'
@@ -337,20 +390,25 @@ export interface FileRouteTypes {
     | '/statistik'
     | '/verwaltung'
     | '/b/$token'
+    | '/email/unsubscribe'
     | '/kunde/$token'
     | '/m/$token'
     | '/tg/verfuegbarkeit'
     | '/v/$token'
     | '/anfragen/kunden'
     | '/anfragen/mitarbeiter'
+    | '/lovable/email/suppression'
     | '/api/public/email/inbound'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/unsubscribe'
     | '/_authenticated/anfragen'
     | '/_authenticated/bedarf'
     | '/_authenticated/bestaetigungen'
@@ -368,33 +426,49 @@ export interface FileRouteTypes {
     | '/_authenticated/statistik'
     | '/_authenticated/verwaltung'
     | '/b/$token'
+    | '/email/unsubscribe'
     | '/kunde/$token'
     | '/m/$token'
     | '/tg/verfuegbarkeit'
     | '/v/$token'
     | '/_authenticated/anfragen/kunden'
     | '/_authenticated/anfragen/mitarbeiter'
+    | '/lovable/email/suppression'
     | '/api/public/email/inbound'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  UnsubscribeRoute: typeof UnsubscribeRoute
   BTokenRoute: typeof BTokenRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   KundeTokenRoute: typeof KundeTokenRoute
   MTokenRoute: typeof MTokenRoute
   TgVerfuegbarkeitRoute: typeof TgVerfuegbarkeitRoute
   VTokenRoute: typeof VTokenRoute
+  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
+  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -442,6 +516,13 @@ declare module '@tanstack/react-router' {
       path: '/kunde/$token'
       fullPath: '/kunde/$token'
       preLoaderRoute: typeof KundeTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$token': {
@@ -563,6 +644,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnfragenRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/anfragen/mitarbeiter': {
       id: '/_authenticated/anfragen/mitarbeiter'
       path: '/mitarbeiter'
@@ -576,6 +664,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/anfragen/kunden'
       preLoaderRoute: typeof AuthenticatedAnfragenKundenRouteImport
       parentRoute: typeof AuthenticatedAnfragenRoute
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
@@ -662,14 +764,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  UnsubscribeRoute: UnsubscribeRoute,
   BTokenRoute: BTokenRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   KundeTokenRoute: KundeTokenRoute,
   MTokenRoute: MTokenRoute,
   TgVerfuegbarkeitRoute: TgVerfuegbarkeitRoute,
   VTokenRoute: VTokenRoute,
+  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
+  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
