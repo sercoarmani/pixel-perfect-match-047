@@ -1,18 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Phone, PhoneCall, Check, X, Megaphone, Copy, Send, Compass } from "lucide-react";
 import { toast } from "sonner";
-import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage } from "@/lib/dispo.functions";
+import { getDispoOffeneBedarfe, bedarfZusage, bedarfAbsage, listMitarbeiter } from "@/lib/dispo.functions";
 import { sendBedarfBroadcast } from "@/lib/telegram.functions";
 import { formatKm } from "@/lib/format-distance";
+import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
 
 const DIENST_LANG: Record<string, string> = { F: "Früh", S: "Spät", N: "Nacht" };
 
@@ -68,13 +71,16 @@ function DispoPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <PhoneCall className="h-5 w-5" /> Disposition
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {bedarfe.length} offene Kundenanfrage{bedarfe.length === 1 ? "" : "n"} – passende Mitarbeiter mit „Zusage"/„Absage" besetzen.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <PhoneCall className="h-5 w-5" /> Disposition
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {bedarfe.length} offene Kundenanfrage{bedarfe.length === 1 ? "" : "n"} – passende Mitarbeiter mit „Zusage"/„Absage" besetzen.
+          </p>
+        </div>
+        <FlexTeamWhatsAppButton bedarfe={bedarfe} />
       </div>
 
       <div className="rounded-md border bg-card p-4">
@@ -290,3 +296,102 @@ function AnruflisteRow({ bedarf, mitarbeiter }: { bedarf: any; mitarbeiter: any 
     </TableRow>
   );
 }
+
+function buildBedarfsVorlage(bedarfe: any[]): string {
+  if (!bedarfe || bedarfe.length === 0) {
+    return "Hallo, wir suchen kurzfristig Unterstützung – wer hat diese Woche Kapazität? Bitte kurz zurückmelden.";
+  }
+  const lines = bedarfe.slice(0, 5).map((b: any) => {
+    const datum = format(new Date(b.datum), "EEE dd.MM.", { locale: de });
+    const dienst = DIENST_LANG[b.dienst] ?? b.dienst;
+    const ort = b.einrichtung?.name || b.einrichtung?.ort || "Einrichtung";
+    return `• ${datum} ${dienst} – ${ort} (${b.qualifikation})`;
+  });
+  const rest = bedarfe.length - 5;
+  if (rest > 0) lines.push(`… und ${rest} weitere`);
+  return `Hallo, offene Dienste:\n${lines.join("\n")}\nWer kann? Bitte kurz zurückmelden.`;
+}
+
+function FlexTeamWhatsAppButton({ bedarfe }: { bedarfe: any[] }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const fetchMit = useServerFn(listMitarbeiter);
+  const { data: mitData } = useQuery({
+    queryKey: ["mitarbeiter"],
+    queryFn: () => fetchMit(),
+    enabled: open,
+  });
+
+  const empfaenger = useMemo(
+    () =>
+      ((mitData as any[]) ?? []).filter(
+        (m: any) => m.aktiv && normalizeWhatsAppPhone(m.telefon),
+      ),
+    [mitData],
+  );
+
+  useEffect(() => {
+    if (open) setText(buildBedarfsVorlage(bedarfe));
+  }, [open, bedarfe]);
+
+  function handleSend() {
+    const msg = text.trim();
+    if (!msg) {
+      toast.error("Bitte eine Nachricht eingeben.");
+      return;
+    }
+    if (empfaenger.length === 0) {
+      toast.error("Keine aktiven Mitarbeiter mit Telefonnummer.");
+      return;
+    }
+    openWhatsAppChats(
+      empfaenger.map((m: any) => ({ telefon: m.telefon, text: msg })),
+      (n) => toast.success(`${n} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`),
+    );
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+      >
+        <WhatsAppIcon className="h-4 w-4" /> WhatsApp an FlexTeam
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WhatsAppIcon className="h-4 w-4 text-green-600" /> WhatsApp-Massennachricht an FlexTeam
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm">
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="min-h-40"
+              placeholder="Nachricht…"
+            />
+            <p className="text-xs text-muted-foreground">
+              Wird an <strong>{empfaenger.length}</strong> aktive Mitarbeiter mit Telefonnummer geöffnet.
+              Pro Empfänger öffnet sich ein WhatsApp-Tab mit vorbereitetem Text – du musst dort jeweils
+              auf „Senden" tippen. Bitte Popups für diese Seite erlauben.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Abbrechen</Button>
+            <Button
+              onClick={handleSend}
+              disabled={empfaenger.length === 0 || !text.trim()}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Send className="h-3.5 w-3.5 mr-1" /> Tabs öffnen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+

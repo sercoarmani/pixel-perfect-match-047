@@ -23,6 +23,7 @@ import { format, addDays } from "date-fns";
 import { MitarbeiterDokumente } from "@/components/mitarbeiter-dokumente";
 import { DokumenteSammelImport } from "@/components/dokumente-sammel-import";
 import { GeocodeStatusBadge, GeocodeSingleButton, GeocodeBulkButton } from "@/components/geocode-status";
+import { WhatsAppIcon, openWhatsAppChats, normalizeWhatsAppPhone } from "@/components/icons/whatsapp";
 
 
 
@@ -144,6 +145,7 @@ function MitarbeiterPage() {
 
 function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] }) {
   const [open, setOpen] = useState(false);
+  const [kanal, setKanal] = useState<"telegram" | "whatsapp">("telegram");
   const [monat, setMonat] = useState<string>(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1, 1);
@@ -163,9 +165,18 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
     });
   }, []);
 
-  const empfaengerAnzahl = (mitarbeiter ?? []).filter(
+  const monatLabel = useMemo(() => {
+    const opt = monatsOptionen.find((o) => o.value === monat);
+    return opt?.label ?? monat;
+  }, [monatsOptionen, monat]);
+
+  const empfaengerTelegram = (mitarbeiter ?? []).filter(
     (m) => m.telegram_chat_id != null && (!nurAktive || m.aktiv),
-  ).length;
+  );
+  const empfaengerWhatsApp = (mitarbeiter ?? []).filter(
+    (m) => normalizeWhatsAppPhone(m.telefon) && (!nurAktive || m.aktiv),
+  );
+  const empfaengerAnzahl = kanal === "telegram" ? empfaengerTelegram.length : empfaengerWhatsApp.length;
 
   const m = useMutation({
     mutationFn: () => send({ data: { monat, nur_aktive: nurAktive } }),
@@ -180,6 +191,23 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
     onError: (e: Error) => toast.error(e.message),
   });
 
+  function sendenViaWhatsApp() {
+    if (empfaengerWhatsApp.length === 0) {
+      toast.error("Keine Mitarbeiter mit Telefonnummer.");
+      return;
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const recipients = empfaengerWhatsApp.map((ma: any) => {
+      const link = `${origin}/m/${ma.zugangs_token}?monat=${monat}`;
+      const text = `Hallo ${ma.vorname}, bitte trage deine Verfügbarkeit für ${monatLabel} ein:\n${link}`;
+      return { telefon: ma.telefon, text };
+    });
+    openWhatsAppChats(recipients, (n) =>
+      toast.success(`${n} WhatsApp-Chat(s) werden geöffnet. Bitte je Tab auf „Senden" tippen.`),
+    );
+    setOpen(false);
+  }
+
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
@@ -188,9 +216,19 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Verfügbarkeitslink per Telegram senden</DialogTitle>
+            <DialogTitle>Verfügbarkeitslink senden</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2 text-sm">
+            <div className="space-y-1.5">
+              <Label>Kanal</Label>
+              <Select value={kanal} onValueChange={(v) => setKanal(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="telegram">Telegram (automatisch)</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp (Tabs öffnen)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label>Monat</Label>
               <Select value={monat} onValueChange={setMonat}>
@@ -213,14 +251,28 @@ function VerfuegbarkeitsBroadcastButton({ mitarbeiter }: { mitarbeiter: any[] })
               <label htmlFor="brd-aktiv" className="cursor-pointer">Nur aktive Mitarbeiter</label>
             </div>
             <p className="text-xs text-muted-foreground">
-              Es wird an <strong>{empfaengerAnzahl}</strong> verknüpfte Mitarbeiter gesendet. Jeder erhält seinen persönlichen Link für den gewählten Monat.
+              {kanal === "telegram" ? (
+                <>Es wird an <strong>{empfaengerAnzahl}</strong> verknüpfte Mitarbeiter gesendet. Jeder erhält seinen persönlichen Link für den gewählten Monat.</>
+              ) : (
+                <>Pro <strong>{empfaengerAnzahl}</strong> Mitarbeiter mit Telefonnummer öffnet sich ein WhatsApp-Tab mit dem persönlichen Link. Du tippst dort jeweils nur noch auf „Senden". Bitte Popups erlauben.</>
+              )}
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Abbrechen</Button>
-            <Button onClick={() => m.mutate()} disabled={m.isPending || empfaengerAnzahl === 0}>
-              {m.isPending ? "Sende…" : "Jetzt senden"}
-            </Button>
+            {kanal === "telegram" ? (
+              <Button onClick={() => m.mutate()} disabled={m.isPending || empfaengerAnzahl === 0}>
+                {m.isPending ? "Sende…" : "Jetzt senden"}
+              </Button>
+            ) : (
+              <Button
+                onClick={sendenViaWhatsApp}
+                disabled={empfaengerAnzahl === 0}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <WhatsAppIcon className="h-3.5 w-3.5 mr-1" /> Tabs öffnen
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
