@@ -1,33 +1,43 @@
-## Hintergrund / Klarstellung
+## Outlook-Anbindung für Posteingang & Versand
 
-WhatsApp erlaubt **technisch nicht**, dass eine Nummer automatisch Nachrichten an viele andere Nummern sendet, außer über die kostenpflichtige WhatsApp Business Cloud API. Die aktuelle wa.me-Lösung ist ein **Click-to-Chat-Link**: sie öffnet den Chat mit vorausgefülltem Text – das tatsächliche "Senden" muss immer manuell passieren. Es gibt keine Möglichkeit, das zu umgehen.
+Ich verbinde dein Microsoft-Outlook-Postfach über den Lovable-Connector (OAuth) und ersetze damit den bisherigen Inbound-Webhook als primäre Mailquelle. Versand & Empfang laufen dann über dein echtes Outlook-Postfach – sichtbar im Posteingang, zählbar im Versand-Protokoll.
 
-Wir bleiben bei wa.me, machen aber die UX und Erwartungshaltung deutlich besser.
+### Was eingerichtet wird
 
-## Änderungen
+1. **Connector verbinden**
+   - `standard_connectors--connect` mit `microsoft_outlook` → du wählst deinen Outlook-Account.
+   - Damit stehen `LOVABLE_API_KEY` und `MICROSOFT_OUTLOOK_API_KEY` als Server-Env zur Verfügung (Gateway: `https://connector-gateway.lovable.dev/microsoft_outlook`).
 
-### 1) Sequenzieller Versand statt Massen-Tabs
+2. **Server-Modul `src/lib/outlook.server.ts`**
+   - `fetchOutlookMessages({ since })` – ruft `/me/mailFolders/inbox/messages` mit `$orderby=receivedDateTime desc` + `$filter=receivedDateTime ge …`.
+   - `sendOutlookMail({ to, subject, html, text, replyTo })` – `POST /me/sendMail` mit JSON-Body (Outlook-Format, kein RFC 2822).
+   - Mapping: Outlook-Message → bestehendes `email_inbox`-Schema (`message_id`, `von_email`, `betreff`, `body_text/html`, `anhaenge`, `empfangen_am`). Duplikate per `message_id`-Unique-Check.
+   - Nach Insert: `classifyAndAssignInbox(id)` wie bisher.
 
-Aktuell öffnen sich N Tabs auf einmal (Pop-up-Blocker, Chaos). Stattdessen:
-- **Ein Chat nach dem anderen**: Dialog zeigt "Empfänger 1 von 12 – Max Müller". Button "Chat öffnen & weiter".
-- Nach Klick öffnet sich genau **ein** WhatsApp-Tab. User drückt dort "Senden", schließt den Tab, kommt zurück, klickt "Nächster".
-- Fortschrittsanzeige (z. B. "5 von 12 versendet"), Buttons "Überspringen" und "Abbrechen".
-- Optional: Checkbox "als versendet markieren" pro Empfänger (lokal im Dialog).
+3. **Sync-Endpoint & Cron**
+   - Neuer Server-Route `src/routes/api/public/outlook/sync.ts` (HMAC-geschützt mit `OUTLOOK_SYNC_SECRET`).
+   - pg_cron-Job (alle 2 min) ruft den Endpoint → holt neue Mails seit `last_synced_at` (in `email_send_state` oder neuer `outlook_sync_state`-Zeile).
+   - Manueller „Jetzt synchronisieren"-Button in Posteingang.
 
-### 2) Klartext-Hinweis im Dialog
+4. **Versand-Pfad umstellen**
+   - `sendeFreemail` bekommt eine Verzweigung: Wenn Outlook verbunden → `sendOutlookMail` (Absender = dein Outlook-Account, sichtbar im echten „Gesendet"-Ordner), sonst Fallback auf bisherige Lovable-Queue.
+   - Logging unverändert: `versand_log` (Status `sent`/`failed`) + `email_send_log`.
 
-Großer Info-Hinweis ganz oben im WhatsApp-Versand-Dialog (sowohl Dispo als auch Mitarbeiter):
+5. **Verwaltung-UI**
+   - Neue Card „Outlook-Postfach" in `_authenticated.verwaltung.tsx`: Verbindungsstatus, Adresse, „Test-Sync", „Test-Mail senden".
 
-> WhatsApp erlaubt keinen vollautomatischen Massenversand. Für jeden Empfänger öffnet sich der Chat mit der vorausgefüllten Nachricht – du musst in WhatsApp selbst auf **Senden** drücken.
+### Technische Details
 
-### 3) "Alle Tabs auf einmal"-Modus als Opt-in
+- Gateway-Auth: zwei Header (`Authorization: Bearer $LOVABLE_API_KEY`, `X-Connection-Api-Key: $MICROSOFT_OUTLOOK_API_KEY`) — strikt server-seitig in Handler-Bodies, keine Top-Level-Imports.
+- Reichweite: Connector greift auf **dein** Postfach zu (workspace-owner OAuth), nicht auf Kunden-Postfächer — passt, weil eingehende Kundenmails an deine Outlook-Adresse gehen sollen.
+- Bestehender Inbound-Webhook bleibt als Fallback bestehen, aber inaktiv, sobald Outlook-Sync läuft.
+- Migration: neue Tabelle `outlook_sync_state(id, last_synced_at, last_message_id)` mit RLS + GRANTs.
 
-Für erfahrene User bleibt der bisherige Modus erhalten, aber hinter einem Toggle "Alle auf einmal öffnen (für Power-User)". Default: sequenziell.
+### Was du tun musst
 
-## Technische Details
+- Im nächsten Schritt öffnet sich ein Connector-Dialog für Microsoft Outlook → mit deinem Outlook-Account anmelden und freigeben.
+- Danach läuft alles automatisch (Sync + Versand über Outlook).
 
-- `src/components/icons/whatsapp.tsx`: `openWhatsAppChats` bleibt für den Power-Mode. Neue Funktion `openWhatsAppChatSingle(phone, text)` öffnet genau einen Tab.
-- Neue Komponente `src/components/whatsapp-sequential-dialog.tsx`: gemeinsamer Sequenz-Dialog mit Empfängerliste, Index-State, Fortschritt, Skip/Cancel. Wird von Dispo- und Mitarbeiter-Flow wiederverwendet.
-- `src/routes/_authenticated.dispo.tsx`: bestehender FlexTeam-Dialog ruft nach "Tabs öffnen" stattdessen den Sequenz-Dialog auf (mit Toggle für Power-Mode).
-- `src/routes/_authenticated.mitarbeiter.tsx`: Verfügbarkeitslink-Dialog im WhatsApp-Kanal verwendet ebenfalls den Sequenz-Dialog. Pro Empfänger wird der personalisierte Link verwendet.
-- Keine Backend-/Server-Fn-Änderungen nötig – Datenabruf läuft schon.
+### Offene Frage
+
+Soll der Versand **immer** über Outlook laufen (alle App-Mails kommen aus deinem persönlichen Postfach, auch Kundenbestätigungen & Massenmails), oder **nur** Antworten aus dem Posteingang über Outlook und transaktionale Massenmails weiter über `noreply@notify.dispoplan.one`?
