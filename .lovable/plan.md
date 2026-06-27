@@ -1,43 +1,60 @@
-## Outlook-Anbindung für Posteingang & Versand
+## Outlook fertigstellen + Telegram-KI-Agent + Build-Fix
 
-Ich verbinde dein Microsoft-Outlook-Postfach über den Lovable-Connector (OAuth) und ersetze damit den bisherigen Inbound-Webhook als primäre Mailquelle. Versand & Empfang laufen dann über dein echtes Outlook-Postfach – sichtbar im Posteingang, zählbar im Versand-Protokoll.
+Drei Arbeitsblöcke in einer Reihenfolge, die den aktuellen Build-Fehler zuerst behebt und dann sauber aufeinander aufbaut.
 
-### Was eingerichtet wird
+---
 
-1. **Connector verbinden**
-   - `standard_connectors--connect` mit `microsoft_outlook` → du wählst deinen Outlook-Account.
-   - Damit stehen `LOVABLE_API_KEY` und `MICROSOFT_OUTLOOK_API_KEY` als Server-Env zur Verfügung (Gateway: `https://connector-gateway.lovable.dev/microsoft_outlook`).
+### Block 1 — Build reparieren (zuerst)
 
-2. **Server-Modul `src/lib/outlook.server.ts`**
-   - `fetchOutlookMessages({ since })` – ruft `/me/mailFolders/inbox/messages` mit `$orderby=receivedDateTime desc` + `$filter=receivedDateTime ge …`.
-   - `sendOutlookMail({ to, subject, html, text, replyTo })` – `POST /me/sendMail` mit JSON-Body (Outlook-Format, kein RFC 2822).
-   - Mapping: Outlook-Message → bestehendes `email_inbox`-Schema (`message_id`, `von_email`, `betreff`, `body_text/html`, `anhaenge`, `empfangen_am`). Duplikate per `message_id`-Unique-Check.
-   - Nach Insert: `classifyAndAssignInbox(id)` wie bisher.
+Der letzte Build bricht im Nitro-/Rollup-Schritt beim `readFile` ab (Stacktrace ist abgeschnitten, deutet auf eine fehlende oder fehlerhaft referenzierte Datei aus dem Outlook-Versuch). Ich:
 
-3. **Sync-Endpoint & Cron**
-   - Neuer Server-Route `src/routes/api/public/outlook/sync.ts` (HMAC-geschützt mit `OUTLOOK_SYNC_SECRET`).
-   - pg_cron-Job (alle 2 min) ruft den Endpoint → holt neue Mails seit `last_synced_at` (in `email_send_state` oder neuer `outlook_sync_state`-Zeile).
-   - Manueller „Jetzt synchronisieren"-Button in Posteingang.
+1. Suche nach hinterlassenen Outlook-Artefakten (`src/lib/outlook.*`, `src/routes/api/public/outlook/*`, Imports in `verwaltung.tsx`/`posteingang.tsx`/Migrations).
+2. Entferne tote Imports/Dateien, repariere offene Dialog-/Card-Inserts in `_authenticated.verwaltung.tsx`.
+3. Lasse den Dev-Build sauber durchlaufen, bevor Block 2 startet.
 
-4. **Versand-Pfad umstellen**
-   - `sendeFreemail` bekommt eine Verzweigung: Wenn Outlook verbunden → `sendOutlookMail` (Absender = dein Outlook-Account, sichtbar im echten „Gesendet"-Ordner), sonst Fallback auf bisherige Lovable-Queue.
-   - Logging unverändert: `versand_log` (Status `sent`/`failed`) + `email_send_log`.
+---
 
-5. **Verwaltung-UI**
-   - Neue Card „Outlook-Postfach" in `_authenticated.verwaltung.tsx`: Verbindungsstatus, Adresse, „Test-Sync", „Test-Mail senden".
+### Block 2 — Outlook-Anbindung sauber zu Ende bauen
 
-### Technische Details
+- **Connector verbinden**: `standard_connectors--connect` mit `microsoft_outlook` → du wählst dein Konto. Setzt `MICROSOFT_OUTLOOK_API_KEY` als Server-Env.
+- **`src/lib/outlook.server.ts`**: Gateway-Calls über `https://connector-gateway.lovable.dev/microsoft_outlook` mit den zwei Pflicht-Headern (`Authorization: Bearer $LOVABLE_API_KEY`, `X-Connection-Api-Key: $MICROSOFT_OUTLOOK_API_KEY`).
+  - `fetchInboxSince(iso)` → `GET /me/mailFolders/inbox/messages?$top=50&$orderby=receivedDateTime desc&$filter=receivedDateTime ge {iso}`.
+  - `sendMail({to,subject,html,text,replyTo})` → `POST /me/sendMail` (Outlook-JSON-Body).
+- **Sync-Route** `src/routes/api/public/outlook/sync.ts` (HMAC-geschützt mit `OUTLOOK_SYNC_SECRET`, via `secrets--generate_secret`):
+  - holt neue Mails seit `last_synced_at`, mappt auf `email_inbox` (`message_id`-Dedupe), ruft `classifyAndAssignInbox(id)`.
+- **Migration**: Tabelle `outlook_sync_state(id, last_synced_at, last_message_id, updated_at)` + RLS + GRANTs.
+- **pg_cron**: ruft Sync-Route alle 2 min mit `apikey`-Header (Anon-Key).
+- **Versand-Pfad**: `sendeFreemail` bekommt Verzweigung — wenn Outlook konfiguriert → `sendOutlookMail` (Absender = dein Postfach, landet im echten Gesendet-Ordner), sonst Fallback Lovable-Queue. Logging in `versand_log` + `email_send_log` bleibt.
+- **UI**: Neue Card „Outlook-Postfach" in `_authenticated.verwaltung.tsx` (Status, „Jetzt synchronisieren", „Test-Mail"). Posteingang bekommt „Synchronisieren"-Button.
 
-- Gateway-Auth: zwei Header (`Authorization: Bearer $LOVABLE_API_KEY`, `X-Connection-Api-Key: $MICROSOFT_OUTLOOK_API_KEY`) — strikt server-seitig in Handler-Bodies, keine Top-Level-Imports.
-- Reichweite: Connector greift auf **dein** Postfach zu (workspace-owner OAuth), nicht auf Kunden-Postfächer — passt, weil eingehende Kundenmails an deine Outlook-Adresse gehen sollen.
-- Bestehender Inbound-Webhook bleibt als Fallback bestehen, aber inaktiv, sobald Outlook-Sync läuft.
-- Migration: neue Tabelle `outlook_sync_state(id, last_synced_at, last_message_id)` mit RLS + GRANTs.
+---
+
+### Block 3 — Telegram-KI-Agent im bestehenden Bot
+
+Der vorhandene Bot (`src/routes/api/public/telegram/webhook.ts`) versteht heute nur fixe Kommandos (Kopplungscode, Zusage/Absage). Ich ergänze einen KI-Modus für freie Fragen.
+
+- **Provider-Helper**: `src/lib/ai-gateway.server.ts` mit `createLovableAiGatewayProvider` (AI-SDK + `@ai-sdk/openai-compatible`). Model-Default: `google/gemini-3-flash-preview`.
+- **Agent-Funktion** `src/lib/telegram-agent.server.ts`:
+  - System-Prompt: „Du bist der DispoPlan-Assistent. Antworte kurz, deutsch, höflich. Nutze Tools, um echte Daten zu lesen — niemals erfinden."
+  - Tools (alle read-only, scoped auf den verknüpften Mitarbeiter):
+    - `getMeineEinsaetze({from,to})` — eigene Einsätze.
+    - `getOffeneBedarfe({limit})` — offene Bedarfe im Umkreis.
+    - `getMeineVerfuegbarkeit({monat})` — eingetragene Verfügbarkeiten.
+    - `getNaechsteAnfrage()` — letzte/aktuelle Anfrage an mich.
+  - `stopWhen: stepCountIs(50)`, Gateway-Run-ID-Propagation gemäß AI-SDK-Standard.
+- **Webhook-Erweiterung**: Wenn `linked` Mitarbeiter eine freie Textnachricht schickt (kein Code, kein Kommando, kein Callback), wird der Agent gerufen, Antwort per `tgSendMessage` zurück. „Typing…"-Indicator via `sendChatAction(typing)` während der Inferenz.
+- **Rate-Limit & Sicherheit**: max. 20 Agent-Calls/Stunde pro `mitarbeiter_id` (einfache In-Memory-LRU im Worker reicht; bei Überschreitung höfliche Antwort). Niemals Daten anderer Mitarbeiter rausgeben — alle Tool-Queries filtern strikt auf den verknüpften `mitarbeiter_id`.
+- **Verwaltung-UI**: Toggle „KI-Antworten aktiv" + Anzeige letzter Agent-Antworten/Kosten (aus `ai_gateway_logs`).
+
+### Technische Hinweise
+
+- Kein neuer Telegram-Bot, kein separater Agent-Account — alles im bestehenden Webhook.
+- Kein GitHub nötig für den KI-Agent (du wolltest nur Telegram-Bot mit KI). Lovable ↔ GitHub-Repo-Sync wäre separat (GUI-Schritt: Plus-Menü → GitHub → Connect) und braucht keinen Code.
+- `LOVABLE_API_KEY` ist bereits gesetzt; keine zusätzlichen Keys nötig (außer Outlook-Connector-OAuth und `OUTLOOK_SYNC_SECRET`).
+- Build-Fix passiert zuerst, sonst sieht man Folgefehler nicht.
 
 ### Was du tun musst
 
-- Im nächsten Schritt öffnet sich ein Connector-Dialog für Microsoft Outlook → mit deinem Outlook-Account anmelden und freigeben.
-- Danach läuft alles automatisch (Sync + Versand über Outlook).
-
-### Offene Frage
-
-Soll der Versand **immer** über Outlook laufen (alle App-Mails kommen aus deinem persönlichen Postfach, auch Kundenbestätigungen & Massenmails), oder **nur** Antworten aus dem Posteingang über Outlook und transaktionale Massenmails weiter über `noreply@notify.dispoplan.one`?
+1. Plan bestätigen → ich starte mit dem Build-Fix.
+2. Wenn der Outlook-Connector-Dialog erscheint: mit deinem Outlook-Account anmelden.
+3. Danach läuft alles automatisch (Sync + Versand + KI-Antworten im Telegram-Bot).
