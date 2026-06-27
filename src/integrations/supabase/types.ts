@@ -831,6 +831,30 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_notify_recipients: {
+        Row: {
+          aktiv: boolean
+          chat_id: number
+          created_at: string
+          id: string
+          label: string | null
+        }
+        Insert: {
+          aktiv?: boolean
+          chat_id: number
+          created_at?: string
+          id?: string
+          label?: string | null
+        }
+        Update: {
+          aktiv?: boolean
+          chat_id?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+        }
+        Relationships: []
+      }
       telegram_updates: {
         Row: {
           chat_id: number | null
