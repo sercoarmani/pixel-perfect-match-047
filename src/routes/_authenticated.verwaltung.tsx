@@ -105,7 +105,9 @@ function VerwaltungPage() {
           <WhatsAppSetupCard />
           <WhatsAppTemplatesCard />
         </div>
+        <TelegramNotifyCard />
       </section>
+
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-2">
