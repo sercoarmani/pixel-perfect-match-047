@@ -99,15 +99,4 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
   },
-  "pnpm": {
-    "overrides": {
-      "entities": "4.5.0"
-    }
-  },
-  "overrides": {
-    "entities": "4.5.0"
-  },
-  "resolutions": {
-    "entities": "4.5.0"
-  }
 }
