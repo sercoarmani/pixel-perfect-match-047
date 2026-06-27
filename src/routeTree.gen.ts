@@ -42,6 +42,7 @@ import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lova
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
+import { Route as ApiPublicTelegramNotifyAnfrageRouteImport } from './routes/api/public/telegram/notify-anfrage'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -219,6 +220,12 @@ const ApiPublicTelegramWebhookRoute =
     path: '/api/public/telegram/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicTelegramNotifyAnfrageRoute =
+  ApiPublicTelegramNotifyAnfrageRouteImport.update({
+    id: '/api/public/telegram/notify-anfrage',
+    path: '/api/public/telegram/notify-anfrage',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
   id: '/api/public/email/inbound',
   path: '/api/public/email/inbound',
@@ -255,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
+  '/api/public/telegram/notify-anfrage': typeof ApiPublicTelegramNotifyAnfrageRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -290,6 +298,7 @@ export interface FileRoutesByTo {
   '/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
+  '/api/public/telegram/notify-anfrage': typeof ApiPublicTelegramNotifyAnfrageRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -327,6 +336,7 @@ export interface FileRoutesById {
   '/_authenticated/anfragen/mitarbeiter': typeof AuthenticatedAnfragenMitarbeiterRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
+  '/api/public/telegram/notify-anfrage': typeof ApiPublicTelegramNotifyAnfrageRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/anfragen/mitarbeiter'
     | '/lovable/email/suppression'
     | '/api/public/email/inbound'
+    | '/api/public/telegram/notify-anfrage'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/anfragen/mitarbeiter'
     | '/lovable/email/suppression'
     | '/api/public/email/inbound'
+    | '/api/public/telegram/notify-anfrage'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
@@ -435,6 +447,7 @@ export interface FileRouteTypes {
     | '/_authenticated/anfragen/mitarbeiter'
     | '/lovable/email/suppression'
     | '/api/public/email/inbound'
+    | '/api/public/telegram/notify-anfrage'
     | '/api/public/telegram/webhook'
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
@@ -454,6 +467,7 @@ export interface RootRouteChildren {
   VTokenRoute: typeof VTokenRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
+  ApiPublicTelegramNotifyAnfrageRoute: typeof ApiPublicTelegramNotifyAnfrageRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -693,6 +707,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/telegram/notify-anfrage': {
+      id: '/api/public/telegram/notify-anfrage'
+      path: '/api/public/telegram/notify-anfrage'
+      fullPath: '/api/public/telegram/notify-anfrage'
+      preLoaderRoute: typeof ApiPublicTelegramNotifyAnfrageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/inbound': {
       id: '/api/public/email/inbound'
       path: '/api/public/email/inbound'
@@ -773,6 +794,7 @@ const rootRouteChildren: RootRouteChildren = {
   VTokenRoute: VTokenRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
+  ApiPublicTelegramNotifyAnfrageRoute: ApiPublicTelegramNotifyAnfrageRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
