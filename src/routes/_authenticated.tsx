@@ -172,12 +172,14 @@ function AuthLayout() {
   const { session, signOut, user, isDispo, isAdmin, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (loading) {
-    return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Lade…</div>;
-  }
-  if (!session) {
-    return <Navigate to="/login" />;
-  }
+  // Login-Schutz im Entwicklungsmodus deaktiviert.
+  // Zum Reaktivieren die folgenden zwei Blöcke wieder einkommentieren:
+  // if (loading) {
+  //   return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Lade…</div>;
+  // }
+  // if (!session) {
+  //   return <Navigate to="/login" />;
+  // }
 
   const initials = (user?.email ?? "?").slice(0, 2).toUpperCase();
 

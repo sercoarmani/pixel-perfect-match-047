@@ -12,4 +12,9 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
+  // IPv4-Binding erzwingen: manche Umgebungen unterstützen kein IPv6 (::),
+  // was sonst zu "listen EAFNOSUPPORT :::8080" beim Start führt.
+  vite: {
+    server: { host: "0.0.0.0" },
+  },
 });
